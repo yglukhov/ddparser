@@ -1,0 +1,10 @@
+{
+	"name": "ddparser",
+	"description": "D language bindings for dparser",
+	"copyright": "Copyright © 2014, yglukhov",
+	"authors": ["yglukhov"],
+    "sourceFiles": ["d/libdparse.a", "d/libmkdparse.a"],
+	"dflags" : [],
+    "targetType":"sourceLibrary",
+    "preGenerateCommands": ["make -C d libmkdparse.a libdparse.a"]
+}
