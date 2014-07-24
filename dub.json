@@ -6,5 +6,5 @@
     "sourceFiles": ["d/libdparse.a", "d/libmkdparse.a"],
 	"dflags" : [],
     "targetType":"sourceLibrary",
-    "preGenerateCommands": ["make -C d libmkdparse.a libdparse.a"]
+    "preGenerateCommands": ["make -C \"$PACKAGE_DIR/d\" libmkdparse.a libdparse.a"]
 }
