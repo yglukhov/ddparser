@@ -6,6 +6,7 @@ import core.memory;
 import std.conv;
 import std.typecons;
 import std.variant;
+import std.exception;
 
 class Grammar
 {
@@ -15,13 +16,8 @@ class Grammar
     {
         propagate = (c)
         {
-            assert(c.length == 1);
+            enforce(c.length == 1);
             c.result = c[0];
-        };
-
-        reduceByAppending = (c)
-        {
-            c.reduceByAppending();
         };
     }
 
@@ -55,37 +51,29 @@ class Grammar
         return this;
     }
 
-    void doCast(ref string to, TerminalNode from)
-    {
-        to = from.stringValue;
-    }
-
-    bool tryCast(To)(ref To to, Object from)
-    {
-        alias FromTypes = TypeTuple!(TerminalNode);
-        foreach(T; FromTypes)
-        {
-            T t = cast(T)from;
-            if (t !is null)
-            {
-                static if (is(T == To))
-                {
-                    to = t;
-                }
-                else
-                {
-                    doCast(to, t);
-                }
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     Action actionAtIndex(uint i)
     {
         return productions[i].a;
+    }
+
+    final @property void rootSymbol(string symbol)
+    {
+        uint start = firstIndexOfProductionForSymbol(symbol);
+        if (start == 0) return; // The needed production is already first
+
+        uint end = endOfProductionStartingAtIndex(start);
+
+        // Move productions from start to end to the beginning of array
+        productions = productions[start .. end] ~ productions[0 .. start] ~ productions[end .. $];
+    }
+
+    final @property string rootSymbol() const
+    {
+        assert(productions.length, "Grammar is empty");
+        auto s = productions[0].g;
+        auto indexOfColon = s.indexOf(":");
+        assert(indexOfColon != -1, "Malformed production");
+        return s[0 .. indexOfColon].strip();
     }
 
     override string toString() const
@@ -104,11 +92,23 @@ class Grammar
         return result ~ ";";
     }
 
-    private static Object toRet(string a)
+    private final uint endOfProductionStartingAtIndex(uint index) const
     {
-        auto res = new TerminalNode();
-        res.value = a;
-        return res;
+        foreach(i, p; productions[index + 1 .. $])
+        {
+            if (!p.g.strip.startsWith("|")) return cast(uint)i + index;
+        }
+        return cast(uint)productions.length;
+    }
+
+    private final uint firstIndexOfProductionForSymbol(string sym) const
+    {
+        string searchString = sym ~ ":";
+        foreach(i, p; productions)
+        {
+            if (p.g.strip().startsWith(searchString)) return cast(uint)i;
+        }
+        assert(false, "Production " ~ sym ~ " not found");
     }
 
     Production[] productions;
@@ -359,6 +359,13 @@ extern(C):
 
     alias VecPNode = Vec!(PNode*);
 
+    struct _Parser
+    {
+        D_Parser parser;
+        char* start;
+        char* end;
+    }
+
     struct PNode {
     uint            hash;
     AssocKind        assoc;
@@ -400,10 +407,19 @@ extern(C):
     }
 }
 
+struct Location
+{
+    ulong offset;
+    uint line;
+    uint column;
+    uint length;
+}
+
 abstract class ParseNode
 {
     string identifier;
     Variant value;
+    Location location;
     abstract @property string stringValue() const;
     abstract override string toString() const;
     @property bool isTerminal() const { return true; }
@@ -476,10 +492,6 @@ class Parser
         {
             result = node.user;
         }
-        else
-        {
-            writeln("fail");
-        }
 
         if (node)
         {
@@ -495,42 +507,6 @@ class Parser
         Object userInfo;
         bool isFinal;
 
-        void reduceByAppending()
-        {
-            if (length == 0) return;
-            assert(length == 2);
-            NonTerminalNode res = cast(NonTerminalNode)result;
-            assert(res);
-            if (children[0].isEmpty && !children[1].isEmpty)
-            {
-                res.children = [children[1]];
-                res.value = children[1].value;
-            //    children = [children[1]];
-            }
-            else if (children[1].isEmpty && !children[0].isEmpty)
-            {
-                res.children = [children[0]];
-                res.value = children[0].value;
-            //    children = [children[0]];
-            }
-            else if (children[1].isEmpty && children[0].isEmpty)
-            {
-                res.children = [];
-            }
-            else
-            {
-                if (children[1].value.hasValue)
-                {
-                    res.value = children[0].value ~ children[1].value;
-                }
-                else
-                {
-                    res.value = children[0].value;
-                }
-                res.children = (cast(NonTerminalNode)children[0]).children ~ children[1];
-            }
-        }
-
         @property ulong length()
         {
             return children.length;
@@ -543,7 +519,13 @@ class Parser
 
         auto opIndex(uint index)
         {
+            index < children.length || assert(false, "Out of bounds: " ~ this.toString());
             return children[index];
+        }
+
+        @property Location location() const
+        {
+            return result.location;
         }
 
         ParseNode[] children;
@@ -555,7 +537,37 @@ class Parser
         }
     }
 
+    final @property Location location() const
+    {
+        return Location(parser.loc.s - inputPtr, parser.loc.line, parser.loc.col);
+    }
+
+    @property bool useGreedinessForDisambiguation() const
+    {
+        if (parser) return !parser.dont_use_greediness_for_disambiguation;
+        return _useGreedinessForDisambiguation;
+    }
+
+    @property void useGreedinessForDisambiguation(bool flag)
+    {
+        _useGreedinessForDisambiguation = flag;
+        if (parser) parser.dont_use_greediness_for_disambiguation = !flag;
+    }
+
+    @property bool useHeightForDisambiguation() const
+    {
+        if (parser) return !parser.dont_use_height_for_disambiguation;
+        return _useHeightForDisambiguation;
+    }
+
+    @property void useHeightForDisambiguation(bool flag)
+    {
+        _useHeightForDisambiguation = flag;
+        if (parser) parser.dont_use_height_for_disambiguation = !flag;
+    }
+
     AmbiguityHandler ambiguityHandler;
+    void delegate(Parser) syntaxErrorHandler;
 
 private:
     bool setGrammar(string grammarString)
@@ -604,13 +616,16 @@ private:
 //        parser.dont_fixup_internal_productions = 0;
         parser.commit_actions_interval = 0;
         parser.ambiguity_fn = &ambigfn;
+        parser.syntax_error_fn = &syntaxErrorFn;
+        parser.dont_use_greediness_for_disambiguation = !_useGreedinessForDisambiguation;
+        parser.dont_use_height_for_disambiguation = !_useHeightForDisambiguation;
     }
 
     static extern(C) D_ParseNode * ambigfn(D_Parser* p, int n, D_ParseNode **v)
     {
         if (p.initial_globals)
         {
-            return (cast(Parser)p.initial_globals).ambiguity(p, v[0 .. n -1]);
+            return (cast(Parser)p.initial_globals).ambiguity(p, v[0 .. n]);
         }
         return null;
     }
@@ -649,16 +664,18 @@ private:
     }
 
     final D_ParseNode* ambiguity(D_Parser* p, D_ParseNode*[] v)
-    {
-        int res = tryResolvingAmbiguityByPreferringStringOverRegex(v);
-        if (res != -1) return v[res];
-
+    {   
         writeln("AMBIGUITY: ");
+
         foreach (i, n; v)
         {
             writeln("NODE ", i);
             printNode(n);
         }
+
+        int res = tryResolvingAmbiguityByPreferringStringOverRegex(v);
+        if (res != -1) return v[res];
+
 
 //        throw new Exception("AMBIG!!");
 
@@ -670,6 +687,21 @@ private:
         if (d.user)
         {
             GC.removeRoot(cast(void*)d.user);
+        }
+    }
+
+    static extern(C) void syntaxErrorFn(D_Parser* p)
+    {
+        assert(p.initial_globals);
+        (cast(Parser)p.initial_globals).syntaxError();
+    }
+
+    void syntaxError()
+    {
+        if (syntaxErrorHandler) syntaxErrorHandler(this);
+        else
+        {
+            throw new Exception("Syntax error: " ~ location.line.to!string() ~ ":" ~ location.column.to!string());
         }
     }
 
@@ -705,6 +737,8 @@ private:
                 if (logLevel) writeln("CH ", symbolName);
                 string value = stringValueForNode(node);
                 auto term = new TerminalNode();
+                copyLocationFromDParseNodeToParseNode(node, term);
+                term.location.length = cast(uint)value.length;
                 term.identifier = symbolName;
                 term.value = value;
                 node.user = term;
@@ -758,7 +792,15 @@ private:
         auto action = grammar.actionAtIndex(actionIndex);
         context.result = _defaultAction(args, newNode);
         context.children = args;
-        if (action) action(context);
+        try
+        {
+            if (action) action(context);
+        }
+        catch(Exception e)
+        {
+            writeln("Exception while reducing: ", context);
+            throw e;
+        }
         newNode.user = context.result;
         if (context.result) GC.addRoot(cast(void*)context.result);
     }
@@ -784,6 +826,11 @@ private:
         auto result = new NonTerminalNode();
         result.children = args;
         result.identifier = symbolNameForSymbol(symbolForNode(newNode));
+        copyLocationFromDParseNodeToParseNode(newNode, result);
+        if (args.length)
+        {
+            result.location.length = cast(uint)(args[$-1].location.offset - result.location.offset + args[$-1].location.length);
+        }
         return result;
     }
 
@@ -792,9 +839,24 @@ private:
         print_parsetree(*binaryTables.parser_tables_gram, node);
     }
 
+    final @property char* inputPtr() const pure nothrow @trusted
+    {
+        assert(parser);
+        return (cast(_Parser*)parser).start;
+    }
+
+    final void copyLocationFromDParseNodeToParseNode(D_ParseNode* from, ParseNode to) pure nothrow @safe const
+    {
+        to.location.offset = from.start_loc.s - inputPtr;
+        to.location.line = from.start_loc.line;
+        to.location.column = from.start_loc.col;
+    }
+
     Context context;
     BinaryTables* binaryTables;
     D_Parser* parser;
     Grammar grammar;
     uint logLevel;
+    bool _useGreedinessForDisambiguation = true;
+    bool _useHeightForDisambiguation = true;
 }
