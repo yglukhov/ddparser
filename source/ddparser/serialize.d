@@ -1,3 +1,4 @@
+module ddparser.serialize;
 
 import std.traits;
 import std.json;

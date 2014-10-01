@@ -1,9 +1,10 @@
+module ddparser.scan;
 
 
-import dparse_;
-import parse;
-import dparse_tables;
-import util_;
+import ddparser.dparse;
+import ddparser.parse;
+import ddparser.dparse_tables;
+import ddparser.util;
 import core.stdc.string;
 import std.stdio;
 
@@ -67,6 +68,7 @@ scan_buffer(d_loc_t loc, D_State *parse_state, ShiftResult *results) {
             break;
         case 4:
             do_smth!(SB_uint32, SB_trans_uint32, uint32)(loc, last_loc, s, col, line, nresults, shift, parse_state, results);
+            break;
         default:
     }
     if (shift) {

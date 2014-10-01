@@ -3,20 +3,21 @@
 /*
   Copyright 2002-2004 John Plevyak, All Rights Reserved
 */
+module ddparser.gram;
 
 import std.bitmanip;
-import util_;
-import dparse_tables;
-import lr;
-import lex;
-import dparse_;
-import parse;
+import ddparser.util;
+import ddparser.dparse_tables;
+import ddparser.lr;
+import ddparser.lex;
+import ddparser.dparse;
+import ddparser.parse;
 import core.stdc.string;
 import core.stdc.stdlib;
 import core.stdc.stdio;
 import std.stdio;
 import std.json;
-import serialize;
+import ddparser.serialize;
 import std.string;
 
 enum EOF_SENTINAL = "\377";
@@ -558,7 +559,7 @@ escape_string_for_regex(const(char) *s) {
       case '?':
       case '+':
 	*ss++ = '\\';
-	/* fall through */
+    goto default;
       default: *ss++ = *s; break;
     }
   }
@@ -803,6 +804,7 @@ add_declaration(Grammar *g, char *start, char *end, uint kind, uint line) {
     case DeclarationKind.DECLARE_WHITESPACE: g.default_white_space = dup_str(start, end); return;
     case DeclarationKind.DECLARE_SET_OP_PRIORITY: 
       d_fail("declare does not expect argument, line %d", line);
+      break;
     default: 
       new_declaration(g, new_ident(start, end, null), kind);
       break;

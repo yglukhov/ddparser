@@ -1,6 +1,7 @@
+module ddparser.symtab;
 
 import std.bitmanip;
-import util_;
+import ddparser.util;
 
 import core.stdc.string;
 import core.stdc.stdio;

@@ -1,6 +1,7 @@
+module ddparser.lr;
 
-import gram;
-import util_;
+import ddparser.gram;
+import ddparser.util;
 import core.stdc.string;
 import core.stdc.stdlib;
 

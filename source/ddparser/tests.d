@@ -1,8 +1,9 @@
+module ddparser.tests;
 
-import dparser;
+import ddparser.dparser;
 import std.stdio;
-import dparse_tables;
-import gramgram;
+import ddparser.dparse_tables;
+import ddparser.gramgram;
 
 version (unittest) Grammar createGrammar()
 {

@@ -1,6 +1,8 @@
-import gram;
-import util_;
-import lr;
+module ddparser.lex;
+
+import ddparser.gram;
+import ddparser.util;
+import ddparser.lr;
 import core.stdc.string;
 import core.stdc.stdlib;
 import core.stdc.ctype;
@@ -261,7 +263,7 @@ build_regex_nfa(LexState *ls, uint8 **areg, NFAState *pp, NFAState *nn, Action *
                           break;
                       case '\\':
                           c = *reg++;
-                          /* fall through */
+                          goto default;
                       default:
                           pc = c;
                           mark[c] = 1;
@@ -294,7 +296,7 @@ Lsetdone:
               c = *reg++;
               if (!c)	
                   goto Lerror;
-              /* fall through */
+              goto default;
           default:
               if (!ls.ignore_case || !isalpha(c))
                   vec_add(&s.chars[c], (x = new_NFAState(ls))); 

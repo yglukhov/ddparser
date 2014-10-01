@@ -3,14 +3,16 @@
 */
 
 //#include "d.h"
+module ddparser.parse;
+
 import std.stdio;
 
-import util_;
-import dparse_tables;
-import dparse_;
-import scan;
-import gram;
-import symtab;
+import ddparser.util;
+import ddparser.dparse_tables;
+import ddparser.dparse;
+import ddparser.scan;
+import ddparser.gram;
+import ddparser.symtab;
 //import core.stdc.stdio;
 import core.stdc.string;
 import core.stdc.stdlib;
@@ -1017,34 +1019,33 @@ cmp_greediness(Parser *p, PNode *x, PNode *y) {
 
   int ix = 0, iy = 0;
   while (1) {
-    if (pvx.n <= ix || pvy.n <= iy)
-      return(0);
-    x = pvx.v[ix]; y = pvy.v[iy];
-    if (x == y) {
-      ix++;
-      iy++;
-    } else if (x.parse_node.start_loc.s < y.parse_node.start_loc.s)
-      ix++;
-    else if (x.parse_node.start_loc.s > y.parse_node.start_loc.s)
-      iy++;
-    else if (x.parse_node.symbol < y.parse_node.symbol)
-      ix++;
-    else if (x.parse_node.symbol > y.parse_node.symbol)
-      iy++;
-    else if (x.parse_node.end > y.parse_node.end)
-      return(-1);
-    else if (x.parse_node.end < y.parse_node.end)
-      return(1);
-    else if (x.children.n < y.children.n)
-      return(-1);
-    else if (x.children.n > y.children.n)
-      return(1);
-    else {
-      ix++;
-      iy++;
-    }
+      if (pvx.n <= ix || pvy.n <= iy)
+          return(0);
+      x = pvx.v[ix]; y = pvy.v[iy];
+      if (x == y) {
+          ix++;
+          iy++;
+      } else if (x.parse_node.start_loc.s < y.parse_node.start_loc.s)
+          ix++;
+      else if (x.parse_node.start_loc.s > y.parse_node.start_loc.s)
+          iy++;
+      else if (x.parse_node.symbol < y.parse_node.symbol)
+          ix++;
+      else if (x.parse_node.symbol > y.parse_node.symbol)
+          iy++;
+      else if (x.parse_node.end > y.parse_node.end)
+          return(-1);
+      else if (x.parse_node.end < y.parse_node.end)
+          return(1);
+      else if (x.children.n < y.children.n)
+          return(-1);
+      else if (x.children.n > y.children.n)
+          return(1);
+      else {
+          ix++;
+          iy++;
+      }
   }
-  return 0;
 }
 
 int
@@ -1337,7 +1338,7 @@ goto_PNode(Parser *p, d_loc_t *loc, PNode *pn, SNode *ps) {
   new_ps = add_SNode(p, state, loc, pn.parse_node.scope_, pn.parse_node.globals);
   new_ps.last_pn = pn;
 
-  debug printf("goto %d (%s) . %d %p\n",
+  debug(trace) printf("goto %d (%s) . %d %p\n",
              cast(int)(ps.state - p.t.state),
              p.t.symbols[pn.parse_node.symbol].name,
              state_index, new_ps);
@@ -1478,7 +1479,7 @@ shift_all(Parser *p, char *pos) {
     if (!r.shift)
       continue;
     p.shifts++;
-    debug printf("shift %d %p %d (%s)\n",
+    debug(trace) printf("shift %d %p %d (%s)\n",
                cast(int)(r.snode.state - p.t.state), r.snode, r.shift.symbol,
                p.t.symbols[r.shift.symbol].name);
     new_pn = add_PNode(p, r.shift.symbol, &r.snode.loc, r.loc.s,
@@ -1579,7 +1580,7 @@ reduce_one(Parser *p, Reduction *r) {
     if (pn)
       goto_PNode(p, &sn.loc, pn, sn);
   } else {
-    debug printf("reduce %d %p %d\n", cast(int)(r.snode.state - p.t.state), sn, n);
+    debug(trace) printf("reduce %d %p %d\n", cast(int)(r.snode.state - p.t.state), sn, n);
     vec_clear(&paths);
     build_paths(r.znode, &paths, n);
     for (i = 0; i < paths.n; i++) {
@@ -1645,8 +1646,8 @@ binary_op_ZNode(SNode *sn) {
 }
 
 
-debug static const char *spaces = "                                                                                                  ";
-debug static void
+debug(trace) static const char *spaces = "                                                                                                  ";
+debug(trace) static void
 print_stack(Parser *p, SNode *s, int indent) {
   int i,j;
 
@@ -1685,7 +1686,7 @@ cmp_stacks(Parser *p) {
   ZNode *az, bz;
 
   pos = p.shifts_todo.snode.loc.s;
-  debug {
+  debug(trace) {
     int i = 0;
     for (al = &p.shifts_todo, a = *al; a && a.snode.loc.s == pos;
          al = &a.next, a = a.next)
@@ -1711,7 +1712,7 @@ cmp_stacks(Parser *p) {
           (b.snode.state.reduces_to != a.snode.state - p.t.state))
         continue;
       if (az.pn.op_priority > bz.pn.op_priority) {
-        debug{printf("DELETE ");
+        debug(trace){printf("DELETE ");
             print_stack(p, b.snode, 0);
             printf("\n");}
         *bl = b.next;
@@ -1720,7 +1721,7 @@ cmp_stacks(Parser *p) {
         break;
       }
       if (az.pn.op_priority < bz.pn.op_priority) {
-        debug{printf("DELETE ");
+        debug(trace){printf("DELETE ");
             print_stack(p, a.snode, 0);
             printf("\n");}
         *al = a.next;
@@ -1883,7 +1884,7 @@ commit_tree(Parser *p, PNode *pn) {
     }
   }
   if (pn.reduction)
-    debug printf("commit %p (%s)\n", pn, p.t.symbols[pn.parse_node.symbol].name);
+    debug(trace) printf("commit %p (%s)\n", pn, p.t.symbols[pn.parse_node.symbol].name);
   if (pn.reduction && pn.reduction.final_code)
     pn.reduction.final_code(
       pn, cast(void**)&pn.children.v[0], pn.children.n,

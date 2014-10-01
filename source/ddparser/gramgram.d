@@ -1,15 +1,16 @@
+module ddparser.gramgram;
 
-import gram;
-import write_tables;
-import dparse_;
-import dparse_tables;
-import util_;
-import parse;
+import ddparser.gram;
+import ddparser.write_tables;
+import ddparser.dparse;
+import ddparser.dparse_tables;
+import ddparser.util;
+import ddparser.parse;
 import core.stdc.string;
 import core.stdc.stdlib;
 import std.json;
 import std.stdio;
-import serialize;
+import ddparser.serialize;
 import std.string;
 
 

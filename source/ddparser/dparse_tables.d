@@ -1,8 +1,9 @@
 /*
   Copyright 2002-2004 John Plevyak, All Rights Reserved
 */
+module ddparser.dparse_tables;
 
-import dparse_;
+import ddparser.dparse;
 import std.conv;
 import core.stdc.string;
 

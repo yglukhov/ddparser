@@ -1,6 +1,7 @@
+module ddparser.dparse;
 
-import dparse_tables;
-import symtab;
+import ddparser.dparse_tables;
+import ddparser.symtab;
 
 alias d_voidp = void *;
 

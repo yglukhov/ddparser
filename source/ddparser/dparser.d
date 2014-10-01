@@ -1,3 +1,4 @@
+module ddparser.dparser;
 
 import std.c.string;
 import std.string;
@@ -7,16 +8,15 @@ import std.conv;
 import std.typecons;
 import std.variant;
 import std.exception;
-import gram;
-import dparse_tables;
-import dparse_;
-import gram;
-import gramgram;
-import parse;
-import write_tables;
+import ddparser.gram;
+import ddparser.dparse_tables;
+import ddparser.dparse;
+import ddparser.gramgram;
+import ddparser.parse;
+import ddparser.write_tables;
 
-alias D_Grammar = gram.Grammar;
-alias _Parser = parse.Parser;
+alias D_Grammar = ddparser.gram.Grammar;
+alias _Parser = ddparser.parse.Parser;
 
 void hexDump(const ubyte* ptr, uint len)
 {
@@ -138,9 +138,6 @@ struct BinaryTables
         char *tables;
     }
 
-extern(C) int write_binary_tables_to_string(D_Grammar *g,
-                    ubyte **str, uint *str_len);
-extern(C) BinaryTables* read_binary_tables_from_string(ubyte *buf, D_ReductionCode spec_code, D_ReductionCode final_code);
 extern(C) void  print_parsetree(D_ParserTables pt, D_ParseNode *pn, void* fn = null, void *client_data = null) @trusted nothrow;
 
 extern(C) void d_version(char *v)
@@ -343,7 +340,7 @@ class Parser
     static D_ParserTables* tablesWithGrammar(Grammar g, bool oldWay)
     {
         auto dg = grammarWithString(g.toString());
-        return oldWay ? tablesWithGrammar_old(dg) : tablesWithGrammar(dg);
+        return tablesWithGrammar(dg);
     }
 
 private:
@@ -372,16 +369,6 @@ private:
 
         if (build_grammar(g) < 0) return null;
         return g;
-    }
-
-    static D_ParserTables* tablesWithGrammar_old(D_Grammar* g)
-    {
-        ubyte* gram;
-        uint len;
-
-        if (write_binary_tables_to_string(g, &gram, &len) < 0) return null;
-
-        return read_binary_tables_from_string(gram, &spec_code, &final_code).parser_tables_gram;
     }
 
     static D_ParserTables* tablesWithGrammar(D_Grammar* g)
@@ -630,7 +617,7 @@ private:
 
     final printNode(D_ParseNode* node) @safe nothrow
     {
-        print_parsetree(*binaryTables, node);
+        //print_parsetree(*binaryTables, node);
     }
 
     final @property char* inputPtr() const pure nothrow @trusted

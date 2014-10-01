@@ -1,12 +1,13 @@
 /*
   Copyright 2002-2006 John Plevyak, All Rights Reserved
 */
+module ddparser.write_tables;
 
-import util_;
-import lex;
-import gram;
-import dparse_tables;
-import lr;
+import ddparser.util;
+import ddparser.lex;
+import ddparser.gram;
+import ddparser.dparse_tables;
+import ddparser.lr;
 import core.stdc.string;
 import std.conv;
 import core.stdc.stdio;
@@ -1520,7 +1521,6 @@ buildStateData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
         }
         tables.d_states = d_states;
     } else {
-        assert(false);
             d_fail("no states\n");
     }
 }

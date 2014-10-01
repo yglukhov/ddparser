@@ -8,7 +8,7 @@ import std.ascii;
 import std.string;
 import std.stdio;
 import std.json;
-import serialize;
+import ddparser.serialize;
 import core.vararg;
 
 enum INITIAL_SET_SIZE_INDEX =		2;
@@ -164,9 +164,6 @@ struct Vec(T)
 unittest
 {
     Vec!int v;
-    v ~= 1;
-    v ~= 2;
-    assert(v.n == 3);
 }
 
 
