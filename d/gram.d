@@ -460,7 +460,6 @@ int state_for_declaration(Grammar *g, int iproduction);
 
 immutable string action_types[] = [ "ACCEPT", "SHIFT", "REDUCE" ];
 
-static void print_state(State *s);
 
 Production* new_production(Grammar *g, string name) {
   Production *p  = lookup_production(g, name); 

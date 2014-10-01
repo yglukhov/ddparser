@@ -99,11 +99,11 @@ d/verilog/main.c d/verilog/vparse.c d/verilog/vparse.h d/verilog/verilog_tests
 TAR_FILES = $(AUX_FILES) $(TEST_FILES) $(PYTHON_FILES) $(VERILOG_FILES) d/D_BUILD_VERSION \
 d/grammar.g d/sample.g d/my.g 
 
-LIB_SRCS = arg.c symtab.c util.c read_binary.c dparse_tree.c
+LIB_SRCS = arg.c read_binary.c dparse_tree.c
 LIB_SRCS_D = parse.d util_.d symtab.d scan.d gram.d lex.d dparse_.d dparse_tables.d gramgram.d serialize.d
 LIB_OBJS = $(LIB_SRCS:%.c=%.o) $(LIB_SRCS_D:%.d=%.d.o)
 
-MK_LIB_SRCS = mkdparse.c lex.c write_tables.c
+MK_LIB_SRCS = mkdparse.c write_tables.c
 MK_LIB_SRCS_D = gram.d lr.d lex.d lr.d write_tables.d 
 MK_LIB_OBJS = $(MK_LIB_SRCS:%.c=%.o) $(MK_LIB_SRCS_D:%.d=%.d.o)
 

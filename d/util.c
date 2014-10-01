@@ -215,8 +215,6 @@ set_add(void *av, void *t) {
   return set_add(v, t);
 }
 
-#define TRACE() printf("%s: %d\n", __FILE__, (int)__LINE__)
-
 void *
 set_add_fn(void *av, void *t, hash_fns_t *fns) {
   AbstractVec *v = (AbstractVec*)av, vv;
