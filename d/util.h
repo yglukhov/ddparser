@@ -16,6 +16,7 @@
 #define IS_BIT_SET(_v, _s) ((_v)[(_s) / 8] & 1 << ((_s) % 8))
 #define SET_BIT(_v, _s) (_v)[(_s) / 8] |= (1 << ((_s) %8))
 
+
 typedef struct AbstractVec {
   uint	n;
   uint  i;	/* size index for use with sets */

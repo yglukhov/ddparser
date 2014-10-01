@@ -215,6 +215,8 @@ set_add(void *av, void *t) {
   return set_add(v, t);
 }
 
+#define TRACE() printf("%s: %d\n", __FILE__, (int)__LINE__)
+
 void *
 set_add_fn(void *av, void *t, hash_fns_t *fns) {
   AbstractVec *v = (AbstractVec*)av, vv;
@@ -407,3 +409,5 @@ char *escape_string(char *s) { return escape_string_internal(s, 0); }
 char *escape_string_single_quote(char *s) { return escape_string_internal(s, 1); }
 
 void d_free(void *x) { FREE(x); }
+
+

@@ -4,7 +4,7 @@
 	"copyright": "Copyright © 2014, yglukhov",
 	"authors": ["yglukhov"],
     "sourceFiles": ["d/libdparse.a", "d/libmkdparse.a"],
-	"dflags" : [],
+	"dflags" : ["-I$PACKAGE_DIR/d"],
     "targetType":"sourceLibrary",
-    "preGenerateCommands": ["make -C \"$PACKAGE_DIR/d\" libmkdparse.a libdparse.a"]
+    "preGenerateCommands": ["make -C \"$PACKAGE_DIR/d\" clean", "make -C \"$PACKAGE_DIR/d\""]
 }

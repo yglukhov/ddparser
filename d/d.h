@@ -31,29 +31,19 @@
 #include <ctype.h>
 #include <string.h>
 
-#ifdef LEAK_DETECT
-#define GC_DEBUG
-#include "gc.h"
+
+void* GC_MALLOC(size_t);
+void* GC_CALLOC(size_t, size_t);
+void GC_FREE(void*);
+void* GC_REALLOC(void*, size_t);
 #define MALLOC(n) GC_MALLOC(n)
 #define CALLOC(m,n) GC_MALLOC((m)*(n))
 #define FREE(p) GC_FREE(p)
 #define REALLOC(p,n) GC_REALLOC((p),(n))
 #define CHECK_LEAKS() GC_gcollect()
-#else
-#ifdef USE_GC
-#include "gc.h"
-#define MALLOC GC_MALLOC
-#define REALLOC GC_REALLOC
-#define FREE(_x)
 #define malloc dont_use_malloc_use_MALLOC_instead
 #define relloc dont_use_realloc_use_REALLOC_instead
 #define free dont_use_free_use_FREE_instead
-#else
-#define MALLOC malloc
-#define REALLOC realloc
-#define FREE free
-#endif
-#endif
 
 // enough already with the signed/unsiged char issues
 #define isspace_(_c) isspace((unsigned char)(_c))

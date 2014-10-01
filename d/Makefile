@@ -1,11 +1,11 @@
 # Makefile for D_Parser
 
-#D_DEBUG=1
-D_OPTIMIZE=1
+D_DEBUG=1
+#D_OPTIMIZE=1
 #D_PROFILE=1
-#D_USE_GC=1
+D_USE_GC=1
 #D_LEAK_DETECT=1
-D_USE_FREELISTS=1
+#D_USE_FREELISTS=1
 
 MAJOR=1
 MINOR=30
@@ -50,7 +50,7 @@ endif
 
 ifdef D_USE_GC
 CFLAGS += -DUSE_GC ${GC_CFLAGS}
-LIBS += -lgc
+#LIBS += -lgc
 ifeq ($(OS_TYPE),Linux)
   LIBS += -ldl
 endif
@@ -59,6 +59,8 @@ ifdef D_LEAK_DETECT
 CFLAGS += -DLEAK_DETECT  ${GC_CFLAGS}
 LIBS += -lleak
 endif
+
+LIBS += -lphobos2 -ldruntime-osx64
 
 ifdef D_USE_FREELISTS
 CFLAGS += -DUSE_FREELISTS
@@ -97,15 +99,17 @@ d/verilog/main.c d/verilog/vparse.c d/verilog/vparse.h d/verilog/verilog_tests
 TAR_FILES = $(AUX_FILES) $(TEST_FILES) $(PYTHON_FILES) $(VERILOG_FILES) d/D_BUILD_VERSION \
 d/grammar.g d/sample.g d/my.g 
 
-LIB_SRCS = arg.c parse.c scan.c symtab.c util.c read_binary.c dparse_tree.c
-LIB_OBJS = $(LIB_SRCS:%.c=%.o)
+LIB_SRCS = arg.c symtab.c util.c read_binary.c dparse_tree.c
+LIB_SRCS_D = parse.d util_.d symtab.d scan.d gram.d lex.d dparse_.d dparse_tables.d gramgram.d serialize.d
+LIB_OBJS = $(LIB_SRCS:%.c=%.o) $(LIB_SRCS_D:%.d=%.d.o)
 
-MK_LIB_SRCS = mkdparse.c write_tables.c grammar.g.c gram.c lex.c lr.c
-MK_LIB_OBJS = $(MK_LIB_SRCS:%.c=%.o)
+MK_LIB_SRCS = mkdparse.c lex.c write_tables.c
+MK_LIB_SRCS_D = gram.d lr.d lex.d lr.d write_tables.d 
+MK_LIB_OBJS = $(MK_LIB_SRCS:%.c=%.o) $(MK_LIB_SRCS_D:%.d=%.d.o)
 
 ifdef D_USE_GC
-LIBMKDPARSE = libmkdparse_gc.a
-LIBDPARSE = libdparse_gc.a
+LIBMKDPARSE = libmkdparse.a
+LIBDPARSE = libdparse.a
 else
 LIBMKDPARSE = libmkdparse.a
 LIBDPARSE = libdparse.a
@@ -149,6 +153,10 @@ version:
 test:
 	(MAKE=$(MAKE) ./parser_tests)
 
+%.d.o : %.d
+	dmd -c -of$@ $<
+
+
 install:
 	mkdir -p $(PREFIX)/bin
 	cp -f $(EXECUTABLES) $(PREFIX)/bin
@@ -179,7 +187,7 @@ $(LIBMKDPARSE): $(MK_LIB_OBJS)
 %.d_parser.c: % make_dparser
 	$(MAKE_DPARSER) $<
 
-sample_parser: $(SAMPLE_PARSER_OBJS) $(INSTALL_LIBRARIES)
+sample_parser: $(SAMPLE_PARSER_OBJS) $(LIBRARIES)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ version.c $(LIBS)
 
 test_parser: $(TEST_PARSER_OBJS) $(LIBRARIES)

@@ -1,6 +1,8 @@
 
 import dparser;
 import std.stdio;
+import dparse_tables;
+import gramgram;
 
 version (unittest) Grammar createGrammar()
 {
@@ -40,3 +42,7 @@ unittest
     assert(g.rootSymbol == "EXPRESSION");
 }
 
+unittest
+{
+    /* testGramJson(); */
+}

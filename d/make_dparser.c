@@ -79,10 +79,14 @@ help(ArgumentState *arg_state, char *arg_unused) {
   usage(arg_state, arg_unused);
 }
 
+int rt_init();
+
 int
 main(int argc, char *argv[]) {
   char *grammar_pathname;
   Grammar *g;
+
+  rt_init();
 
   process_args(&arg_state, argv);
   if (arg_state.nfile_arguments != 1)

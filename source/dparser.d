@@ -7,12 +7,30 @@ import std.conv;
 import std.typecons;
 import std.variant;
 import std.exception;
+import gram;
+import dparse_tables;
+import dparse_;
+import gram;
+import gramgram;
+import parse;
+import write_tables;
+
+alias D_Grammar = gram.Grammar;
+alias _Parser = parse.Parser;
+
+void hexDump(const ubyte* ptr, uint len)
+{
+    for(uint i = 0; i < len; ++i)
+    {
+        writef("%X", ptr[i]);
+    }
+}
 
 class Grammar
 {
     alias Action = void delegate(Parser.Context c);
 
-    static this()
+    shared static this()
     {
         propagate = (c)
         {
@@ -114,298 +132,21 @@ class Grammar
     Production[] productions;
 }
 
-
-private // Here goes mostly copy-paste from C headers
-{
-    enum INTEGRAL_VEC_SIZE = 3;
-
-extern(C):
-
-    // util.h
-    struct Vec(T)
-    {
-        uint n;
-        uint i;
-        T *v;
-        T e[INTEGRAL_VEC_SIZE];
-    }
-
-    alias AbstractVec = Vec!(void*);
-
-    void d_fail(const char *str, ...);
-    void d_free(void *);
-
-
-    // dparse.h
-    alias D_ParseNode_Globals = Object;
-    alias D_ParseNode_User = ParseNode;
-
-    struct D_Parser
-    {
-        D_ParseNode_Globals    initial_globals;        /* global values */
-        D_WhiteSpaceFn     initial_white_space_fn;
-        D_Scope     *initial_scope;
-        D_SyntaxErrorFn     syntax_error_fn;
-        D_AmbiguityFn     ambiguity_fn;
-        D_FreeNodeFn          free_node_fn;
-        d_loc_t         loc;         /* initial location, set on error */
-        int            start_state; // do not move or change without fixing copy_user_configurables()
-        /* user configurables */
-        int             sizeof_user_parse_node;
-        int             save_parse_tree;
-        int            dont_compare_stacks;
-        int             dont_fixup_internal_productions;
-        int             fixup_EBNF_productions;
-        int            dont_merge_epsilon_trees;
-        int            dont_use_height_for_disambiguation;
-        int            dont_use_greediness_for_disambiguation;
-        int             commit_actions_interval; /* 0 is immediate */
-        int             error_recovery;
-        int            partial_parses;
-        /* parse results */
-        int             syntax_errors; // do not move or change without fixing copy_user_configurables()
-    }
-
-    alias D_SyntaxErrorFn = void function(D_Parser *);
-    alias D_AmbiguityFn = D_ParseNode* function(D_Parser*, int n, D_ParseNode **v);
-    alias D_FreeNodeFn = void function(D_ParseNode *d);
-
-    struct D_ParseNode {
-        int            symbol;
-        d_loc_t        start_loc;
-        char            *end;
-        char            *end_skip;
-        D_Scope    *scope_;
-        D_WhiteSpaceFn    white_space;
-        D_ParseNode_Globals    *globals;
-        D_ParseNode_User    user;
-    }
-
-    D_Parser *new_D_Parser(D_ParserTables *t, int sizeof_ParseNode_User);
-    void free_D_Parser(D_Parser *p);
-    D_ParseNode *dparse(D_Parser *p, char *buf, int buf_len);
-
-    int d_get_number_of_children(D_ParseNode *pn);
-    D_ParseNode *d_get_child(D_ParseNode *pn, int child);
-    D_ParseNode *d_find_in_tree(D_ParseNode *pn, int symbol);
-    void free_D_ParseNode(D_Parser *p, D_ParseNode *pn);
-
-    // gram.h
-    struct Production;
-    struct Term;
-    struct State;
-    struct Action;
-    struct Rule;
-    struct Elem;
-    struct Declaration;
-    struct D_Pass;
-
-    struct Code {
-    char     *code;
-    int    line;
-    }
-
-    struct D_Grammar {
-    char            *pathname;
-    Vec!(Production *)    productions;
-    Vec!(Term *)        terminals;
-    Vec!(State *)        states;
-    Vec!(Action *)        actions;
-    Code            scanner;
-    Code            *code;
-    int            ncode;
-    Vec!(Declaration *)    declarations;
-    Vec!(D_Pass *)        passes;
-    Vec!(char *)        all_pathnames;
-    char            *default_white_space;
-    /* grammar construction options */
-    int            set_op_priority_from_rule;
-    int            right_recursive_BNF;
-    int            states_for_whitespace;
-    int            states_for_all_nterms;
-    int            tokenizer;
-    int            longest_match;
-    int            save_parse_tree;
-    /* grammar writing options */
-    char            grammar_ident[256];
-    int            scanner_blocks;
-    int            scanner_block_size;
-    int            write_line_directives;
-    int            write_header;
-    int            token_type;
-    int            write_cpp;
-    char            write_extension[256];
-    /* temporary variables for grammar construction */
-    Production *    p;
-    Rule *        r;
-    Elem *        e;
-    int            action_index;
-    int            action_count;
-    int            pass_index;
-    int            rule_index;
-    int            write_line;
-    char            *write_pathname;
-    }
-
-    D_Grammar *new_D_Grammar(char *pathname);
-    void free_D_Grammar(D_Grammar *g);
-    int parse_grammar(D_Grammar *g, char *pathname, char *str);
-    int build_grammar(D_Grammar *g);
-
-
-    enum ASSOC_LEFT =       0x0001;
-    enum ASSOC_RIGHT =       0x0002;
-    enum ASSOC_NARY =       0x0004;
-    enum ASSOC_UNARY =      0x0008;
-    enum ASSOC_BINARY =     0x0010;
-
-    enum AssocKind {
-        ASSOC_NONE        = 0,
-        ASSOC_NARY_LEFT     = (ASSOC_NARY|ASSOC_LEFT),
-        ASSOC_NARY_RIGHT     = (ASSOC_NARY|ASSOC_RIGHT),
-        ASSOC_UNARY_LEFT     = (ASSOC_UNARY|ASSOC_LEFT),
-        ASSOC_UNARY_RIGHT     = (ASSOC_UNARY|ASSOC_RIGHT),
-        ASSOC_BINARY_LEFT    = (ASSOC_BINARY|ASSOC_LEFT),
-        ASSOC_BINARY_RIGHT    = (ASSOC_BINARY|ASSOC_RIGHT),
-        ASSOC_NO        = 0x0020
-    }
-
-    // mkdparse.h
-    void mkdparse_from_string(D_Grammar *g, char *str);
-
-    // write_tables.h
-    int write_binary_tables(D_Grammar *g);
-    int write_binary_tables_to_string(D_Grammar *g,
-                    ubyte **str, uint *str_len);
-
-    // read_binary.h
-    struct BinaryTables
+struct BinaryTables
     {
         D_ParserTables *parser_tables_gram;
         char *tables;
     }
 
-    BinaryTables* read_binary_tables(char *file_name, D_ReductionCode spec_code, D_ReductionCode final_code);
-    BinaryTables* read_binary_tables_from_string(ubyte *buf, D_ReductionCode spec_code, D_ReductionCode final_code);
-    void free_BinaryTables(BinaryTables * binary_tables);
+extern(C) int write_binary_tables_to_string(D_Grammar *g,
+                    ubyte **str, uint *str_len);
+extern(C) BinaryTables* read_binary_tables_from_string(ubyte *buf, D_ReductionCode spec_code, D_ReductionCode final_code);
+extern(C) void  print_parsetree(D_ParserTables pt, D_ParseNode *pn, void* fn = null, void *client_data = null) @trusted nothrow;
 
-    // dparse_tables.h
-    D_ParseNode* D_PN(void* _x, int _o) { return cast(D_ParseNode*)(cast(char*)_x + _o); }
-
-    struct d_loc_t
-    {
-        char *s;
-        char* pathname;
-        char* ws;
-        int col, line;
-    }
-
-    struct D_ParserTables {
-    uint        nstates;
-    D_State        *state;
-    ushort    *goto_table;
-    uint        whitespace_state;
-    uint        nsymbols;
-    D_Symbol        *symbols;
-    D_WhiteSpaceFn    default_white_space;
-    uint        npasses;
-    D_Pass        *passes;
-    uint        save_parse_tree;
-    }
-
-    alias D_ReductionCode = int function(void *new_ps, void **children, int n_children, int pn_offset, D_Parser *parser);
-    alias D_WhiteSpaceFn = void function(D_Parser *p, d_loc_t *loc, void **p_globals);
-
-    struct D_Reduction {
-    ushort    nelements;
-    ushort    symbol;
-    D_ReductionCode    speculative_code;
-    D_ReductionCode    final_code;
-    ushort    op_assoc;
-    ushort    rule_assoc;
-    int             op_priority;
-    int             rule_priority;
-    int            action_index;
-    int            npass_code;
-    D_ReductionCode    *pass_code;
-    }
-
-    struct D_Shift;
-    struct D_State;
-
-    enum D_SymbolKind : uint
-    {
-        D_SYMBOL_NTERM =        1,
-        D_SYMBOL_INTERNAL =    2,
-        D_SYMBOL_EBNF =        3,
-        D_SYMBOL_STRING =        4,
-        D_SYMBOL_REGEX =        5,
-        D_SYMBOL_CODE =        6,
-        D_SYMBOL_TOKEN =        7
-    }
-
-
-    struct D_Symbol {
-    D_SymbolKind        kind;
-    const char            *name;
-    int            name_len;
-    int            start_symbol;
-    }
-
-    // dsymtab.h
-    struct D_Scope;
-
-    // parse.h
-
-    alias VecPNode = Vec!(PNode*);
-
-    struct _Parser
-    {
-        D_Parser parser;
-        char* start;
-        char* end;
-    }
-
-    struct PNode {
-    uint            hash;
-    AssocKind        assoc;
-    int            priority;
-    AssocKind        op_assoc;
-    int            op_priority;
-    D_Reduction        *reduction;
-    D_Shift        *shift;
-    static if (0) // USE_GC
-    {
-        uint32        refcount;
-    }
-    VecPNode        children;
-    // uint            height;        /* max tree height */
-    // uint8            evaluated;
-    // uint8            error_recovery;
-    // struct PNode        *all_next;
-    // struct PNode        *bucket_next;
-    // struct PNode        *ambiguities;
-    // struct PNode        *latest;    /* latest version of this PNode */
-    // char            *ws_before;
-    // char            *ws_after;
-    // D_Scope               *initial_scope;
-    // void                  *initial_globals;
-    // D_ParseNode        parse_node;    /* public fields */
-    // #ifdef TRACK_PNODES
-    // struct PNode        *xnext;
-    // struct PNode        *xprev;
-    // #endif
-    }
-
-    // dparse_tree.h
-    void  print_parsetree(D_ParserTables pt, D_ParseNode *pn, void* fn = null, void *client_data = null) @trusted nothrow;
-
-    // VERSION
-    void d_version(char *v)
+extern(C) void d_version(char *v)
     {
         v[0] = 0;
     }
-}
 
 struct Location
 {
@@ -473,8 +214,8 @@ class Parser
 
     ~this()
     {
-        if (binaryTables) free_BinaryTables(binaryTables);
-        if (parser) free_D_Parser(parser);
+        //if (binaryTables) free_BinaryTables(binaryTables);
+        //if (parser) free_D_Parser(parser);
     }
 
     bool setGrammar(Grammar g)
@@ -484,18 +225,36 @@ class Parser
         return true;
     }
 
+    bool setGrammarNewWay(Grammar g)
+    {
+        D_Grammar *_g = grammarWithString(g.toString());
+
+        binaryTables = tablesWithGrammar(_g);
+
+        createParser();
+        grammar = g;
+        return true;
+    }
+
     ParseNode parse(string s)
     {
         D_ParseNode * node = dparse(parser, cast(char*)s.ptr, cast(int)s.length);
         ParseNode result;
+        bool ok = false;
         if (node && !parser.syntax_errors)
         {
-            result = node.user;
+            result = cast(ParseNode)node.user;
+            ok = true;
         }
 
         if (node)
         {
             free_D_ParseNode(parser, node);
+        }
+
+        if (!ok && !errorRecoveryEnabled)
+        {
+            syntaxError();
         }
 
         return result;
@@ -566,14 +325,32 @@ class Parser
         if (parser) parser.dont_use_height_for_disambiguation = !flag;
     }
 
+    @property bool errorRecoveryEnabled() const
+    {
+        if (parser) return !!parser.error_recovery;
+        return _errorRecoveryEnabled;
+    }
+
+    @property void errorRecoveryEnabled(bool flag)
+    {
+        _errorRecoveryEnabled = flag;
+        if (parser) parser.error_recovery = !!flag;
+    }
+
     AmbiguityHandler ambiguityHandler;
     void delegate(Parser) syntaxErrorHandler;
 
+    static D_ParserTables* tablesWithGrammar(Grammar g, bool oldWay)
+    {
+        auto dg = grammarWithString(g.toString());
+        return oldWay ? tablesWithGrammar_old(dg) : tablesWithGrammar(dg);
+    }
+
 private:
-    bool setGrammar(string grammarString)
+
+    static D_Grammar* grammarWithString(string grammarString)
     {
         D_Grammar *g = new_D_Grammar(cast(char*)"grammar".ptr);
-        scope(exit) free_D_Grammar(g);
 
         g.set_op_priority_from_rule = 0;
         g.right_recursive_BNF = 0;
@@ -589,19 +366,35 @@ private:
         g.token_type = 0;
 
         // TODO: Can't handle syntax error here =(
-        if (parse_grammar(g, cast(char*)"-".ptr, cast(char*)grammarString.toStringz()) < 0) return false;
+        if (parse_grammar(g, cast(char*)"-".ptr, cast(char*)grammarString.toStringz()) < 0) return null;
 
         if (g.productions.n < 2) throw new Exception("Too few productions");
 
-        if (build_grammar(g) < 0) return false;
+        if (build_grammar(g) < 0) return null;
+        return g;
+    }
 
+    static D_ParserTables* tablesWithGrammar_old(D_Grammar* g)
+    {
         ubyte* gram;
         uint len;
 
-        if (write_binary_tables_to_string(g, &gram, &len) < 0) return false;
+        if (write_binary_tables_to_string(g, &gram, &len) < 0) return null;
 
-        binaryTables = read_binary_tables_from_string(gram, &spec_code, &final_code);
-        d_free(gram);
+        return read_binary_tables_from_string(gram, &spec_code, &final_code).parser_tables_gram;
+    }
+
+    static D_ParserTables* tablesWithGrammar(D_Grammar* g)
+    {
+        return createTablesFromGrammar(g, &spec_code, &final_code);
+    }
+
+    bool setGrammar(string grammarString)
+    {
+        D_Grammar *g = grammarWithString(grammarString);
+        scope(exit) free_D_Grammar(g);
+
+        binaryTables = tablesWithGrammar(g);
 
         createParser();
         return true;
@@ -609,8 +402,8 @@ private:
 
     void createParser()
     {
-        parser = new_D_Parser(binaryTables.parser_tables_gram, D_ParseNode_User.sizeof);
-        parser.initial_globals = this;
+        parser = new_D_Parser(binaryTables, D_ParseNode_User.sizeof);
+        parser.initial_globals = cast(void*)this;
         parser.save_parse_tree = 1;
         parser.free_node_fn = &free_node;
 //        parser.dont_fixup_internal_productions = 0;
@@ -619,6 +412,7 @@ private:
         parser.syntax_error_fn = &syntaxErrorFn;
         parser.dont_use_greediness_for_disambiguation = !_useGreedinessForDisambiguation;
         parser.dont_use_height_for_disambiguation = !_useHeightForDisambiguation;
+        parser.error_recovery = _errorRecoveryEnabled;
     }
 
     static extern(C) D_ParseNode * ambigfn(D_Parser* p, int n, D_ParseNode **v)
@@ -723,9 +517,9 @@ private:
         return 0;
     }
 
-    final void appendNodeResults(ref D_ParseNode_User[] output, D_ParseNode* node)
+    final void appendNodeResults(ref ParseNode[] output, D_ParseNode* node)
     {
-        D_ParseNode_User u = node.user;
+        ParseNode u = cast(ParseNode)node.user;
 
         if (u is null)
         {
@@ -741,7 +535,7 @@ private:
                 term.location.length = cast(uint)value.length;
                 term.identifier = symbolName;
                 term.value = value;
-                node.user = term;
+                node.user = cast(void*)term;
                 GC.addRoot(cast(void*)term);
                 output ~= term;
             }
@@ -772,7 +566,7 @@ private:
         {
             context.isFinal = !speculative;
             auto sym = symbolForNode(D_PN(new_ps, pn_offset));
-            D_ParseNode_User[] args;
+            ParseNode[] args;
         //    writeln(speculative ? "SPEC" : "FINAL", " DEB ", symbolNameForSymbol(sym), " ", sym.kind);
         //    if(symbolNameForSymbol(sym) == "FUNC_ARG"){ logLevel = 1; printNode(D_PN(new_ps, pn_offset)); }
             foreach (child; children[0 .. n_children])
@@ -801,7 +595,7 @@ private:
             writeln("Exception while reducing: ", context);
             throw e;
         }
-        newNode.user = context.result;
+        newNode.user = cast(void*)context.result;
         if (context.result) GC.addRoot(cast(void*)context.result);
     }
 
@@ -817,7 +611,7 @@ private:
 
     final const(D_Symbol)* symbolForNode(D_ParseNode* n) const @trusted nothrow pure
     {
-        return &binaryTables.parser_tables_gram.symbols[n.symbol];
+        return &binaryTables.symbols[n.symbol];
     }
 
     final ParseNode _defaultAction(ParseNode[] args, D_ParseNode* newNode) @safe nothrow pure
@@ -836,7 +630,7 @@ private:
 
     final printNode(D_ParseNode* node) @safe nothrow
     {
-        print_parsetree(*binaryTables.parser_tables_gram, node);
+        print_parsetree(*binaryTables, node);
     }
 
     final @property char* inputPtr() const pure nothrow @trusted
@@ -852,11 +646,15 @@ private:
         to.location.column = from.start_loc.col;
     }
 
+    ParseNode[] allNodes; // This array is needed not to let GC collect the objects which are referenced from
+    // somewhere in C code
+
     Context context;
-    BinaryTables* binaryTables;
+    D_ParserTables * binaryTables;
     D_Parser* parser;
     Grammar grammar;
     uint logLevel;
     bool _useGreedinessForDisambiguation = true;
     bool _useHeightForDisambiguation = true;
+    bool _errorRecoveryEnabled = true;
 }
