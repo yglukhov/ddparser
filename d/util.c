@@ -407,5 +407,3 @@ char *escape_string(char *s) { return escape_string_internal(s, 0); }
 char *escape_string_single_quote(char *s) { return escape_string_internal(s, 1); }
 
 void d_free(void *x) { FREE(x); }
-
-

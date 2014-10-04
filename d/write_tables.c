@@ -613,291 +613,286 @@ shift_fns = {
 
 static void
 write_scanner_data(File *fp, Grammar *g, char *tag) {
-    State *s;
-    ScannerBlock *vsblock, *xv, *yv;
-    VecScannerBlock scanner_block_hash[4], *pscanner_block_hash;
-    VecScannerBlock trans_scanner_block_hash[4], *ptrans_scanner_block_hash;
-    VecAction shift_hash;
-    int nvsblocks, ivsblock, i, j, k, x, xx;
-    VecScanState *ss;
-    char speculative_code[256];
-    Term *t;
+  State *s;
+  ScannerBlock *vsblock, *xv, *yv;
+  VecScannerBlock scanner_block_hash[4], *pscanner_block_hash;
+  VecScannerBlock trans_scanner_block_hash[4], *ptrans_scanner_block_hash;
+  VecAction shift_hash;
+  int nvsblocks, ivsblock, i, j, k, x, xx;
+  VecScanState *ss;
+  char speculative_code[256];
+  Term *t;
 
-    /* shift_actions */
-    for (i = 0; i < g->terminals.n; i++) {
-        int action_index = -1;
-        t = g->terminals.v[i];
-        if (t->regex_production && t->regex_production->rules.v[0]->speculative_code.code) {
-            assert(!fp->binary);
-            sprintf(speculative_code, "d_speculative_reduction_code_%d_%d_%s", 
-                    t->regex_production->index, t->regex_production->rules.v[0]->index, tag);
-        } else {
-            strcpy(speculative_code, "NULL");
-        }
-        if (t->regex_production) {
-            action_index = t->regex_production->rules.v[0]->action_index;
-        }
-        start_struct(fp, D_Shift, make_name("d_shift_%d_%s", i, tag), "");
-        add_struct_member(fp, D_Shift, %d, g->terminals.v[i]->index + g->productions.n, symbol);
-        add_struct_member(fp, D_Shift, %d, g->terminals.v[i]->scan_kind, shift_kind);
-        add_struct_member(fp, D_Shift, %d, g->terminals.v[i]->op_assoc, op_assoc);
-        add_struct_member(fp, D_Shift, %d, g->terminals.v[i]->op_priority, op_priority);
-        add_struct_member(fp, D_Shift, %d, g->terminals.v[i]->term_priority, term_priority);
-        if (fp->binary) {
-            /* printf("shift1 action_index: %d\n", (int)action_index); */
-            add_struct_member(fp, D_Shift, %d, action_index, action_index);
-            add_struct_ptr_member(fp, D_Shift, "", &spec_code_entry, speculative_code);
-        } else {
-            add_struct_member(fp, D_Shift, %d, 0, action_index);
-            fprintf(fp->fp, ", %s", speculative_code);
-        }
-        end_struct(fp, D_Shift, "\n");
-        g->write_line++;
-        if (g->terminals.v[i]->trailing_context) {
-            start_struct(fp, D_Shift, make_name("d_tshift_%d_%s", i, tag), "");
-            add_struct_member(fp, D_Shift, %d, g->terminals.v[i]->index + g->productions.n, symbol);
-            add_struct_member(fp, D_Shift, %d, D_SCAN_TRAILING, shift_kind);
-            add_struct_member(fp, D_Shift, %d, g->terminals.v[i]->op_assoc, op_assoc);
-            add_struct_member(fp, D_Shift, %d, g->terminals.v[i]->op_priority, op_priority);
-            add_struct_member(fp, D_Shift, %d, g->terminals.v[i]->term_priority, term_priority);
-            if (fp->binary) {
-                add_struct_member(fp, D_Shift, %d, action_index, action_index);
-            /* printf("shift2 action_index: %d\n", (int)action_index); */
-                add_struct_ptr_member(fp, D_Shift, "", &spec_code_entry, speculative_code);
-            } else {
-                add_struct_member(fp, D_Shift, %d, 0, action_index);
-                fprintf(fp->fp, ", %s", speculative_code);
-            }
-            end_struct(fp, D_Shift, "\n");
-            g->write_line++;
-        }
+  /* shift_actions */
+  for (i = 0; i < g->terminals.n; i++) {
+    int action_index = -1;
+    t = g->terminals.v[i];
+    if (t->regex_production && t->regex_production->rules.v[0]->speculative_code.code) {
+      assert(!fp->binary);
+      sprintf(speculative_code, "d_speculative_reduction_code_%d_%d_%s", 
+	      t->regex_production->index, t->regex_production->rules.v[0]->index, tag);
+    } else {
+      strcpy(speculative_code, "NULL");
     }
-    print(fp, "\n");
+    if (t->regex_production) {
+      action_index = t->regex_production->rules.v[0]->action_index;
+    }
+    start_struct(fp, D_Shift, make_name("d_shift_%d_%s", i, tag), "");
+    add_struct_member(fp, D_Shift, %d, g->terminals.v[i]->index + g->productions.n, symbol);
+    add_struct_member(fp, D_Shift, %d, g->terminals.v[i]->scan_kind, shift_kind);
+    add_struct_member(fp, D_Shift, %d, g->terminals.v[i]->op_assoc, op_assoc);
+    add_struct_member(fp, D_Shift, %d, g->terminals.v[i]->op_priority, op_priority);
+    add_struct_member(fp, D_Shift, %d, g->terminals.v[i]->term_priority, term_priority);
+    if (fp->binary) {
+      add_struct_member(fp, D_Shift, %d, action_index, action_index);
+      add_struct_ptr_member(fp, D_Shift, "", &spec_code_entry, speculative_code);
+    } else {
+      add_struct_member(fp, D_Shift, %d, 0, action_index);
+      fprintf(fp->fp, ", %s", speculative_code);
+    }
+    end_struct(fp, D_Shift, "\n");
     g->write_line++;
-    /* scanners */
-    nvsblocks = 0;
-    for (i = 0; i < g->states.n; i++)
-        nvsblocks += g->states.v[i]->scanner.states.n * g->scanner_blocks;
-    vsblock = MALLOC((nvsblocks ? nvsblocks : 1) * sizeof(ScannerBlock));
-    for (i = 0; i < 4; i++) {
-        vec_clear(&scanner_block_hash[i]);
-        vec_clear(&trans_scanner_block_hash[i]);
+    if (g->terminals.v[i]->trailing_context) {
+      start_struct(fp, D_Shift, make_name("d_tshift_%d_%s", i, tag), "");
+      add_struct_member(fp, D_Shift, %d, g->terminals.v[i]->index + g->productions.n, symbol);
+      add_struct_member(fp, D_Shift, %d, D_SCAN_TRAILING, shift_kind);
+      add_struct_member(fp, D_Shift, %d, g->terminals.v[i]->op_assoc, op_assoc);
+      add_struct_member(fp, D_Shift, %d, g->terminals.v[i]->op_priority, op_priority);
+      add_struct_member(fp, D_Shift, %d, g->terminals.v[i]->term_priority, term_priority);
+      if (fp->binary) {
+	add_struct_member(fp, D_Shift, %d, action_index, action_index);
+	add_struct_ptr_member(fp, D_Shift, "", &spec_code_entry, speculative_code);
+      } else {
+	add_struct_member(fp, D_Shift, %d, 0, action_index);
+	fprintf(fp->fp, ", %s", speculative_code);
+      }
+      end_struct(fp, D_Shift, "\n");
+      g->write_line++;
     }
-    scanner_block_fns.data[0] = (void*)(uintptr_t)g->scanner_block_size;
-    scanner_block_fns.data[1] = (void*)g;
-    trans_scanner_block_fns.data[0] = (void*)(uintptr_t)g->scanner_block_size;
-    trans_scanner_block_fns.data[1] = (void*)g;
-    /* shift */
-    vec_clear(&shift_hash);
+  }
+  print(fp, "\n");
+  g->write_line++;
+  /* scanners */
+  nvsblocks = 0;
+  for (i = 0; i < g->states.n; i++)
+    nvsblocks += g->states.v[i]->scanner.states.n * g->scanner_blocks;
+  vsblock = MALLOC((nvsblocks ? nvsblocks : 1) * sizeof(ScannerBlock));
+  for (i = 0; i < 4; i++) {
+    vec_clear(&scanner_block_hash[i]);
+    vec_clear(&trans_scanner_block_hash[i]);
+  }
+  scanner_block_fns.data[0] = (void*)(uintptr_t)g->scanner_block_size;
+  scanner_block_fns.data[1] = (void*)g;
+  trans_scanner_block_fns.data[0] = (void*)(uintptr_t)g->scanner_block_size;
+  trans_scanner_block_fns.data[1] = (void*)g;
+  /* shift */
+  vec_clear(&shift_hash);
+  ivsblock = 0;
+  for (i = 0; i < g->states.n; i++) {
+    s = g->states.v[i];
+    if (s->same_shifts)
+      continue;
+    ss = &s->scanner.states;
+    /* build accepts differences */
+    for (j = 0; j < s->scanner.transitions.n; j++) {
+      VecAction *va = &s->scanner.transitions.v[j]->accepts_diff;
+      start_array(fp, D_Shift *, make_name("d_accepts_diff_%d_%d_%s", i, j, tag), "", 0, "");
+      for (k = 0; k < va->n; k++) {
+	if (va->v[k]->kind != ACTION_SHIFT_TRAILING)
+	  add_array_ptr_member(fp, D_Shift*, "&", get_offset(fp, "d_shift_%d_%s", va->v[k]->term->index, tag), 0); 
+	else
+	  add_array_ptr_member(fp, D_Shift*, "&", get_offset(fp, "d_tshift_%d_%s", va->v[k]->term->index, tag), 0);
+      }
+      add_array_member(fp, D_Shift*, %d, 0, 1);
+      end_array(fp, "\n");
+      g->write_line += 2;
+    }
+    if (s->scanner.transitions.n) {
+      start_array(fp, D_Shift **, make_name("d_accepts_diff_%d_%s", i, tag), "", 0, "\n");
+      for (j = 0; j < s->scanner.transitions.n; j++) {
+	add_array_ptr_member(fp, D_Shift **, "", get_offset(fp, "d_accepts_diff_%d_%d_%s", i, j, tag), j == s->scanner.transitions.n - 1);
+	print(fp, "\n");
+	if (j != s->scanner.transitions.n - 1)
+	  g->write_line++;
+      }
+      end_array(fp, "\n\n");
+      g->write_line += 3;
+    }
+    /* build scanner_block_hash */
+    pscanner_block_hash = &scanner_block_hash[scanner_size(s)-1]; 
+    ptrans_scanner_block_hash = &trans_scanner_block_hash[scanner_size(s)-1]; 
+    for (j = 0; j < ss->n; j++) {
+      if (!s->same_shifts) {
+	for (k = 0; k < g->scanner_blocks; k++) {
+	  vsblock[ivsblock].state_index = s->index;
+	  vsblock[ivsblock].scanner_index = j;
+	  vsblock[ivsblock].block_index = k;
+	  vsblock[ivsblock].chars = 
+	    (void*)&ss->v[j]->chars[k * g->scanner_block_size];
+	  vsblock[ivsblock].transitions = 
+	    (void*)&ss->v[j]->transition[k * g->scanner_block_size];
+	  xv = &vsblock[ivsblock];
+	  ivsblock++;
+	  assert(ivsblock <= nvsblocks);
+	  /* output state scanner blocks */
+	  yv = set_add_fn(pscanner_block_hash, xv, &scanner_block_fns);
+	  if (xv == yv) {
+	    int size = scanner_size(s);
+	    start_array_fn(fp, size, "", make_type(size), make_name("d_scanner_%d_%d_%d_%s", i, j, k, tag), "SCANNER_BLOCK_SIZE", SCANNER_BLOCK_SIZE, "\n");
+	    for (x = 0; x < g->scanner_block_size; x++) {
+	      xx = x + k * g->scanner_block_size;
+	      add_array_member_fn(fp, get_copy_func(size), "%d", ss->v[j]->chars[xx] ? ss->v[j]->chars[xx]->index + 1 : 0, x == g->scanner_block_size);
+	      if (x % 16 == 15) { print(fp, "\n"); /*fprintf(fp, "\n");*/ g->write_line++; }
+	    }
+	    end_array(fp, "\n\n");
+	    g->write_line += 3;
+	  }
+	  if (s->scan_kind != D_SCAN_LONGEST || s->trailing_context) {
+	    /* output accept_diff scanner blocks */
+	    yv = set_add_fn(ptrans_scanner_block_hash, xv, 
+			    &trans_scanner_block_fns);
+	    if (xv == yv) {
+	      int size = scanner_size(s);
+	      start_array_fn(fp, size, "", make_type(size), make_name("d_accepts_diff_%d_%d_%d_%s", i, j, k, tag), "SCANNER_BLOCK_SIZE", SCANNER_BLOCK_SIZE, "\n");
+	      for (x = 0; x < g->scanner_block_size; x++) {
+		xx = x + k * g->scanner_block_size;
+		add_array_member_fn(fp, get_copy_func(size), "%d", ss->v[j]->transition[xx]->index, x == g->scanner_block_size);
+		if (x % 16 == 15) { print(fp, "\n"); g->write_line++; }
+	      }
+	      end_array(fp, "\n\n");
+	      g->write_line += 3;
+	    }
+	  }
+	}
+	/* output shifts */
+	if (ss->v[j]->accepts.n) {
+	  char tmp[256];
+	  sprintf(tmp, "d_shift_%d_%d_%s", i, j, tag);
+	  for (k = 0; k < ss->v[j]->accepts.n; k++) {
+	    Action *a = ss->v[j]->accepts.v[k], *aa;
+	    if (ss->v[j]->accepts.n == 1) {
+	      if (a->temp_string)
+		continue;
+	      a->temp_string = dup_str(tmp, 0);
+	      aa = set_add_fn(&shift_hash, a, &shift_fns);
+	      if (aa != a)
+		continue;
+	    }
+	    /* output shifts */
+	    if (!k) 
+	      start_array(fp, D_Shift *, make_name(tmp), "", 0, "");
+	    if (a->kind != ACTION_SHIFT_TRAILING) {
+	      add_array_ptr_member(fp, D_Shift *, "&", get_offset(fp, "d_shift_%d_%s", a->term->index, tag), 0);
+	      if (k == ss->v[j]->accepts.n - 1) {
+		add_array_ptr_member(fp, D_Shift *, "&", &null_entry, 1);
+		end_array(fp, "\n\n");
+	      }
+	    } else {
+	      add_array_ptr_member(fp, D_Shift *, "&", get_offset(fp, "d_tshift_%d_%s", a->term->index, tag), 0); 
+	      if (k == ss->v[j]->accepts.n - 1) {
+		add_array_ptr_member(fp, D_Shift *, "&", &null_entry, 1);
+		end_array(fp, "\n\n");
+	      }
+	    }
+	    if (k == ss->v[j]->accepts.n - 1)
+	      g->write_line += 2;
+	  }
+	}
+      }
+    }
+  }
+  for (i = 0; i < g->states.n; i++) {
+    s = g->states.v[i];
+    ss = &s->scanner.states;
     ivsblock = 0;
-
-
-
-    for (i = 0; i < g->states.n; i++) {
-        s = g->states.v[i];
-        if (s->same_shifts)
-            continue;
-        ss = &s->scanner.states;
-        /* build accepts differences */
-        for (j = 0; j < s->scanner.transitions.n; j++) {
-            VecAction *va = &s->scanner.transitions.v[j]->accepts_diff;
-            start_array(fp, D_Shift *, make_name("d_accepts_diff_%d_%d_%s", i, j, tag), "", 0, "");
-            for (k = 0; k < va->n; k++) {
-                if (va->v[k]->kind != ACTION_SHIFT_TRAILING)
-                    add_array_ptr_member(fp, D_Shift*, "&", get_offset(fp, "d_shift_%d_%s", va->v[k]->term->index, tag), 0); 
-                else
-                    add_array_ptr_member(fp, D_Shift*, "&", get_offset(fp, "d_tshift_%d_%s", va->v[k]->term->index, tag), 0);
-            }
-            add_array_member(fp, D_Shift*, %d, 0, 1);
-            end_array(fp, "\n");
-            g->write_line += 2;
-        }
-        if (s->scanner.transitions.n) {
-            start_array(fp, D_Shift **, make_name("d_accepts_diff_%d_%s", i, tag), "", 0, "\n");
-            for (j = 0; j < s->scanner.transitions.n; j++) {
-                add_array_ptr_member(fp, D_Shift **, "", get_offset(fp, "d_accepts_diff_%d_%d_%s", i, j, tag), j == s->scanner.transitions.n - 1);
-                print(fp, "\n");
-                if (j != s->scanner.transitions.n - 1)
-                    g->write_line++;
-            }
-            end_array(fp, "\n\n");
-            g->write_line += 3;
-        }
-        /* build scanner_block_hash */
-        pscanner_block_hash = &scanner_block_hash[scanner_size(s)-1]; 
-        ptrans_scanner_block_hash = &trans_scanner_block_hash[scanner_size(s)-1]; 
-        for (j = 0; j < ss->n; j++) {
-            if (!s->same_shifts) {
-                for (k = 0; k < g->scanner_blocks; k++) {
-                    vsblock[ivsblock].state_index = s->index;
-                    vsblock[ivsblock].scanner_index = j;
-                    vsblock[ivsblock].block_index = k;
-                    vsblock[ivsblock].chars = 
-                        (void*)&ss->v[j]->chars[k * g->scanner_block_size];
-                    vsblock[ivsblock].transitions = 
-                        (void*)&ss->v[j]->transition[k * g->scanner_block_size];
-                    xv = &vsblock[ivsblock];
-                    ivsblock++;
-                    assert(ivsblock <= nvsblocks);
-                    /* output state scanner blocks */
-                    yv = set_add_fn(pscanner_block_hash, xv, &scanner_block_fns);
-                    if (xv == yv) {
-                        int size = scanner_size(s);
-                        start_array_fn(fp, size, "", make_type(size), make_name("d_scanner_%d_%d_%d_%s", i, j, k, tag), "SCANNER_BLOCK_SIZE", SCANNER_BLOCK_SIZE, "\n");
-                        for (x = 0; x < g->scanner_block_size; x++) {
-                            xx = x + k * g->scanner_block_size;
-                            add_array_member_fn(fp, get_copy_func(size), "%d", ss->v[j]->chars[xx] ? ss->v[j]->chars[xx]->index + 1 : 0, x == g->scanner_block_size);
-                            if (x % 16 == 15) { print(fp, "\n"); /*fprintf(fp, "\n");*/ g->write_line++; }
-                        }
-                        end_array(fp, "\n\n");
-                        g->write_line += 3;
-                    }
-                    if (s->scan_kind != D_SCAN_LONGEST || s->trailing_context) {
-                        /* output accept_diff scanner blocks */
-                        yv = set_add_fn(ptrans_scanner_block_hash, xv, 
-                                &trans_scanner_block_fns);
-                        if (xv == yv) {
-                            int size = scanner_size(s);
-                            start_array_fn(fp, size, "", make_type(size), make_name("d_accepts_diff_%d_%d_%d_%s", i, j, k, tag), "SCANNER_BLOCK_SIZE", SCANNER_BLOCK_SIZE, "\n");
-                            for (x = 0; x < g->scanner_block_size; x++) {
-                                xx = x + k * g->scanner_block_size;
-                                add_array_member_fn(fp, get_copy_func(size), "%d", ss->v[j]->transition[xx]->index, x == g->scanner_block_size);
-                                if (x % 16 == 15) { print(fp, "\n"); g->write_line++; }
-                            }
-                            end_array(fp, "\n\n");
-                            g->write_line += 3;
-                        }
-                    }
-                }
-                /* output shifts */
-                if (ss->v[j]->accepts.n) {
-                    char tmp[256];
-                    sprintf(tmp, "d_shift_%d_%d_%s", i, j, tag);
-                    for (k = 0; k < ss->v[j]->accepts.n; k++) {
-                        Action *a = ss->v[j]->accepts.v[k], *aa;
-                        if (ss->v[j]->accepts.n == 1) {
-                            if (a->temp_string)
-                                continue;
-                            a->temp_string = dup_str(tmp, 0);
-                            aa = set_add_fn(&shift_hash, a, &shift_fns);
-                            if (aa != a)
-                                continue;
-                        }
-                        /* output shifts */
-                        if (!k) 
-                            start_array(fp, D_Shift *, make_name(tmp), "", 0, "");
-                        if (a->kind != ACTION_SHIFT_TRAILING) {
-                            add_array_ptr_member(fp, D_Shift *, "&", get_offset(fp, "d_shift_%d_%s", a->term->index, tag), 0);
-                            if (k == ss->v[j]->accepts.n - 1) {
-                                add_array_ptr_member(fp, D_Shift *, "&", &null_entry, 1);
-                                end_array(fp, "\n\n");
-                            }
-                        } else {
-                            add_array_ptr_member(fp, D_Shift *, "&", get_offset(fp, "d_tshift_%d_%s", a->term->index, tag), 0); 
-                            if (k == ss->v[j]->accepts.n - 1) {
-                                add_array_ptr_member(fp, D_Shift *, "&", &null_entry, 1);
-                                end_array(fp, "\n\n");
-                            }
-                        }
-                        if (k == ss->v[j]->accepts.n - 1)
-                            g->write_line += 2;
-                    }
-                }
-            }
-        }
+    if (ss->n && !s->same_shifts) {
+      /* output scanner state transition tables */
+      /* assume SB_uint8, 16, and 32 have same member offsets */
+      assert(sizeof(SB_uint8) == sizeof(SB_uint16) && sizeof(SB_uint16) == sizeof(SB_uint32));
+      start_array_fn(fp, sizeof(SB_uint8), "SB_", scanner_u_type(s), make_name("d_scanner_%d_%s", i, tag), 
+		     "", ss->n, "\n");
+      g->write_line += 1;
+      pscanner_block_hash = &scanner_block_hash[scanner_size(s)-1]; 
+      for (j = 0; j < ss->n; j++) {
+	Action *a;
+	start_struct_in_array(fp);
+	if (ss->v[j]->accepts.n) {
+	  a = ss->v[j]->accepts.v[0];
+	  if (ss->v[j]->accepts.n == 1) {
+	    a = set_add_fn(&shift_hash, a, &shift_fns);
+	    add_struct_ptr_member(fp, SB_uint8, "", get_offset(fp, "%s", a->temp_string), shift);
+	  } else
+	    add_struct_ptr_member(fp, SB_uint8, "", get_offset(fp, "d_shift_%d_%d_%s", i, j, tag), shift);
+	} else
+	  add_struct_ptr_member(fp, SB_uint8, "", &null_entry, shift);
+	print_no_comma(fp, ", {");
+	for (k = 0; k < g->scanner_blocks; k++) {
+	  ScannerBlock vs;
+	  vs.state_index = s->index;
+	  vs.scanner_index = j;
+	  vs.block_index = k;
+	  vs.chars = (void*)&ss->v[j]->chars[k * g->scanner_block_size];
+	  vs.transitions = 
+	    (void*)&ss->v[j]->transition[k * g->scanner_block_size];
+	  xv = &vs;
+	  yv = set_add_fn(pscanner_block_hash, xv, &scanner_block_fns);
+	  assert(yv != xv);
+	  add_struct_ptr_member(fp, SB_uint8, "", get_offset(fp, "d_scanner_%d_%d_%d_%s", yv->state_index, yv->scanner_index, yv->block_index, tag), scanner_block[k]);
+	  if (k != g->scanner_blocks-1) {
+	    if ((k % 2) == 1) { print(fp, "\n "); g->write_line += 1; }
+	  }
+	}
+	print(fp, "}");
+	end_struct_in_array(fp, j != ss->n-1 ? ",\n" : "\n");
+	g->write_line += 1;
+      }
+      end_array(fp, "\n\n");
+      g->write_line += 2;
+      if (s->scan_kind != D_SCAN_LONGEST || s->trailing_context) {
+	/* output scanner accepts diffs tables */
+	start_array_fn(fp, sizeof(SB_trans_uint8), "SB_trans_", scanner_u_type(s), 
+			make_name("d_transition_%d_%s", i, tag), "", ss->n, "\n");
+	g->write_line += 1;
+	ptrans_scanner_block_hash = 
+	  &trans_scanner_block_hash[scanner_size(s)-1]; 
+	for (j = 0; j < ss->n; j++) {
+	  start_struct_in_array(fp);
+	  print(fp, "{");
+	  for (k = 0; k < g->scanner_blocks; k++) {
+	    ScannerBlock vs;
+	    vs.state_index = s->index;
+	    vs.scanner_index = j;
+	    vs.block_index = k;
+	    vs.chars = (void*)&ss->v[j]->chars[k * g->scanner_block_size];
+	    vs.transitions = 
+	      (void*)&ss->v[j]->transition[k * g->scanner_block_size];
+	    xv = &vs;
+	    yv = set_add_fn(ptrans_scanner_block_hash, xv, 
+			    &trans_scanner_block_fns);
+	    assert(yv != xv);
+	    add_struct_ptr_member(fp, SB_trans_uint8, "", 
+				    get_offset(fp, "d_accepts_diff_%d_%d_%d_%s", 
+					      yv->state_index, yv->scanner_index,
+					      yv->block_index, tag), scanner_block[k]);	    
+	    if (k != g->scanner_blocks-1) {
+	      if ((k % 2) == 1) { print(fp, "\n "); g->write_line += 1; }
+	    }
+	  }
+	  print(fp, "}");
+	  end_struct_in_array(fp, j != ss->n-1 ? ",\n" : "\n");
+	  g->write_line += 1;
+	}
+	end_array(fp, "\n\n");
+	g->write_line += 2;
+      }
     }
-    for (i = 0; i < g->states.n; i++) {
-        s = g->states.v[i];
-        ss = &s->scanner.states;
-        ivsblock = 0;
-        if (ss->n && !s->same_shifts) {
-            /* output scanner state transition tables */
-            /* assume SB_uint8, 16, and 32 have same member offsets */
-            assert(sizeof(SB_uint8) == sizeof(SB_uint16) && sizeof(SB_uint16) == sizeof(SB_uint32));
-            start_array_fn(fp, sizeof(SB_uint8), "SB_", scanner_u_type(s), make_name("d_scanner_%d_%s", i, tag), 
-                    "", ss->n, "\n");
-            g->write_line += 1;
-            pscanner_block_hash = &scanner_block_hash[scanner_size(s)-1]; 
-            for (j = 0; j < ss->n; j++) {
-                Action *a;
-                start_struct_in_array(fp);
-                if (ss->v[j]->accepts.n) {
-                    a = ss->v[j]->accepts.v[0];
-                    if (ss->v[j]->accepts.n == 1) {
-                        a = set_add_fn(&shift_hash, a, &shift_fns);
-                        add_struct_ptr_member(fp, SB_uint8, "", get_offset(fp, "%s", a->temp_string), shift);
-                    } else
-                        add_struct_ptr_member(fp, SB_uint8, "", get_offset(fp, "d_shift_%d_%d_%s", i, j, tag), shift);
-                } else
-                    add_struct_ptr_member(fp, SB_uint8, "", &null_entry, shift);
-                print_no_comma(fp, ", {");
-                for (k = 0; k < g->scanner_blocks; k++) {
-                    ScannerBlock vs;
-                    vs.state_index = s->index;
-                    vs.scanner_index = j;
-                    vs.block_index = k;
-                    vs.chars = (void*)&ss->v[j]->chars[k * g->scanner_block_size];
-                    vs.transitions = 
-                        (void*)&ss->v[j]->transition[k * g->scanner_block_size];
-                    xv = &vs;
-                    yv = set_add_fn(pscanner_block_hash, xv, &scanner_block_fns);
-                    assert(yv != xv);
-                    add_struct_ptr_member(fp, SB_uint8, "", get_offset(fp, "d_scanner_%d_%d_%d_%s", yv->state_index, yv->scanner_index, yv->block_index, tag), scanner_block[k]);
-                    if (k != g->scanner_blocks-1) {
-                        if ((k % 2) == 1) { print(fp, "\n "); g->write_line += 1; }
-                    }
-                }
-                print(fp, "}");
-                end_struct_in_array(fp, j != ss->n-1 ? ",\n" : "\n");
-                g->write_line += 1;
-            }
-            end_array(fp, "\n\n");
-            g->write_line += 2;
-            if (s->scan_kind != D_SCAN_LONGEST || s->trailing_context) {
-                /* output scanner accepts diffs tables */
-                start_array_fn(fp, sizeof(SB_trans_uint8), "SB_trans_", scanner_u_type(s), 
-                        make_name("d_transition_%d_%s", i, tag), "", ss->n, "\n");
-                g->write_line += 1;
-                ptrans_scanner_block_hash = 
-                    &trans_scanner_block_hash[scanner_size(s)-1]; 
-                for (j = 0; j < ss->n; j++) {
-                    start_struct_in_array(fp);
-                    print(fp, "{");
-                    for (k = 0; k < g->scanner_blocks; k++) {
-                        ScannerBlock vs;
-                        vs.state_index = s->index;
-                        vs.scanner_index = j;
-                        vs.block_index = k;
-                        vs.chars = (void*)&ss->v[j]->chars[k * g->scanner_block_size];
-                        vs.transitions = 
-                            (void*)&ss->v[j]->transition[k * g->scanner_block_size];
-                        xv = &vs;
-                        yv = set_add_fn(ptrans_scanner_block_hash, xv, 
-                                &trans_scanner_block_fns);
-                        assert(yv != xv);
-                        add_struct_ptr_member(fp, SB_trans_uint8, "", 
-                                get_offset(fp, "d_accepts_diff_%d_%d_%d_%s", 
-                                    yv->state_index, yv->scanner_index,
-                                    yv->block_index, tag), scanner_block[k]);	    
-                        if (k != g->scanner_blocks-1) {
-                            if ((k % 2) == 1) { print(fp, "\n "); g->write_line += 1; }
-                        }
-                    }
-                    print(fp, "}");
-                    end_struct_in_array(fp, j != ss->n-1 ? ",\n" : "\n");
-                    g->write_line += 1;
-                }
-                end_array(fp, "\n\n");
-                g->write_line += 2;
-            }
-        }
-    }
-    for (i = 0; i < 4; i++) {
-        vec_free(&scanner_block_hash[i]);
-        vec_free(&trans_scanner_block_hash[i]);
-    }
-    vec_free(&shift_hash);
-    FREE(vsblock);
+  }
+  for (i = 0; i < 4; i++) {
+    vec_free(&scanner_block_hash[i]);
+    vec_free(&trans_scanner_block_hash[i]);
+  }
+  vec_free(&shift_hash);
+  FREE(vsblock);
 }
 
 #define reduction_index(_r) \
@@ -905,118 +900,118 @@ write_scanner_data(File *fp, Grammar *g, char *tag) {
 
 static void
 write_goto_data(File *fp, Grammar *g, char *tag) {
-    Vec(intptr_t) vgoto;
-    State *s;
-    uint8 *goto_valid = NULL;
-    int i, j, x, again, nvalid_bytes, sym, lowest_sym;
+  Vec(intptr_t) vgoto;
+  State *s;
+  uint8 *goto_valid = NULL;
+  int i, j, x, again, nvalid_bytes, sym, lowest_sym;
 
-    nvalid_bytes = ((g->productions.n + g->terminals.n) + 7) / 8;
-    goto_valid = MALLOC(nvalid_bytes);
-    vec_clear(&vgoto);
-    for (i = 0; i < g->states.n; i++) {
-        s = g->states.v[i];
-        if (s->gotos.n) {
-            /* check for goto on token */
-            for (j = 0; j < s->gotos.n; j++)
-                if (s->gotos.v[j]->elem->kind == ELEM_TERM &&
-                        s->gotos.v[j]->elem->e.term->kind == TERM_TOKEN)
-                    s->goto_on_token = 1;
-            /* find lowest goto, set valid bits */
-            memset(goto_valid, 0, nvalid_bytes);
-            lowest_sym = elem_symbol(g, s->gotos.v[0]->elem);
-            SET_BIT(goto_valid, lowest_sym);
-            for (j = 1; j < s->gotos.n; j++) {
-                sym = elem_symbol(g, s->gotos.v[j]->elem);
-                SET_BIT(goto_valid, sym);
-                if (sym < lowest_sym)
-                    lowest_sym = sym;
-            }
-            /* insert into vgoto */
-            again = 1;
-            while (again) {
-                again = 0;
-                for (j = 0; j < s->gotos.n; j++) {
-                    x = elem_symbol(g, s->gotos.v[j]->elem);
-                    x -= lowest_sym;
-                    while (vgoto.n <= x) {
-                        int qq = 0;
-                        vec_add(&vgoto, 0);
-                        for (qq = 0; qq < vgoto.n; qq++)
-                            if (vgoto.v[qq] == 239847234)
-                                printf("wow...\n");
-                    }
-                    if (vgoto.v[x]) {
-                        again = 1;
-                        /* undo the damage */
-                        for (--j;j >= 0;j--) {
-                            x = elem_symbol(g, s->gotos.v[j]->elem);
-                            x -= lowest_sym;
-                            vgoto.v[x] = 0;
-                        }
-                        lowest_sym--;
-                        break;
-                    } else
-                        vgoto.v[x] = s->gotos.v[j]->state->index + 1;
-                }
-            }
-            s->goto_table_offset = lowest_sym;
-            /* valid bits */
-            start_array(fp, unsigned char, make_name("d_goto_valid_%d_%s", i, tag), "", 0, "");
-            print(fp, "\n");
-            g->write_line += 1;
-            for (j = 0; j < nvalid_bytes; j++)
-                add_array_member(fp, unsigned char, 0x%x, goto_valid[j], j == nvalid_bytes - 1);
-            end_array(fp, "\n");
-            g->write_line += 1;
-        } else
-            s->goto_table_offset = -INT_MAX;
-        /* reduce_actions */
-        if (s->reduce_actions.n) {
-            start_array(fp, D_Reduction *, make_name("d_reductions_%d_%s", i, tag), "", 0, "");
-            for (j = 0; j < s->reduce_actions.n; j++)
-                add_array_ptr_member(fp, D_Reduction *, "&",
-                        get_offset(fp, "d_reduction_%d_%s", reduction_index(s->reduce_actions.v[j]->rule), tag), 
-                        j == s->reduce_actions.n - 1);
-            end_array(fp, "\n");
-            g->write_line += 1;
-        }
-        /* modified_reduce_actions */
-        if (s->right_epsilon_hints.n) {
-            start_array(fp, D_RightEpsilonHint, make_name("d_right_epsilon_hints_%d_%s", i, tag), "", 0, "");
-            for (j = 0; j < s->right_epsilon_hints.n; j++) {
-                start_struct_in_array(fp);
-                add_struct_member(fp, D_RightEpsilonHint, %d, s->right_epsilon_hints.v[j]->depth, depth);
-                add_struct_member(fp, D_RightEpsilonHint, %d, s->right_epsilon_hints.v[j]->state->index, preceeding_state);
-                add_struct_ptr_member(fp, D_RightEpsilonHint, "&", get_offset(fp, "d_reduction_%d_%s", reduction_index(s->right_epsilon_hints.v[j]->rule), tag), reduction);
-                end_struct_in_array(fp, ((j == s->right_epsilon_hints.n - 1) ? "" : ","));
-            }
-            end_array(fp, "\n");
-            g->write_line += 1;
-        }
+  nvalid_bytes = ((g->productions.n + g->terminals.n) + 7) / 8;
+  goto_valid = MALLOC(nvalid_bytes);
+  vec_clear(&vgoto);
+  for (i = 0; i < g->states.n; i++) {
+    s = g->states.v[i];
+    if (s->gotos.n) {
+      /* check for goto on token */
+      for (j = 0; j < s->gotos.n; j++)
+	if (s->gotos.v[j]->elem->kind == ELEM_TERM &&
+	    s->gotos.v[j]->elem->e.term->kind == TERM_TOKEN)
+	  s->goto_on_token = 1;
+      /* find lowest goto, set valid bits */
+      memset(goto_valid, 0, nvalid_bytes);
+      lowest_sym = elem_symbol(g, s->gotos.v[0]->elem);
+      SET_BIT(goto_valid, lowest_sym);
+      for (j = 1; j < s->gotos.n; j++) {
+	sym = elem_symbol(g, s->gotos.v[j]->elem);
+	SET_BIT(goto_valid, sym);
+	if (sym < lowest_sym)
+	  lowest_sym = sym;
+      }
+      /* insert into vgoto */
+      again = 1;
+      while (again) {
+	again = 0;
+	for (j = 0; j < s->gotos.n; j++) {
+	  x = elem_symbol(g, s->gotos.v[j]->elem);
+	  x -= lowest_sym;
+	  while (vgoto.n <= x) {
+            int qq = 0;
+	    vec_add(&vgoto, 0);
+            for (qq = 0; qq < vgoto.n; qq++)
+              if (vgoto.v[qq] == 239847234)
+                printf("wow...\n");
+          }
+	  if (vgoto.v[x]) {
+	    again = 1;
+	    /* undo the damage */
+	    for (--j;j >= 0;j--) {
+	      x = elem_symbol(g, s->gotos.v[j]->elem);
+	      x -= lowest_sym;
+	      vgoto.v[x] = 0;
+	    }
+	    lowest_sym--;
+	    break;
+	  } else
+	    vgoto.v[x] = s->gotos.v[j]->state->index + 1;
+	}
+      }
+      s->goto_table_offset = lowest_sym;
+      /* valid bits */
+      start_array(fp, unsigned char, make_name("d_goto_valid_%d_%s", i, tag), "", 0, "");
+      print(fp, "\n");
+      g->write_line += 1;
+      for (j = 0; j < nvalid_bytes; j++)
+	add_array_member(fp, unsigned char, 0x%x, goto_valid[j], j == nvalid_bytes - 1);
+      end_array(fp, "\n");
+      g->write_line += 1;
+    } else
+      s->goto_table_offset = -INT_MAX;
+    /* reduce_actions */
+    if (s->reduce_actions.n) {
+      start_array(fp, D_Reduction *, make_name("d_reductions_%d_%s", i, tag), "", 0, "");
+      for (j = 0; j < s->reduce_actions.n; j++)
+	add_array_ptr_member(fp, D_Reduction *, "&",
+				 get_offset(fp, "d_reduction_%d_%s", reduction_index(s->reduce_actions.v[j]->rule), tag), 
+				 j == s->reduce_actions.n - 1);
+      end_array(fp, "\n");
+      g->write_line += 1;
     }
-    /* gotos */
-    if (vgoto.n) {
-        start_array(fp, unsigned short, make_name("d_gotos_%s", tag), "", vgoto.n, "\n");
-        g->write_line += 1;
-        for (j = 0; j < vgoto.n; j++) {
-            if (vgoto.v[j] < 0 || vgoto.v[j] > 65535)
-                d_fail("goto table overflow");
-            add_array_member(fp, unsigned short, %d, vgoto.v[j], j == vgoto.n - 1);
-            if (j % 16 == 15) {
-                print(fp, "\n");
-                g->write_line += 1;
-            }
-        }
-        end_array(fp, "\n\n");
-        g->write_line += 2;
-    } else {
-        start_array(fp, unsigned short, make_name("d_gotos_%s", tag), "", 1, "");
-        add_array_member(fp, unsigned short, %d, 0, 1);
-        end_array(fp, "\n");
-        g->write_line += 1;
+    /* modified_reduce_actions */
+    if (s->right_epsilon_hints.n) {
+      start_array(fp, D_RightEpsilonHint, make_name("d_right_epsilon_hints_%d_%s", i, tag), "", 0, "");
+      for (j = 0; j < s->right_epsilon_hints.n; j++) {
+	start_struct_in_array(fp);
+	add_struct_member(fp, D_RightEpsilonHint, %d, s->right_epsilon_hints.v[j]->depth, depth);
+	add_struct_member(fp, D_RightEpsilonHint, %d, s->right_epsilon_hints.v[j]->state->index, preceeding_state);
+	add_struct_ptr_member(fp, D_RightEpsilonHint, "&", get_offset(fp, "d_reduction_%d_%s", reduction_index(s->right_epsilon_hints.v[j]->rule), tag), reduction);
+	end_struct_in_array(fp, ((j == s->right_epsilon_hints.n - 1) ? "" : ","));
+      }
+      end_array(fp, "\n");
+      g->write_line += 1;
     }
-    vec_free(&vgoto);
-    FREE(goto_valid);
+  }
+  /* gotos */
+  if (vgoto.n) {
+    start_array(fp, unsigned short, make_name("d_gotos_%s", tag), "", vgoto.n, "\n");
+    g->write_line += 1;
+    for (j = 0; j < vgoto.n; j++) {
+      if (vgoto.v[j] < 0 || vgoto.v[j] > 65535)
+	d_fail("goto table overflow");
+      add_array_member(fp, unsigned short, %d, vgoto.v[j], j == vgoto.n - 1);
+      if (j % 16 == 15) {
+	print(fp, "\n");
+	g->write_line += 1;
+      }
+    }
+    end_array(fp, "\n\n");
+    g->write_line += 2;
+  } else {
+    start_array(fp, unsigned short, make_name("d_gotos_%s", tag), "", 1, "");
+    add_array_member(fp, unsigned short, %d, 0, 1);
+    end_array(fp, "\n");
+    g->write_line += 1;
+  }
+  vec_free(&vgoto);
+  FREE(goto_valid);
 }
 
 static void
@@ -1067,34 +1062,34 @@ write_scanner_code(File *file, Grammar *g, char *tag) {
 
 static int
 find_symbol(Grammar *g, char *s, char *e, int kind) {
-    while (*s && isspace_(*s)) s++;
-    if (e > s) {
-        if (kind == D_SYMBOL_NTERM) {
-            Production *p;
-            if ((p = lookup_production(g, s, e-s)))
-                return p->index;
-        } else if (kind == D_SYMBOL_STRING) {
-            int i;
-            int found = -1;
-            for (i = 0; i < g->terminals.n;i++)
-                if (g->terminals.v[i]->kind == TERM_STRING &&
-                        ((g->terminals.v[i]->term_name &&
-                          strlen(g->terminals.v[i]->term_name) == e-s &&
-                          !strncmp(s, g->terminals.v[i]->term_name, e-s)) ||
-                         (!g->terminals.v[i]->term_name &&
-                          g->terminals.v[i]->string_len == (e-s) &&
-                          !strncmp(s, g->terminals.v[i]->string, e-s)))) {
-                    if (found > 0) {
-                        d_fail("attempt to find symbol for non-unique string '%s'\n",
-                                g->terminals.v[i]->string);
-                    } else
-                        found = i;
-                }
-            if (found > 0)
-                return found + g->productions.n;
-        }
+  while (*s && isspace_(*s)) s++;
+  if (e > s) {
+    if (kind == D_SYMBOL_NTERM) {
+      Production *p;
+      if ((p = lookup_production(g, s, e-s)))
+	return p->index;
+    } else if (kind == D_SYMBOL_STRING) {
+      int i;
+      int found = -1;
+      for (i = 0; i < g->terminals.n;i++)
+	if (g->terminals.v[i]->kind == TERM_STRING &&
+	    ((g->terminals.v[i]->term_name &&
+	      strlen(g->terminals.v[i]->term_name) == e-s &&
+	      !strncmp(s, g->terminals.v[i]->term_name, e-s)) ||
+	     (!g->terminals.v[i]->term_name &&
+	      g->terminals.v[i]->string_len == (e-s) &&
+	      !strncmp(s, g->terminals.v[i]->string, e-s)))) {
+	  if (found > 0) {
+	    d_fail("attempt to find symbol for non-unique string '%s'\n",
+		   g->terminals.v[i]->string);
+	  } else
+	    found = i;
+	}
+      if (found > 0)
+	return found + g->productions.n;
     }
-    return -1;
+  }
+  return -1;
 }
 
 static void
@@ -1296,156 +1291,155 @@ static char * reduction_args = "(void *_ps, void **_children, int _n_children, i
 
 static void
 write_reductions(File *file, Grammar *g, char *tag) {
-    int i, j, k, l, pmax;
-    Production *p, *pdefault;
-    Rule *r, *rdefault = NULL;
-    char final_code[256], speculative_code[256], pass_code[256];
-    FILE *fp = file->fp;
+  int i, j, k, l, pmax;
+  Production *p, *pdefault;
+  Rule *r, *rdefault = NULL;
+  char final_code[256], speculative_code[256], pass_code[256];
+  FILE *fp = file->fp;
 
-    pdefault = lookup_production(g, "_", 1);
-    if (pdefault) {
-        rdefault = pdefault->rules.v[0];
-        fprintf(fp, "int d_speculative_reduction_code_%d_%d_%s%s;\n",
-                rdefault->prod->index, rdefault->index, tag, reduction_args);
-        g->write_line += 1;
-        fprintf(fp, "int d_final_reduction_code_%d_%d_%s%s;\n",
-                rdefault->prod->index, rdefault->index, tag, reduction_args);
-        g->write_line += 1;
-        fprintf(fp, "extern D_ReductionCode d_pass_code_%d_%d_%s[];\n",
-                rdefault->prod->index, rdefault->index, tag);
-        g->write_line += 1;
-        for (i = 0; i < rdefault->pass_code.n; i++) {
-            fprintf(fp, "int d_pass_code_%d_%d_%d_%s%s;\n",
-                    i, rdefault->prod->index, rdefault->index, tag, reduction_args);
-            g->write_line += 1;
-        }
+  pdefault = lookup_production(g, "_", 1);
+  if (pdefault) {
+    rdefault = pdefault->rules.v[0];
+    fprintf(fp, "int d_speculative_reduction_code_%d_%d_%s%s;\n",
+	    rdefault->prod->index, rdefault->index, tag, reduction_args);
+    g->write_line += 1;
+    fprintf(fp, "int d_final_reduction_code_%d_%d_%s%s;\n",
+	    rdefault->prod->index, rdefault->index, tag, reduction_args);
+    g->write_line += 1;
+    fprintf(fp, "extern D_ReductionCode d_pass_code_%d_%d_%s[];\n",
+	    rdefault->prod->index, rdefault->index, tag);
+    g->write_line += 1;
+    for (i = 0; i < rdefault->pass_code.n; i++) {
+      fprintf(fp, "int d_pass_code_%d_%d_%d_%s%s;\n",
+	      i, rdefault->prod->index, rdefault->index, tag, reduction_args);
+      g->write_line += 1;
     }
-    for (i = 0; i < g->productions.n; i++) {
-        p = g->productions.v[i];
-        for (j = p->rules.n - 1; j >= 0; j--) {
-            r = p->rules.v[j];
-            for (k = 0; k < j; k++)
-                if (r->elems.n == p->rules.v[k]->elems.n &&
-                        r->speculative_code.code == p->rules.v[k]->speculative_code.code &&
-                        r->final_code.code == p->rules.v[k]->final_code.code &&
-                        r->op_priority == p->rules.v[k]->op_priority &&
-                        r->op_assoc == p->rules.v[k]->op_assoc &&
-                        r->rule_priority == p->rules.v[k]->rule_priority &&
-                        r->rule_assoc == p->rules.v[k]->rule_assoc &&
-                        r->action_index == p->rules.v[k]->action_index) 
-                {
-                    if (r->pass_code.n != p->rules.v[k]->pass_code.n)
-                        continue;
-                    for (l = 0; l < r->pass_code.n; l++) {
-                        if (!r->pass_code.v[l] && !p->rules.v[k]->pass_code.v[l])
-                            continue;
-                        if (!r->pass_code.v[l] || !p->rules.v[k]->pass_code.v[l])
-                            goto Lcontinue;
-                        if (r->pass_code.v[l]->code != p->rules.v[k]->pass_code.v[l]->code)
-                            goto Lcontinue;
-                    }
-                    r->same_reduction = p->rules.v[k];
-                    break;
-Lcontinue:;
-                }
-        }
-        for (j = 0; j < p->rules.n; j++) {
-            r = p->rules.v[j];
-            if (r->same_reduction)
-                continue;
-            if (r->speculative_code.code) {
-                char fname[256];
-                sprintf(fname, "int d_speculative_reduction_code_%d_%d_%s%s ",
-                        r->prod->index, r->index, tag, reduction_args);
-                write_code(fp, g, r, r->speculative_code.code, fname, r->speculative_code.line, g->pathname);
-            }
-            if (r->final_code.code && r->final_code.line != -1) {
-                char fname[256];
-                sprintf(fname, "int d_final_reduction_code_%d_%d_%s%s ",
-                        r->prod->index, r->index, tag, reduction_args);
-                write_code(fp, g, r, r->final_code.code, fname, r->final_code.line, g->pathname);
-            }
-            for (k = 0; k < r->pass_code.n; k++) {
-                if (r->pass_code.v[k]) {
-                    char fname[256];
-                    sprintf(fname, "int d_pass_code_%d_%d_%d_%s%s ",
-                            k, r->prod->index, r->index, tag, reduction_args);
-                    write_code(fp, g, r, r->pass_code.v[k]->code, fname, r->pass_code.v[k]->line, g->pathname);
-                }
-            }
-            if (r->speculative_code.code)
-                sprintf(speculative_code, "d_speculative_reduction_code_%d_%d_%s", 
-                        r->prod->index, r->index, tag);
-            else if (rdefault && rdefault->speculative_code.code)
-                sprintf(speculative_code, "d_speculative_reduction_code_%d_%d_%s", 
-                        rdefault->prod->index, rdefault->index, tag);
-            else 
-                strcpy(speculative_code, "NULL");
-            if (r->final_code.code && r->final_code.line != -1)
-                sprintf(final_code, "d_final_reduction_code_%d_%d_%s", r->prod->index, r->index, tag);
-            else if (rdefault && rdefault->final_code.code && rdefault->final_code.line != -1)
-                sprintf(final_code, "d_final_reduction_code_%d_%d_%s", 
-                        rdefault->prod->index, rdefault->index, tag);
-            else
-                strcpy(final_code, "NULL");
-            pmax = r->pass_code.n;
-            if (r->pass_code.n || (rdefault && rdefault->pass_code.n)) {
-                if (rdefault && rdefault->pass_code.n > pmax)
-                    pmax = rdefault->pass_code.n;
-                if (!r->pass_code.n)
-                    sprintf(pass_code, "d_pass_code_%d_%d_%s", 
-                            rdefault->prod->index, rdefault->index, tag);
-                else {
-                    sprintf(pass_code, "d_pass_code_%d_%d_%s", 
-                            r->prod->index, r->index, tag);
-                    fprintf(fp, "D_ReductionCode %s[] = {", pass_code);
-                    for (k = 0; k < pmax; k++) {
-                        if (r->pass_code.n > k && r->pass_code.v[k])
-                            fprintf(fp, "d_pass_code_%d_%d_%d_%s%s", k, r->prod->index, r->index, tag,
-                                    k < pmax-1 ? ", " : "");
-                        else
-                            if (rdefault && rdefault->pass_code.n > k && rdefault->pass_code.v[k])
-                                fprintf(fp, "d_pass_code_%d_%d_%d_%s%s", k, rdefault->prod->index, 
-                                        rdefault->index, tag, k < pmax-1 ? ", " : "");
-                            else
-                                fprintf(fp, "NULL%s", k < pmax-1 ? ", " : "");
-                    } 
-                    fprintf(fp, "};\n\n");
-                    g->write_line += 2;
-                }
-            } else
-                strcpy(pass_code, "NULL");
-            start_struct(file, D_Reduction, make_name("d_reduction_%d_%s", r->index, tag), "");
-            add_struct_member(file, D_Reduction, %d, r->elems.n,       nelements);
-            add_struct_member(file, D_Reduction, %d, r->prod->index,   symbol);
-            if (file->binary) {
-                if (!r->prod->internal && r->action_index >= 0) {
-                    add_struct_ptr_member(file, D_Reduction, "", &spec_code_entry,  speculative_code);
-                    add_struct_ptr_member(file, D_Reduction, "", &final_code_entry,  final_code);
-                } else {
-                    add_struct_ptr_member(file, D_Reduction, "", &null_entry,  speculative_code);
-                    add_struct_ptr_member(file, D_Reduction, "", &null_entry,  final_code);
-                }
-            } else {
-                fprintf(fp, ", %s", speculative_code);
-                fprintf(fp, ", %s", final_code);	
-            }
-            add_struct_member(file, D_Reduction, %d, r->op_assoc,      op_assoc);
-            add_struct_member(file, D_Reduction, %d, r->rule_assoc,    rule_assoc);
-            add_struct_member(file, D_Reduction, %d, r->op_priority,   op_priority);
-            add_struct_member(file, D_Reduction, %d, r->rule_priority, rule_priority);
-            add_struct_member(file, D_Reduction, %d, r->prod->internal ? -1 : r->action_index, action_index);
-            /* printf("red action_index: %d\n", (int)(r->prod->internal ? -1 : r->action_index)); */
-            add_struct_member(file, D_Reduction, %d, pmax,             npass_code);
-            if (file->binary) {
-                add_struct_ptr_member(file, D_Reduction, "", &null_entry,  pass_code);	
-            } else {
-                fprintf(fp, ", %s", pass_code);
-            }
-            end_struct(file, D_Reduction, "\n");
-            g->write_line += 1;
-        }
+  }
+  for (i = 0; i < g->productions.n; i++) {
+    p = g->productions.v[i];
+    for (j = p->rules.n - 1; j >= 0; j--) {
+      r = p->rules.v[j];
+      for (k = 0; k < j; k++)
+	if (r->elems.n == p->rules.v[k]->elems.n &&
+	    r->speculative_code.code == p->rules.v[k]->speculative_code.code &&
+	    r->final_code.code == p->rules.v[k]->final_code.code &&
+	    r->op_priority == p->rules.v[k]->op_priority &&
+	    r->op_assoc == p->rules.v[k]->op_assoc &&
+	    r->rule_priority == p->rules.v[k]->rule_priority &&
+	    r->rule_assoc == p->rules.v[k]->rule_assoc &&
+	    r->action_index == p->rules.v[k]->action_index) 
+	{
+	  if (r->pass_code.n != p->rules.v[k]->pass_code.n)
+	    continue;
+	  for (l = 0; l < r->pass_code.n; l++) {
+	    if (!r->pass_code.v[l] && !p->rules.v[k]->pass_code.v[l])
+	      continue;
+	    if (!r->pass_code.v[l] || !p->rules.v[k]->pass_code.v[l])
+	      goto Lcontinue;
+	    if (r->pass_code.v[l]->code != p->rules.v[k]->pass_code.v[l]->code)
+	      goto Lcontinue;
+	  }
+	  r->same_reduction = p->rules.v[k];
+	  break;
+	Lcontinue:;
+	}
     }
+    for (j = 0; j < p->rules.n; j++) {
+      r = p->rules.v[j];
+      if (r->same_reduction)
+	continue;
+      if (r->speculative_code.code) {
+	char fname[256];
+	sprintf(fname, "int d_speculative_reduction_code_%d_%d_%s%s ",
+		r->prod->index, r->index, tag, reduction_args);
+	write_code(fp, g, r, r->speculative_code.code, fname, r->speculative_code.line, g->pathname);
+      }
+      if (r->final_code.code) {
+	char fname[256];
+	sprintf(fname, "int d_final_reduction_code_%d_%d_%s%s ",
+		r->prod->index, r->index, tag, reduction_args);
+	write_code(fp, g, r, r->final_code.code, fname, r->final_code.line, g->pathname);
+      }
+      for (k = 0; k < r->pass_code.n; k++) {
+	if (r->pass_code.v[k]) {
+	  char fname[256];
+	  sprintf(fname, "int d_pass_code_%d_%d_%d_%s%s ",
+		  k, r->prod->index, r->index, tag, reduction_args);
+	  write_code(fp, g, r, r->pass_code.v[k]->code, fname, r->pass_code.v[k]->line, g->pathname);
+	}
+      }
+      if (r->speculative_code.code)
+	  sprintf(speculative_code, "d_speculative_reduction_code_%d_%d_%s", 
+		  r->prod->index, r->index, tag);
+      else if (rdefault && rdefault->speculative_code.code)
+	sprintf(speculative_code, "d_speculative_reduction_code_%d_%d_%s", 
+		rdefault->prod->index, rdefault->index, tag);
+      else 
+	strcpy(speculative_code, "NULL");
+      if (r->final_code.code)
+	sprintf(final_code, "d_final_reduction_code_%d_%d_%s", r->prod->index, r->index, tag);
+      else if (rdefault && rdefault->final_code.code)
+	sprintf(final_code, "d_final_reduction_code_%d_%d_%s", 
+		rdefault->prod->index, rdefault->index, tag);
+      else
+	strcpy(final_code, "NULL");
+      pmax = r->pass_code.n;
+      if (r->pass_code.n || (rdefault && rdefault->pass_code.n)) {
+	if (rdefault && rdefault->pass_code.n > pmax)
+	  pmax = rdefault->pass_code.n;
+	if (!r->pass_code.n)
+	  sprintf(pass_code, "d_pass_code_%d_%d_%s", 
+		  rdefault->prod->index, rdefault->index, tag);
+	else {
+	  sprintf(pass_code, "d_pass_code_%d_%d_%s", 
+		  r->prod->index, r->index, tag);
+	  fprintf(fp, "D_ReductionCode %s[] = {", pass_code);
+	  for (k = 0; k < pmax; k++) {
+	    if (r->pass_code.n > k && r->pass_code.v[k])
+	      fprintf(fp, "d_pass_code_%d_%d_%d_%s%s", k, r->prod->index, r->index, tag,
+		      k < pmax-1 ? ", " : "");
+	    else
+	      if (rdefault && rdefault->pass_code.n > k && rdefault->pass_code.v[k])
+		fprintf(fp, "d_pass_code_%d_%d_%d_%s%s", k, rdefault->prod->index, 
+			rdefault->index, tag, k < pmax-1 ? ", " : "");
+	      else
+		fprintf(fp, "NULL%s", k < pmax-1 ? ", " : "");
+	  } 
+	  fprintf(fp, "};\n\n");
+	  g->write_line += 2;
+	}
+      } else
+	strcpy(pass_code, "NULL");
+      start_struct(file, D_Reduction, make_name("d_reduction_%d_%s", r->index, tag), "");
+      add_struct_member(file, D_Reduction, %d, r->elems.n,       nelements);
+      add_struct_member(file, D_Reduction, %d, r->prod->index,   symbol);
+      if (file->binary) {
+        if (!r->prod->internal && r->action_index >= 0) {
+	  add_struct_ptr_member(file, D_Reduction, "", &spec_code_entry,  speculative_code);
+	  add_struct_ptr_member(file, D_Reduction, "", &final_code_entry,  final_code);
+	} else {
+	  add_struct_ptr_member(file, D_Reduction, "", &null_entry,  speculative_code);
+	  add_struct_ptr_member(file, D_Reduction, "", &null_entry,  final_code);
+	}
+      } else {
+	fprintf(fp, ", %s", speculative_code);
+	fprintf(fp, ", %s", final_code);	
+      }
+      add_struct_member(file, D_Reduction, %d, r->op_assoc,      op_assoc);
+      add_struct_member(file, D_Reduction, %d, r->rule_assoc,    rule_assoc);
+      add_struct_member(file, D_Reduction, %d, r->op_priority,   op_priority);
+      add_struct_member(file, D_Reduction, %d, r->rule_priority, rule_priority);
+      add_struct_member(file, D_Reduction, %d, r->prod->internal ? -1 : r->action_index, action_index);
+      add_struct_member(file, D_Reduction, %d, pmax,             npass_code);
+      if (file->binary) {
+	add_struct_ptr_member(file, D_Reduction, "", &null_entry,  pass_code);	
+      } else {
+	fprintf(fp, ", %s", pass_code);
+      }
+      end_struct(file, D_Reduction, "\n");
+      g->write_line += 1;
+    }
+  }
 }
 
 static uint32
@@ -1491,140 +1485,140 @@ er_hint_hash_fns = {
 
 static void
 write_error_data(File *fp, Grammar *g, VecState *er_hash, char *tag) {
-    int i, j;
-    State *s;
-    Term *t;
-    State *h;
-    char *ss;
+  int i, j;
+  State *s;
+  Term *t;
+  State *h;
+  char *ss;
 
-    if (g->states.n) {
-        for (i = 0; i < g->states.n; i++) {
-            s = g->states.v[i];
-            if (s->error_recovery_hints.n) {
-                h = set_add_fn(er_hash, s, &er_hint_hash_fns);
-                if (h == s) {
-                    start_array(fp, D_ErrorRecoveryHint, make_name("d_error_recovery_hints_%d_%s", i, tag), "", 0, "");
-                    print(fp, s->error_recovery_hints.n > 1 ? "\n" : "");
-                    for (j = 0; j < s->error_recovery_hints.n; j++) {
-                        t = s->error_recovery_hints.v[j]->rule->elems.v[
-                            s->error_recovery_hints.v[j]->rule->elems.n - 1]->e.term;
-                        ss = escape_string(t->string);
-                        start_struct_in_array(fp);
-                        add_struct_member(fp, D_ErrorRecoveryHint, %d, s->error_recovery_hints.v[j]->depth, depth);
-                        add_struct_member(fp, D_ErrorRecoveryHint, %d, s->error_recovery_hints.v[j]->rule->prod->index, symbol);
-                        add_struct_str_member(fp, D_ErrorRecoveryHint, ss, string);
-                        end_struct_in_array(fp, j == s->error_recovery_hints.n - 1 ? "" : ",\n");
-                        if (j != s->error_recovery_hints.n - 1)
-                            g->write_line += 1;
-                        FREE(ss);
-                    }
-                    end_array(fp, "\n");
-                    g->write_line += 1;
-                }
-            }
-        }
+  if (g->states.n) {
+    for (i = 0; i < g->states.n; i++) {
+      s = g->states.v[i];
+      if (s->error_recovery_hints.n) {
+	h = set_add_fn(er_hash, s, &er_hint_hash_fns);
+	if (h == s) {
+	  start_array(fp, D_ErrorRecoveryHint, make_name("d_error_recovery_hints_%d_%s", i, tag), "", 0, "");
+	  print(fp, s->error_recovery_hints.n > 1 ? "\n" : "");
+	  for (j = 0; j < s->error_recovery_hints.n; j++) {
+	    t = s->error_recovery_hints.v[j]->rule->elems.v[
+	      s->error_recovery_hints.v[j]->rule->elems.n - 1]->e.term;
+	    ss = escape_string(t->string);
+	    start_struct_in_array(fp);
+	    add_struct_member(fp, D_ErrorRecoveryHint, %d, s->error_recovery_hints.v[j]->depth, depth);
+	    add_struct_member(fp, D_ErrorRecoveryHint, %d, s->error_recovery_hints.v[j]->rule->prod->index, symbol);
+	    add_struct_str_member(fp, D_ErrorRecoveryHint, ss, string);
+	    end_struct_in_array(fp, j == s->error_recovery_hints.n - 1 ? "" : ",\n");
+	    if (j != s->error_recovery_hints.n - 1)
+	      g->write_line += 1;
+	    FREE(ss);
+	  }
+	  end_array(fp, "\n");
+	  g->write_line += 1;
+	}
+      }
     }
+  }
 }
 static char *scan_kind_strings[] = {"D_SCAN_ALL", "D_SCAN_LONGEST", "D_SCAN_MIXED",  NULL};
 
 static void
 write_state_data(File *fp, Grammar *g, VecState *er_hash, char *tag) {
-    int i;
-    State *s, *h, *shifts;
-
+  int i;
+  State *s, *h, *shifts;
+  
+  print(fp, "\n");
+  start_array(fp, D_State, make_name("d_states_%s", tag), "", 0, "");  
+  if (g->states.n) {
     print(fp, "\n");
-    start_array(fp, D_State, make_name("d_states_%s", tag), "", 0, "");  
-    if (g->states.n) {
-        print(fp, "\n");
-        for (i = 0; i < g->states.n; i++) {
-            s = g->states.v[i];
-            shifts = s->same_shifts ? s->same_shifts : s;
-            start_struct_in_array(fp); 
-            if (s->gotos.n)
-                add_struct_ptr_member(fp, D_State, "", get_offset(fp, "d_goto_valid_%d_%s", i, tag), goto_valid);	
-            else
-                add_struct_ptr_member(fp, D_State, "", &null_entry, goto_valid);	
-            add_struct_member(fp, D_State, %d, s->goto_table_offset, goto_table_offset);      
-            print_no_comma(fp, ", {");
-            if (s->reduce_actions.n) {
-                add_struct_member(fp, D_State, %d, s->reduce_actions.n, reductions.n);
-                add_struct_ptr_member(fp, D_State, "", get_offset(fp, "d_reductions_%d_%s", i, tag), reductions.v);
-            } else {
-                add_struct_member(fp, D_State, %d, 0, reductions.n);
-                add_struct_ptr_member(fp, D_State, "", &null_entry, reductions.v);
-            }
-            print(fp, "}, ");
-            print_no_comma(fp, "{");
-            if (s->right_epsilon_hints.n) {
-                add_struct_member(fp, D_State, %d, s->right_epsilon_hints.n, right_epsilon_hints.n);
-                add_struct_ptr_member(fp, D_State, "", get_offset(fp, "d_right_epsilon_hints_%d_%s", i, tag), right_epsilon_hints.v);
-            } else {
-                add_struct_member(fp, D_State, %d, 0, right_epsilon_hints.n);
-                add_struct_ptr_member(fp, D_State, "", &null_entry, right_epsilon_hints.v);
-            }
-            print(fp, "}, ");
-            print_no_comma(fp, "{");
-            if (s->error_recovery_hints.n) {
-                h = set_add_fn(er_hash, s, &er_hint_hash_fns);
-                add_struct_member(fp, D_State, %d, s->error_recovery_hints.n, error_recovery_hints.n);
-                add_struct_ptr_member(fp, D_State, "", get_offset(fp, "d_error_recovery_hints_%d_%s", h->index, tag), error_recovery_hints.v);
-            } else {
-                add_struct_member(fp, D_State, %d, 0, error_recovery_hints.n);
-                add_struct_ptr_member(fp, D_State, "", &null_entry, error_recovery_hints.v);
-            }
-            print(fp, "}");
-            if (s->shift_actions.n || s->scanner_code || (g->scanner.code && s->goto_on_token))
-                add_struct_member(fp, D_State, %d, 1, shifts);
-            else
-                add_struct_member(fp, D_State, %d, 0, shifts);
-            if (g->scanner.code) {
-                if (s->goto_on_token) {
-                    assert(!fp->binary);
-                    fprintf(fp->fp, ", %s", g->scanner.code);
-                } else {
-                    add_struct_ptr_member(fp, D_State, "", &null_entry, scanner_code);
-                }
-            } else if (s->scanner_code)
-                add_struct_ptr_member(fp, D_State, "", get_offset(fp, "d_scan_code_%d_%s", i, tag), scanner_code);
-            else
-                add_struct_ptr_member(fp, D_State, "", &null_entry, scanner_code);
-            if (s->scanner.states.n) {
-                print_no_comma(fp, ", (void*)");
-                add_struct_ptr_member(fp, D_State, "", get_offset(fp, "d_scanner_%d_%s", shifts->index, tag), scanner_table);
-            } else {
-                add_struct_ptr_member(fp, D_State, "", &null_entry, scanner_table);
-            }
-            if (!fp->binary)
-                fprintf(fp->fp, ", sizeof(%s) ", scanner_type(s));
-            else
-                add_struct_member(fp, D_State, %d, scanner_size(s), scanner_size);
-            add_struct_member(fp, D_State, %d, s->accept ? 1 : 0, accept);
-            add_struct_const_member(fp, D_State, scan_kind_strings[s->scan_kind], s->scan_kind, scan_kind);
-            if ((shifts->scan_kind != D_SCAN_LONGEST || shifts->trailing_context)
-                    && shifts->scanner.states.n) {
-                print_no_comma(fp, ", (void*)");
-                add_struct_ptr_member(fp, D_State, "", get_offset(fp, "d_transition_%d_%s", shifts->index, tag), transition_table);
-            } else {
-                add_struct_ptr_member(fp, D_State, "", &null_entry, transition_table);
-            }
-            if ((shifts->scan_kind != D_SCAN_LONGEST || shifts->trailing_context)
-                    && shifts->scanner.states.n)
-                add_struct_ptr_member(fp, D_State, "", get_offset(fp, "d_accepts_diff_%d_%s", shifts->index, tag), accepts_diff); 
-            else
-                add_struct_ptr_member(fp, D_State, "", &null_entry, accepts_diff);
-            if (s->reduces_to)
-                add_struct_member(fp, D_State, %d, s->reduces_to->index, reduces_to);
-            else
-                add_struct_member(fp, D_State, %d, -1, reduces_to);
-            end_struct_in_array(fp, (i == g->states.n - 1 ? "\n" : ",\n"));
-        }
-        end_array(fp, "\n\n");
-    } else {
-        if (!fp->binary)  /*BS it doesn't look like this fits a D_State?*/
-            fprintf(fp->fp, "{{0, {0, NULL}, 0, NULL}};\n\n");
-        else
-            d_fail("no states\n");
+    for (i = 0; i < g->states.n; i++) {
+      s = g->states.v[i];
+      shifts = s->same_shifts ? s->same_shifts : s;
+      start_struct_in_array(fp); 
+      if (s->gotos.n)
+	add_struct_ptr_member(fp, D_State, "", get_offset(fp, "d_goto_valid_%d_%s", i, tag), goto_valid);	
+      else
+	add_struct_ptr_member(fp, D_State, "", &null_entry, goto_valid);	
+      add_struct_member(fp, D_State, %d, s->goto_table_offset, goto_table_offset);      
+      print_no_comma(fp, ", {");
+      if (s->reduce_actions.n) {
+	add_struct_member(fp, D_State, %d, s->reduce_actions.n, reductions.n);
+	add_struct_ptr_member(fp, D_State, "", get_offset(fp, "d_reductions_%d_%s", i, tag), reductions.v);
+      } else {
+	add_struct_member(fp, D_State, %d, 0, reductions.n);
+	add_struct_ptr_member(fp, D_State, "", &null_entry, reductions.v);
+      }
+      print(fp, "}, ");
+      print_no_comma(fp, "{");
+      if (s->right_epsilon_hints.n) {
+	add_struct_member(fp, D_State, %d, s->right_epsilon_hints.n, right_epsilon_hints.n);
+	add_struct_ptr_member(fp, D_State, "", get_offset(fp, "d_right_epsilon_hints_%d_%s", i, tag), right_epsilon_hints.v);
+      } else {
+	add_struct_member(fp, D_State, %d, 0, right_epsilon_hints.n);
+	add_struct_ptr_member(fp, D_State, "", &null_entry, right_epsilon_hints.v);
+      }
+      print(fp, "}, ");
+      print_no_comma(fp, "{");
+      if (s->error_recovery_hints.n) {
+	h = set_add_fn(er_hash, s, &er_hint_hash_fns);
+	add_struct_member(fp, D_State, %d, s->error_recovery_hints.n, error_recovery_hints.n);
+	add_struct_ptr_member(fp, D_State, "", get_offset(fp, "d_error_recovery_hints_%d_%s", h->index, tag), error_recovery_hints.v);
+      } else {
+	add_struct_member(fp, D_State, %d, 0, error_recovery_hints.n);
+	add_struct_ptr_member(fp, D_State, "", &null_entry, error_recovery_hints.v);
+      }
+      print(fp, "}");
+      if (s->shift_actions.n || s->scanner_code || (g->scanner.code && s->goto_on_token))
+	add_struct_member(fp, D_State, %d, 1, shifts);
+      else
+	add_struct_member(fp, D_State, %d, 0, shifts);
+      if (g->scanner.code) {
+	if (s->goto_on_token) {
+	  assert(!fp->binary);
+	  fprintf(fp->fp, ", %s", g->scanner.code);
+	} else {
+	  add_struct_ptr_member(fp, D_State, "", &null_entry, scanner_code);
+	}
+      } else if (s->scanner_code)
+	add_struct_ptr_member(fp, D_State, "", get_offset(fp, "d_scan_code_%d_%s", i, tag), scanner_code);
+      else
+	add_struct_ptr_member(fp, D_State, "", &null_entry, scanner_code);
+      if (s->scanner.states.n) {
+	print_no_comma(fp, ", (void*)");
+	add_struct_ptr_member(fp, D_State, "", get_offset(fp, "d_scanner_%d_%s", shifts->index, tag), scanner_table);
+      } else {
+	add_struct_ptr_member(fp, D_State, "", &null_entry, scanner_table);
+      }
+      if (!fp->binary)
+	fprintf(fp->fp, ", sizeof(%s) ", scanner_type(s));
+      else
+	add_struct_member(fp, D_State, %d, scanner_size(s), scanner_size);
+      add_struct_member(fp, D_State, %d, s->accept ? 1 : 0, accept);
+      add_struct_const_member(fp, D_State, scan_kind_strings[s->scan_kind], s->scan_kind, scan_kind);
+      if ((shifts->scan_kind != D_SCAN_LONGEST || shifts->trailing_context)
+	  && shifts->scanner.states.n) {
+	print_no_comma(fp, ", (void*)");
+	add_struct_ptr_member(fp, D_State, "", get_offset(fp, "d_transition_%d_%s", shifts->index, tag), transition_table);
+      } else {
+	add_struct_ptr_member(fp, D_State, "", &null_entry, transition_table);
+      }
+      if ((shifts->scan_kind != D_SCAN_LONGEST || shifts->trailing_context)
+	  && shifts->scanner.states.n)
+	add_struct_ptr_member(fp, D_State, "", get_offset(fp, "d_accepts_diff_%d_%s", shifts->index, tag), accepts_diff); 
+      else
+	add_struct_ptr_member(fp, D_State, "", &null_entry, accepts_diff);
+      if (s->reduces_to)
+	add_struct_member(fp, D_State, %d, s->reduces_to->index, reduces_to);
+      else
+	add_struct_member(fp, D_State, %d, -1, reduces_to);
+      end_struct_in_array(fp, (i == g->states.n - 1 ? "\n" : ",\n"));
     }
+    end_array(fp, "\n\n");
+  } else {
+    if (!fp->binary)  /*BS it doesn't look like this fits a D_State?*/
+      fprintf(fp->fp, "{{0, {0, NULL}, 0, NULL}};\n\n");
+    else
+      d_fail("no states\n");
+  }
 }
 
 static int
@@ -1699,38 +1693,38 @@ static int d_symbol_values[] = {
   D_SYMBOL_STRING, D_SYMBOL_REGEX, D_SYMBOL_CODE, D_SYMBOL_TOKEN };
 static void
 write_symbol_data(File *fp, Grammar *g, char *tag) {
-    int i;
-    start_array(fp, D_Symbol, make_name("d_symbols_%s", tag), "", 0, "\n");
+  int i;
+  start_array(fp, D_Symbol, make_name("d_symbols_%s", tag), "", 0, "\n");
+  g->write_line += 1;
+  for (i = 0; i < g->productions.n; i++) {
+    int state = -1, internal_index;
+    if (!g->productions.v[i]->internal && g->productions.v[i]->elem)
+      state = g->productions.v[i]->state->index;
+    start_struct_in_array(fp);
+    internal_index = g->productions.v[i]->internal ? (is_EBNF(g->productions.v[i]->internal) ? 2 : 1) : 0;
+    add_struct_const_member(fp, D_Symbol, d_internal[internal_index], d_internal_values[internal_index], kind);
+    add_struct_str_member(fp, D_Symbol, g->productions.v[i]->name, name);
+    add_struct_member(fp, D_Symbol, %d, g->productions.v[i]->name_len, name_len);
+    add_struct_member(fp, D_Symbol, %d, state, start_symbol);
+    end_struct_in_array(fp, ",\n");
     g->write_line += 1;
-    for (i = 0; i < g->productions.n; i++) {
-        int state = -1, internal_index;
-        if (!g->productions.v[i]->internal && g->productions.v[i]->elem)
-            state = g->productions.v[i]->state->index;
-        start_struct_in_array(fp);
-        internal_index = g->productions.v[i]->internal ? (is_EBNF(g->productions.v[i]->internal) ? 2 : 1) : 0;
-        add_struct_const_member(fp, D_Symbol, d_internal[internal_index], d_internal_values[internal_index], kind);
-        add_struct_str_member(fp, D_Symbol, g->productions.v[i]->name, name);
-        add_struct_member(fp, D_Symbol, %d, g->productions.v[i]->name_len, name_len);
-        add_struct_member(fp, D_Symbol, %d, state, start_symbol);
-        end_struct_in_array(fp, ",\n");
-        g->write_line += 1;
-    }
-    for (i = 0; i < g->terminals.n; i++) {
-        char *s = escape_string(g->terminals.v[i]->string); /* so it is a string */
-        char *ss = escape_string(s);   /* so it is printable */
-        char *name = g->terminals.v[i]->term_name ? g->terminals.v[i]->term_name : (fp->binary ? s : ss);
-        int symbol_index = g->terminals.v[i]->kind;
-        start_struct_in_array(fp);
-        add_struct_const_member(fp, D_Symbol, d_symbol[symbol_index], d_symbol_values[symbol_index], kind);
-        add_struct_str_member(fp, D_Symbol, name, name);
-        add_struct_member(fp, D_Symbol, %d, (int) strlen(name), name_len);  /*BS strlen doesn't always works here, length can change when quoted string is compiled*/
-        end_struct_in_array(fp, ",\n");
-        g->write_line += 1;
-        FREE(s);
-        FREE(ss);
-    }
-    end_array(fp, "\n\n");
-    g->write_line += 2;
+  }
+  for (i = 0; i < g->terminals.n; i++) {
+    char *s = escape_string(g->terminals.v[i]->string); /* so it is a string */
+    char *ss = escape_string(s);   /* so it is printable */
+    char *name = g->terminals.v[i]->term_name ? g->terminals.v[i]->term_name : (fp->binary ? s : ss);
+    int symbol_index = g->terminals.v[i]->kind;
+    start_struct_in_array(fp);
+    add_struct_const_member(fp, D_Symbol, d_symbol[symbol_index], d_symbol_values[symbol_index], kind);
+    add_struct_str_member(fp, D_Symbol, name, name);
+    add_struct_member(fp, D_Symbol, %d, (int) strlen(name), name_len);  /*BS strlen doesn't always works here, length can change when quoted string is compiled*/
+    end_struct_in_array(fp, ",\n");
+    g->write_line += 1;
+    FREE(s);
+    FREE(ss);
+  }
+  end_array(fp, "\n\n");
+  g->write_line += 2;
 }
 
 static void
