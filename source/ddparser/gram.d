@@ -193,7 +193,7 @@ struct Term {
   TermKind		kind;
   uint			index;
   int			term_priority;
-  string			term_name;
+  string		term_name;
   AssocKind		op_assoc;
   int			op_priority;
   char			*string_;
@@ -252,7 +252,7 @@ enum InternalKind {
 
 struct Production {
     string			name;
-    Vec!(Rule *)		rules;
+    Vec!(Rule *)	rules;
     uint			index;
     mixin(bitfields!(
                 uint, "regex", 1,
@@ -307,11 +307,7 @@ struct Elem {
     Production	*nterm;
     Term	*term;
     void	*term_or_nterm;
-    static struct Unresolved {
-      char	*string_;
-      uint	len;
-    } 
-    Unresolved unresolved;
+    string unresolved;
   } 
   E e;
 
@@ -325,8 +321,8 @@ struct Elem {
           s.map(e.nterm, "nterm");
       else if (kind == ElemKind.ELEM_TERM)
           s.map(e.term, "term");
-      else if (kind == ElemKind.ELEM_UNRESOLVED)
-          s.mapCStringWithLength(e.unresolved.string_, "unresolved", e.unresolved.len);
+      /* else if (kind == ElemKind.ELEM_UNRESOLVED) */
+      /*     s.map(e.unresolved, "unresolved"); */
   }
 
 }
@@ -725,12 +721,11 @@ new_utf8_char(Grammar *g, char *s, char *e, Rule *r) {
 }
 
 Elem *
-new_ident(const char[] s, Rule *r)
+new_ident(string s, Rule *r)
 {
   Elem *x = new_elem();
   x.kind = ElemKind.ELEM_UNRESOLVED;
-  x.e.unresolved.string_ = cast(char*)s.toStringz();
-  x.e.unresolved.len = cast(uint)s.length;
+  x.e.unresolved = s;
   x.rule = r;
   if (r)
     vec_add(&r.elems, x);
@@ -740,7 +735,7 @@ new_ident(const char[] s, Rule *r)
 
 extern(C) Elem *
 new_ident(char *s, char *e, Rule *r) {
-    return new_ident(s[0 .. e - s], r);
+    return new_ident(s[0 .. e - s].idup, r);
 }
 
 extern(C) void
@@ -766,7 +761,7 @@ dup_elem(Elem *e, Rule *r) {
   Elem *ee = new Elem();
   memcpy(ee, e, (Elem).sizeof);
   if (ee.kind == ElemKind.ELEM_UNRESOLVED)
-    ee.e.unresolved.string_ = dup_str(e.e.unresolved.string_, null);
+    ee.e.unresolved = e.e.unresolved;
   ee.rule = r;
   return ee;
 }
@@ -1001,17 +996,11 @@ Production* lookup_production(Grammar* g, const(char)[] name)
 }
 
 static Term *
-lookup_token(Grammar *g, char *name, int l) {
-  int i;
-  
-  for (i = 0; i < g.terminals.n; i++) {
-    Term *t = g.terminals.v[i];
-    if (t.kind != TermKind.TERM_TOKEN || t.string_len != l || 
-	strncmp(t.string_, name, l))
-      continue;
-    return t;
-  }
-  return null;
+lookup_token(Grammar *g, const(char)[] name) {
+    foreach(t; g.terminals)
+        if (t.kind == TermKind.TERM_TOKEN && t.string_[0 .. t.string_len] == name)
+            return t;
+    return null;
 }
 
 static Term *
@@ -1070,7 +1059,7 @@ compute_nullable(Grammar *g) {
 */
 static void
 resolve_grammar(Grammar *g) {
-  int i, j, k, l;
+  int i, j, k;
   Production *p, pp;
   Rule *r;
   Elem *e;
@@ -1090,24 +1079,20 @@ resolve_grammar(Grammar *g) {
 	e = r.elems.v[k];
 	e.index = k;
 	if (e.kind == ElemKind.ELEM_UNRESOLVED) {
-	  l = e.e.unresolved.len;
-      pp = lookup_production(g, e.e.unresolved.string_, l);
+      pp = lookup_production(g, e.e.unresolved);
 	  if (pp) {
-	    FREE(e.e.unresolved.string_); e.e.unresolved.string_ = null;
+	    e.e.unresolved = null;
 	    e.kind = ELEM_NTERM;
 	    e.e.nterm = pp;
 	  } else
       {
-          t = lookup_token(g, e.e.unresolved.string_, l);
+          t = lookup_token(g, e.e.unresolved);
           if (t) {
-              FREE(e.e.unresolved.string_); e.e.unresolved.string_ = null;
+              e.e.unresolved = null;
               e.kind = ELEM_TERM;
               e.e.term = t;
           } else {
-              char str[256];
-              strncpy(str.ptr, e.e.unresolved.string_, l);
-              str[l < 255 ? l : 255] = 0;
-              d_fail("unresolved identifier: '%s'", str.ptr);
+              d_fail("unresolved identifier: '%s'", e.e.unresolved);
           }
       }
 	}
@@ -1175,7 +1160,7 @@ print_elem(Elem *ee) {
   if (ee.kind == ELEM_TERM)
     print_term(ee.e.term);
   else if (ee.kind == ElemKind.ELEM_UNRESOLVED)
-    logf("%s ", ee.e.unresolved.string_);
+    logf("%s ", ee.e.unresolved);
   else
     logf("%s ", ee.e.nterm.name);
 }
@@ -1855,15 +1840,15 @@ propogate_declarations(Grammar *g) {
    for (i = 0; i < g.declarations.n; i++) {
        e = g.declarations.v[i].elem;
        if (e.kind == ElemKind.ELEM_UNRESOLVED) {
-           if (e.e.unresolved.len == 0)
+           if (e.e.unresolved.length == 0)
                p = g.productions.v[0];
            else
            {
-               p = lookup_production(g, e.e.unresolved.string_, e.e.unresolved.len);
+               p = lookup_production(g, e.e.unresolved);
                if (!p)
-                   d_fail("unresolved declaration '%s'", e.e.unresolved.string_);
+                   d_fail("unresolved declaration '%s'", e.e.unresolved);
            }
-           FREE(e.e.unresolved.string_); e.e.unresolved.string_ = null;
+           e.e.unresolved = null;
            e.kind = ELEM_NTERM;
            e.e.nterm = p;
        }
@@ -2055,7 +2040,7 @@ print_element_escaped(Elem *ee, int double_escaped) {
   if (ee.kind == ELEM_TERM)
     print_term_escaped(ee.e.term, double_escaped);
   else if (ee.kind == ElemKind.ELEM_UNRESOLVED)
-    logf("%s ", ee.e.unresolved.string_);
+    logf("%s ", ee.e.unresolved);
   else
     logf("%s ", ee.e.nterm.name);
 }
