@@ -44,11 +44,9 @@ char* dup_code(char* s, char* e)
     return dup_str(s, e);
 }
 
-Grammar* grammarGrammar()
+Grammar* createEmptyGrammar()
 {
-      Grammar *g;
-
-  g = new_D_Grammar("-".ptr);
+ Grammar *g = new_D_Grammar("-".ptr);
   /* grammar construction options */
   g.set_op_priority_from_rule = 0;
   g.right_recursive_BNF = 0;
@@ -63,6 +61,12 @@ Grammar* grammarGrammar()
   g.write_line_directives = 1;
   g.write_header = -1;
   g.token_type = 0;
+    return g;
+}
+
+Grammar* grammarGrammar()
+{
+      Grammar *g = createEmptyGrammar();
 
 
   initialize_productions(g);
@@ -2198,13 +2202,26 @@ build_grammar(g);
 
 private __gshared D_ParserTables* gramGramTables;
 
-extern(C) int
-parse_grammar(Grammar *g, char *pathname, char *sarg) {
-
+bool parseGrammar(Grammar* g, string str)
+{
     if (gramGramTables == null)
         gramGramTables = createTablesFromGrammar(grammarGrammar(), null, null);
 
-    int res = 0;
+    if (!g.productions.n)
+        initialize_productions(g);
+    D_Parser *p = new_D_Parser(gramGramTables, (GramGramParseNode_User).sizeof);
+    p.initial_globals = g;
+    if (!dparse(p, cast(char*)str.ptr, cast(int)str.length))
+        return false;
+
+    if (g.productions.n > 1)
+        finish_productions(g);
+
+    return true;
+}
+
+extern(C) int
+parse_grammar(Grammar *g, char *pathname, char *sarg) {
     char *s = sarg;
 
     vec_add(&g.all_pathnames, dup_str(pathname, null));
@@ -2214,20 +2231,9 @@ parse_grammar(Grammar *g, char *pathname, char *sarg) {
         if (!s)
             return -1;
     }
-    if (!g.productions.n)
-        initialize_productions(g);
-    D_Parser *p = new_D_Parser(gramGramTables, (GramGramParseNode_User).sizeof);
-    p.initial_globals = g;
-    p.loc.pathname = pathname;
-    if (dparse(p, s, cast(int)strlen(s))) {
-        if (g.productions.n > 1)
-            finish_productions(g);
-    } else
-        res = -1;
-    if (!sarg)
-        FREE(s);
-    free_D_Parser(p);
-    return res;
+    if (!parseGrammar(g, cast(string)s[0 .. strlen(s)]))
+        return -1;
+    return 0;
 }
 
 void testGramJson()

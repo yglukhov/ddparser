@@ -402,6 +402,8 @@ struct Grammar {
   }
 }
 
+alias D_Grammar = Grammar;
+
 
 
 /* automatically add %op_XXX to rightmost token of %XXX rule, default off */

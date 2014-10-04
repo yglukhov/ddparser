@@ -693,3 +693,22 @@ set_find(void *av, void *t) {
 
 void d_free(void *x) { FREE(x); }
 
+import std.format;
+import std.algorithm;
+import std.array;
+
+void delegate(string s) logFunc;
+
+void log(Args...)(Args args)
+{
+    writeln(args);
+}
+
+void logf(Args...)(Args args)
+{
+    auto writer = appender!string();
+    formattedWrite(writer, args);
+    if (logFunc) logFunc(writer.data);
+    else write(writer.data);
+}
+

@@ -2,8 +2,6 @@ module ddparser.tests;
 
 import ddparser.dparser;
 import std.stdio;
-import ddparser.dparse_tables;
-import ddparser.gramgram;
 
 version (unittest) Grammar createGrammar()
 {
@@ -43,7 +41,4 @@ unittest
     assert(g.rootSymbol == "EXPRESSION");
 }
 
-unittest
-{
-    /* testGramJson(); */
-}
+

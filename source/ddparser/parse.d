@@ -185,16 +185,16 @@ print_paren(Parser *pp, PNode *p) {
   if (!p.error_recovery) {
     if (p.children.n) {
       if (p.children.n > 1)
-        printf("(");
+        logf("(");
       for (i = 0; i < p.children.n; i++)
         print_paren(pp, p.children.v[i]);
       if (p.children.n > 1)
-        printf(")");
+        logf(")");
     } else if (p.parse_node.start_loc.s != p.parse_node.end_skip) {
-      printf(" ");
+      logf(" ");
       for (c = p.parse_node.start_loc.s; c < p.parse_node.end_skip; c++)
-        printf("%c", *c);
-      printf(" ");
+        logf("%c", *c);
+      logf(" ");
     }
   }
 }
@@ -205,27 +205,27 @@ xprint_paren(Parser *pp, PNode *p) {
   char *c;
   LATEST(pp, p);
   if (!p.error_recovery) {
-    printf("[%p %s]", p, pp.t.symbols[p.parse_node.symbol].name);
+    logf("[%X %s]", p, pp.t.symbols[p.parse_node.symbol].name);
     if (p.children.n) {
-      printf("(");
+      logf("(");
       for (i = 0; i < p.children.n; i++)
         xprint_paren(pp, p.children.v[i]);
-      printf(")");
+      logf(")");
     } else if (p.parse_node.start_loc.s != p.parse_node.end_skip) {
-      printf(" ");
+      logf(" ");
       for (c = p.parse_node.start_loc.s; c < p.parse_node.end_skip; c++)
-        printf("%c", *c);
-      printf(" ");
+        logf("%c", *c);
+      logf(" ");
     }
     if (p.ambiguities) {
-      printf(" |OR| ");
+      logf(" |OR| ");
       xprint_paren(pp, p.ambiguities);
     }
   }
 }
 
-void xPP(Parser *pp, PNode *p) { xprint_paren(pp, p); printf("\n"); }
-void PP(Parser *pp, PNode *p) { print_paren(pp, p); printf("\n"); }
+void xPP(Parser *pp, PNode *p) { xprint_paren(pp, p); logf("\n"); }
+void PP(Parser *pp, PNode *p) { print_paren(pp, p); logf("\n"); }
 
 auto D_ParseNode_to_PNode(D_ParseNode* _apn)
 {
@@ -1338,7 +1338,7 @@ goto_PNode(Parser *p, d_loc_t *loc, PNode *pn, SNode *ps) {
   new_ps = add_SNode(p, state, loc, pn.parse_node.scope_, pn.parse_node.globals);
   new_ps.last_pn = pn;
 
-  debug(trace) printf("goto %d (%s) . %d %p\n",
+  debug(trace) logf("goto %d (%s) . %d %X\n",
              cast(int)(ps.state - p.t.state),
              p.t.symbols[pn.parse_node.symbol].name,
              state_index, new_ps);
@@ -1479,7 +1479,7 @@ shift_all(Parser *p, char *pos) {
     if (!r.shift)
       continue;
     p.shifts++;
-    debug(trace) printf("shift %d %p %d (%s)\n",
+    debug(trace) logf("shift %d %X %d (%s)\n",
                cast(int)(r.snode.state - p.t.state), r.snode, r.shift.symbol,
                p.t.symbols[r.shift.symbol].name);
     new_pn = add_PNode(p, r.shift.symbol, &r.snode.loc, r.loc.s,
@@ -1580,7 +1580,7 @@ reduce_one(Parser *p, Reduction *r) {
     if (pn)
       goto_PNode(p, &sn.loc, pn, sn);
   } else {
-    debug(trace) printf("reduce %d %p %d\n", cast(int)(r.snode.state - p.t.state), sn, n);
+    debug(trace) logf("reduce %d %X %d\n", cast(int)(r.snode.state - p.t.state), sn, n);
     vec_clear(&paths);
     build_paths(r.znode, &paths, n);
     for (i = 0; i < paths.n; i++) {
@@ -1651,25 +1651,25 @@ debug(trace) static void
 print_stack(Parser *p, SNode *s, int indent) {
   int i,j;
 
-  printf("%d", cast(int)(s.state - p.t.state));
+  logf("%d", cast(int)(s.state - p.t.state));
   indent += 2;
   for (i = 0; i < s.zns.n; i++) {
     if (!s.zns.v[i])
       continue;
     if (s.zns.n > 1)
-      printf("\n%s[", &spaces[99-indent]);
-    printf("(%s:", p.t.symbols[s.zns.v[i].pn.parse_node.symbol].name);
+      logf("\n%s[", &spaces[99-indent]);
+    logf("(%s:", p.t.symbols[s.zns.v[i].pn.parse_node.symbol].name);
     print_paren(p, s.zns.v[i].pn);
-    printf(")");
+    logf(")");
     for (j = 0; j < s.zns.v[i].sns.n; j++) {
       if (s.zns.v[i].sns.n > 1)
-        printf("\n%s[", &spaces[98-indent]);
+        logf("\n%s[", &spaces[98-indent]);
       print_stack(p, s.zns.v[i].sns.v[j], indent);
       if (s.zns.v[i].sns.n > 1)
-        printf("]");
+        logf("]");
     }
     if (s.zns.n > 1)
-      printf("]");
+      logf("]");
   }
 }
 
@@ -1691,9 +1691,9 @@ cmp_stacks(Parser *p) {
     for (al = &p.shifts_todo, a = *al; a && a.snode.loc.s == pos;
          al = &a.next, a = a.next)
   {
-    if (++i < 2) printf("\n");
+    if (++i < 2) logf("\n");
     print_stack(p, a.snode, 0);
-    printf("\n");
+    logf("\n");
   }}
   for (al = &p.shifts_todo, a = *al; a && a.snode.loc.s == pos;
        al = &a.next, a = a.next)
@@ -1712,18 +1712,18 @@ cmp_stacks(Parser *p) {
           (b.snode.state.reduces_to != a.snode.state - p.t.state))
         continue;
       if (az.pn.op_priority > bz.pn.op_priority) {
-        debug(trace){printf("DELETE ");
+        debug(trace){logf("DELETE ");
             print_stack(p, b.snode, 0);
-            printf("\n");}
+            logf("\n");}
         *bl = b.next;
         FREE(b);
         b = *bl;
         break;
       }
       if (az.pn.op_priority < bz.pn.op_priority) {
-        debug(trace){printf("DELETE ");
+        debug(trace){logf("DELETE ");
             print_stack(p, a.snode, 0);
-            printf("\n");}
+            logf("\n");}
         *al = a.next;
         FREE(a);
         a = *al;
@@ -1765,7 +1765,7 @@ ambiguity_abort_fn(D_Parser *pp, int n, D_ParseNode **v) {
   if (d_verbose_level) {
     for (i = 0; i < n; i++) {
       print_paren(cast(Parser *) pp, D_ParseNode_to_PNode(v[i]));
-      printf("\n");
+      logf("\n");
     }
   }
   d_fail("unresolved ambiguity line %d file %s", v[0].start_loc.line,
@@ -1884,7 +1884,7 @@ commit_tree(Parser *p, PNode *pn) {
     }
   }
   if (pn.reduction)
-    debug(trace) printf("commit %p (%s)\n", pn, p.t.symbols[pn.parse_node.symbol].name);
+    debug(trace) logf("commit %X (%s)\n", pn, p.t.symbols[pn.parse_node.symbol].name);
   if (pn.reduction && pn.reduction.final_code)
     pn.reduction.final_code(
       pn, cast(void**)&pn.children.v[0], pn.children.n,
@@ -2434,7 +2434,7 @@ dparse(D_Parser *ap, char *buf, int buf_len) {
         pn = commit_tree(p, pn);
 
         if (d_verbose_level) {
-            printf(
+            logf(
                     "%d states %d scans %d shifts %d reductions "
                     "%d compares %d ambiguities\n",
                     p.states, p.scans, p.shifts, p.reductions,
@@ -2444,7 +2444,7 @@ dparse(D_Parser *ap, char *buf, int buf_len) {
                     xprint_paren(p, pn);
                 else
                     print_paren(p, pn);
-                printf("\n");
+                logf("\n");
             }
         }
         if (p.user.save_parse_tree) {
