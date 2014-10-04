@@ -188,7 +188,7 @@ star_EBNF(g);
  g.r.final_code.f = (new_ps, children, n_children, pn_offset, parser)
 {
      mixin(commonValues);
-add_global_code(g, n0.start_loc.s+2, n2.end-2, n0.start_loc.line);
+/* add_global_code(g, n0.start_loc.s+2, n2.end-2, n0.start_loc.line); */
 return 0;
 };
 
@@ -206,7 +206,7 @@ g.r = new_rule(g, g.p);
  g.r.final_code.f = (new_ps, children, n_children, pn_offset, parser)
 {
      mixin(commonValues);
-add_global_code(g, n0.start_loc.s+1, n0.end-1, n0.start_loc.line);
+/* add_global_code(g, n0.start_loc.s+1, n0.end-1, n0.start_loc.line); */
   return 0;
 };
 
