@@ -64,6 +64,11 @@ struct Vec(T)
         v = null;
     }
 
+    @property size_t length() const
+    {
+        return n;
+    }
+
     void add(T _i)
     {
         if (!v) { 							
@@ -476,15 +481,17 @@ sbuf_read(const char *pathname) {
   return buf;
 }
 
-extern(C) void d_fail(const char * str, ...)
+void d_fail(Args...)(Args args)
 {
-    writeln("error: ", str[0 .. strlen(str)]);
+    write("error: ");
+    writefln(args);
     assert(false);
 }
 
-extern(C) void d_warn(const char * str, ...)
+void d_warn(Args...)(Args args)
 {
-    writeln("warning: ", str[0 .. strlen(str)]);
+    write("warning: ");
+    writefln(args);
 }
 
 extern(C) void

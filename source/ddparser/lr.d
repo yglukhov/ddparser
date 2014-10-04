@@ -376,7 +376,7 @@ build_error_recovery(Grammar *g) {
 	  rr = s.error_recovery_hints.v[k].rule;
 	  ee = rr.elems.v[rr.elems.n - 1];
 	  if (e.e.term.string_len == ee.e.term.string_len &&
-	      !strcmp(e.e.term.string, ee.e.term.string)) 
+	      !strcmp(e.e.term.string_, ee.e.term.string_)) 
 	  {
 	    if (s.error_recovery_hints.v[k].depth > depth)
 	      s.error_recovery_hints.v[k].depth = depth;

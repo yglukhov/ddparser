@@ -15,6 +15,7 @@ import std.stdio;
 import std.bitmanip;
 import std.system;
 import std.array;
+import std.string;
 
 /+
 
@@ -1069,33 +1070,36 @@ write_scanner_code(File *file, Grammar *g, char *tag) {
 }
 +/
 
-static int
-find_symbol(Grammar *g, char *s, char *e, int kind) {
-    while (*s && isspace_(*s)) s++;
-    if (e > s) {
+static int find_symbol(Grammar *g, const(char)[] s, int kind) {
+    s = s.stripLeft();
         if (kind == D_SYMBOL_NTERM) {
-            Production *p = lookup_production(g, s, cast(int)(e-s));
+            Production *p = lookup_production(g, s);
             if (p)
                 return p.index;
         } else if (kind == D_SYMBOL_STRING) {
             int found = -1;
             for (int i = 0; i < g.terminals.n;i++)
                 if (g.terminals.v[i].kind == TermKind.TERM_STRING &&
-                        ((g.terminals.v[i].term_name &&
-                          strlen(g.terminals.v[i].term_name) == e-s &&
-                          !strncmp(s, g.terminals.v[i].term_name, e-s)) ||
-                         (!g.terminals.v[i].term_name &&
-                          g.terminals.v[i].string_len == (e-s) &&
-                          !strncmp(s, g.terminals.v[i].string, e-s)))) {
+                        (g.terminals.v[i].term_name == s ||
+                        (g.terminals.v[i].term_name.length == 0 &&
+                          g.terminals.v[i].string_len == s.length &&
+                          !strncmp(s.ptr, g.terminals.v[i].string_, s.length)))) {
                     if (found > 0) {
                         d_fail("attempt to find symbol for non-unique string '%s'\n",
-                                g.terminals.v[i].string);
+                                g.terminals.v[i].string_);
                     } else
                         found = i;
                 }
             if (found > 0)
                 return found + g.productions.n;
         }
+    return -1;
+}
+
+static int
+find_symbol(Grammar *g, char *s, char *e, int kind) {
+    if (e > s) {
+        return find_symbol(g, s[0 .. e - s], kind);
     }
     return -1;
 }
@@ -1379,7 +1383,7 @@ er_hint_hash_fn(State *a, hash_fns_t *fns) {
   for (i = 0; i < sa.n; i++) {
     ta = sa.v[i].rule.elems.v[sa.v[i].rule.elems.n - 1].e.term;
     hash += (sa.v[i].depth + 1) * 13;
-    hash += strhashl(ta.string, ta.string_len);
+    hash += strhashl(ta.string_, ta.string_len);
     if (sa.v[i].rule)
       hash += sa.v[i].rule.prod.index * 10007;
   }
@@ -1397,7 +1401,7 @@ er_hint_cmp_fn(State *a, State *b, hash_fns_t *fns) {
     ta = sa.v[i].rule.elems.v[sa.v[i].rule.elems.n - 1].e.term;
     tb = sb.v[i].rule.elems.v[sb.v[i].rule.elems.n - 1].e.term;
     if (sa.v[i].depth != sb.v[i].depth ||
-	strcmp(ta.string, tb.string) ||
+	strcmp(ta.string_, tb.string_) ||
 	sa.v[i].rule.prod.index != sb.v[i].rule.prod.index)
       return 1;
   }
@@ -1435,7 +1439,7 @@ buildErrorData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
                     for (j = 0; j < s.error_recovery_hints.n; j++) {
                         t = s.error_recovery_hints.v[j].rule.elems.v[
                             s.error_recovery_hints.v[j].rule.elems.n - 1].e.term;
-                        ss = escape_string(t.string);
+                        ss = escape_string(t.string_);
                         D_ErrorRecoveryHint hint;
                         hint.depth = cast(ushort)s.error_recovery_hints.v[j].depth;
                         hint.symbol = cast(ushort)s.error_recovery_hints.v[j].rule.prod.index;
@@ -1557,7 +1561,7 @@ write_header(Grammar *g, char *base_pathname, char *tag) {
 	for (i = 0; i < g.terminals.n; i++)
 	  if (g.terminals.v[i].kind == TermKind.TERM_TOKEN)
 	    fprintf(hfp, "#define %s \t%d\n",
-		    g.terminals.v[i].string,
+		    g.terminals.v[i].string_,
 		    g.terminals.v[i].index + g.productions.n);
       } else {
 	fprintf(hfp, "enum D_Tokens_%s {\n", tag);
@@ -1567,7 +1571,7 @@ write_header(Grammar *g, char *base_pathname, char *tag) {
 	    col += g.terminals.v[i].string_len + 7;
 	    if (col > 70) { printf("\n"); col = 0; }
 	    fprintf(hfp, "%s = %d%s",
-		    g.terminals.v[i].string,
+		    g.terminals.v[i].string_,
 		    g.terminals.v[i].index + g.productions.n,
 		    i == g.terminals.n-1 ? "" : ", ");
 	  }
@@ -1611,14 +1615,14 @@ buildSymbolData(Grammar *g, ref BuildTables tables) {
         internal_index = g.productions.v[i].internal ? (is_EBNF(g.productions.v[i].internal) ? 2 : 1) : 0;
         D_Symbol sym;
         sym.kind = d_internal_values[internal_index];
-        sym.name = g.productions.v[i].name;
-        sym.name_len = g.productions.v[i].name_len;
+        sym.name = g.productions.v[i].name.toStringz();
+        sym.name_len = cast(int)g.productions.v[i].name.length;
         sym.start_symbol = state;
         d_symbols ~= sym;
     }
     for (i = 0; i < g.terminals.n; i++) {
-        char *s = escape_string(g.terminals.v[i].string); /* so it is a string */
-        char *name = g.terminals.v[i].term_name ? g.terminals.v[i].term_name : s;
+        char *s = escape_string(g.terminals.v[i].string_); /* so it is a string */
+        const char *name = g.terminals.v[i].term_name.length ? g.terminals.v[i].term_name.toStringz() : s;
         int symbol_index = g.terminals.v[i].kind;
         D_Symbol sym;
         sym.kind = d_symbol_values[symbol_index];

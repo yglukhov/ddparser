@@ -1300,7 +1300,7 @@ g.e = new_elem_nterm(g.p, var0x10fccb700); g.p = var0x10fcc8200; g.r = var0x10fc
  
       if (g.e.kind != ELEM_TERM) 
 	d_fail("terminal name on non-terminal");
-      g.e.e.term.term_name = dup_str(n1.start_loc.s+1, n1.end-1); 
+      g.e.e.term.term_name = n1.start_loc.s[1 .. n1.end - n1.start_loc.s - 1].idup;
     
   return 0;
 };

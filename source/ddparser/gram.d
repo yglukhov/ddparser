@@ -17,8 +17,10 @@ import core.stdc.stdlib;
 import core.stdc.stdio;
 import std.stdio;
 import std.json;
+import std.conv;
 import ddparser.serialize;
 import std.string;
+import std.ascii;
 
 enum EOF_SENTINAL = "\377";
 enum NO_PROD			=0xFFFFFFFF;
@@ -191,10 +193,10 @@ struct Term {
   TermKind		kind;
   uint			index;
   int			term_priority;
-  char			*term_name;
+  string			term_name;
   AssocKind		op_assoc;
   int			op_priority;
-  char			*string;
+  char			*string_;
   int			string_len;
   mixin(bitfields!(
               uint, "scan_kind", 3,
@@ -209,10 +211,10 @@ struct Term {
         s.map(kind, "kind");
         s.map(index, "index");
         s.map(term_priority, "term_priority");
-        s.mapCString(term_name, "term_name");
+        //s.map(term_name, "term_name");
         s.map(op_assoc, "op_assoc");
         s.map(op_priority, "op_priority");
-        s.mapCStringWithLength(string, "string", string_len);
+        s.mapCStringWithLength(string_, "string_", string_len);
 
         mixin(fieldMap!("scan_kind", s));
         mixin(fieldMap!("ignore_case", s));
@@ -249,8 +251,7 @@ enum InternalKind {
 }
 
 struct Production {
-    char			*name;
-    uint			name_len;
+    string			name;
     Vec!(Rule *)		rules;
     uint			index;
     mixin(bitfields!(
@@ -271,6 +272,7 @@ struct Production {
 
     void serialize(Serializer s)
     {
+        //s.map(name, "name");
         s.map(rules, "rules");
         s.map(index, "index");
         mixin(fieldMap!("regex", s));
@@ -306,7 +308,7 @@ struct Elem {
     Term	*term;
     void	*term_or_nterm;
     static struct Unresolved {
-      char	*string;
+      char	*string_;
       uint	len;
     } 
     Unresolved unresolved;
@@ -324,7 +326,7 @@ struct Elem {
       else if (kind == ElemKind.ELEM_TERM)
           s.map(e.term, "term");
       else if (kind == ElemKind.ELEM_UNRESOLVED)
-          s.mapCStringWithLength(e.unresolved.string, "unresolved", e.unresolved.len);
+          s.mapCStringWithLength(e.unresolved.string_, "unresolved", e.unresolved.len);
   }
 
 }
@@ -472,8 +474,7 @@ Production* new_production(Grammar *g, string name) {
   p = new Production();
   memset(p, 0, (Production).sizeof);
   vec_add(&g.productions, p);
-  p.name = cast(char*)name.toStringz();
-  p.name_len = cast(uint)name.length;
+  p.name = name;
   return p;
 }
 
@@ -533,7 +534,7 @@ new_term_string(Grammar *g, const(char)[] s, Rule *r)
   Term *t = new_term();
   Elem *elem;
 
-  t.string = s.toStringz();
+  t.string_ = s.toStringz();
   t.string_len = cast(int)s.length;
   vec_add(&g.terminals, t);
   elem = new_elem_term(t, r);
@@ -576,7 +577,7 @@ unescape_term_string(Term *t) {
   char *ss;
   int length, base = 0;
 
-  for (ss = s = t.string; *s; s++) {
+  for (ss = s = t.string_; *s; s++) {
     if (*s == '\\') {
       switch (s[1]) {
 	case '\\':
@@ -649,7 +650,7 @@ unescape_term_string(Term *t) {
 	    start[length] = saved_c;
 	    if (*s > 0)	     
 	      break;
-	    d_fail("encountered an escaped null while processing '%s'", t.string);
+	    d_fail("encountered an escaped null while processing '%s'", t.string_);
 	  } else
 	    goto next;
       Ldefault:
@@ -665,9 +666,9 @@ unescape_term_string(Term *t) {
   next:;
   }
   *ss = 0;
-  t.string_len = cast(int)strlen(t.string);
+  t.string_len = cast(int)strlen(t.string_);
   if (!t.string_len)
-    d_fail("empty string after unescape '%s'", t.string);
+    d_fail("empty string after unescape '%s'", t.string_);
 }
 
 Elem * new_string(Grammar *g, const(char)[] s, Rule *r)
@@ -728,7 +729,7 @@ new_ident(const char[] s, Rule *r)
 {
   Elem *x = new_elem();
   x.kind = ElemKind.ELEM_UNRESOLVED;
-  x.e.unresolved.string = cast(char*)s.toStringz();
+  x.e.unresolved.string_ = cast(char*)s.toStringz();
   x.e.unresolved.len = cast(uint)s.length;
   x.rule = r;
   if (r)
@@ -745,9 +746,9 @@ new_ident(char *s, char *e, Rule *r) {
 extern(C) void
 new_token(Grammar *g, char *s, char *e) {
   Term *t = new_term();
-  t.string = cast(char*)MALLOC(e - s + 1);
-  memcpy(t.string, s, e - s);
-  t.string[e - s] = 0;
+  t.string_ = cast(char*)MALLOC(e - s + 1);
+  memcpy(t.string_, s, e - s);
+  t.string_[e - s] = 0;
   t.string_len = cast(int)(e - s);
   vec_add(&g.terminals, t);
   t.kind = TermKind.TERM_TOKEN;
@@ -765,7 +766,7 @@ dup_elem(Elem *e, Rule *r) {
   Elem *ee = new Elem();
   memcpy(ee, e, (Elem).sizeof);
   if (ee.kind == ElemKind.ELEM_UNRESOLVED)
-    ee.e.unresolved.string = dup_str(e.e.unresolved.string, null);
+    ee.e.unresolved.string_ = dup_str(e.e.unresolved.string_, null);
   ee.rule = r;
   return ee;
 }
@@ -854,27 +855,26 @@ add_pass_code(Grammar *g, Rule *r, char *pass_start, char *pass_end,
     
 extern(C) Production *
 new_internal_production(Grammar *g, Production *p) {
-  const char *n = p ? p.name : " _synthetic";
-  char *name = cast(char*)MALLOC(strlen(n) + 21);
+  string n = p ? p.name : " _synthetic";
+  string name = n ~ "__" ~ g.productions.length.to!string();
   Production *pp = null, tp = null, ttp;
   int i, found = 0;
-  sprintf(name, "%s__%d", n, g.productions.n);
   pp = new_production(g, name);
   pp.internal = InternalKind.INTERNAL_HIDDEN;
   pp.regex = p ? p.regex : 0;
   if (p) {
-    for (i = 0; i < g.productions.n; i++) {
-      if (found) {
-	ttp = g.productions.v[i];
-	g.productions.v[i] = tp;
-	tp = ttp;
-      } else if (p == g.productions.v[i]) {
-	found = 1;
-	tp = g.productions.v[i+1];
-	g.productions.v[i+1] = pp;
-	i++;
+      for (i = 0; i < g.productions.n; i++) {
+          if (found) {
+              ttp = g.productions.v[i];
+              g.productions.v[i] = tp;
+              tp = ttp;
+          } else if (p == g.productions.v[i]) {
+              found = 1;
+              tp = g.productions.v[i+1];
+              g.productions.v[i+1] = pp;
+              i++;
+          }
       }
-    }
   }
   return pp;
 }
@@ -995,15 +995,10 @@ lookup_production(Grammar *g, const char *name, int l) {
 
 Production* lookup_production(Grammar* g, const(char)[] name)
 {
-    for (int i = 0; i < g.productions.n; i++) {
-        Production *pp = g.productions.v[i];
-        if (pp.name_len != name.length || strncmp(pp.name, name.ptr, name.length))
-            continue;
-        return pp;
-    }
+    foreach(p; g.productions)
+        if (p.name == name) return p;
     return null;
 }
-
 
 static Term *
 lookup_token(Grammar *g, char *name, int l) {
@@ -1012,7 +1007,7 @@ lookup_token(Grammar *g, char *name, int l) {
   for (i = 0; i < g.terminals.n; i++) {
     Term *t = g.terminals.v[i];
     if (t.kind != TermKind.TERM_TOKEN || t.string_len != l || 
-	strncmp(t.string, name, l))
+	strncmp(t.string_, name, l))
       continue;
     return t;
   }
@@ -1030,7 +1025,7 @@ unique_term(Grammar *g, Term *t) {
 	(!g.set_op_priority_from_rule ||
 	 (t.op_assoc == g.terminals.v[i].op_assoc &&
 	  t.op_priority == g.terminals.v[i].op_priority)) &&
-	!strncmp(t.string, g.terminals.v[i].string, t.string_len)) 
+	!strncmp(t.string_, g.terminals.v[i].string_, t.string_len)) 
       return g.terminals.v[i];
   return t;
 }
@@ -1084,7 +1079,7 @@ resolve_grammar(Grammar *g) {
   g.rule_index = 0;
   for (i = 0; i < g.productions.n; i++) {
     p = g.productions.v[i];
-    if (p != lookup_production(g, p.name, p.name_len))
+    if (p != lookup_production(g, p.name))
       d_fail("duplicate production '%s'", p.name);
     p.index = i;
     for (j = 0; j < p.rules.n; j++) {
@@ -1096,21 +1091,21 @@ resolve_grammar(Grammar *g) {
 	e.index = k;
 	if (e.kind == ElemKind.ELEM_UNRESOLVED) {
 	  l = e.e.unresolved.len;
-      pp = lookup_production(g, e.e.unresolved.string, l);
+      pp = lookup_production(g, e.e.unresolved.string_, l);
 	  if (pp) {
-	    FREE(e.e.unresolved.string); e.e.unresolved.string = null;
+	    FREE(e.e.unresolved.string_); e.e.unresolved.string_ = null;
 	    e.kind = ELEM_NTERM;
 	    e.e.nterm = pp;
 	  } else
       {
-          t = lookup_token(g, e.e.unresolved.string, l);
+          t = lookup_token(g, e.e.unresolved.string_, l);
           if (t) {
-              FREE(e.e.unresolved.string); e.e.unresolved.string = null;
+              FREE(e.e.unresolved.string_); e.e.unresolved.string_ = null;
               e.kind = ELEM_TERM;
               e.e.term = t;
           } else {
               char str[256];
-              strncpy(str.ptr, e.e.unresolved.string, l);
+              strncpy(str.ptr, e.e.unresolved.string_, l);
               str[l < 255 ? l : 255] = 0;
               d_fail("unresolved identifier: '%s'", str.ptr);
           }
@@ -1155,20 +1150,20 @@ merge_identical_terminals(Grammar *g) {
 
 void
 print_term(Term *t) {
-  char *s = t.string ? escape_string(t.string) : null;
+  char *s = t.string_ ? escape_string(t.string_) : null;
   if (t.term_name)
-    printf("term_name(\"%s\") ", t.term_name);
+    logf("term_name(\"%s\") ", t.term_name);
   else if (t.kind == TermKind.TERM_STRING) {
-    if (!t.string || !*t.string)
-      printf("<EOF> ");
+    if (!t.string_ || !*t.string_)
+      logf("<EOF> ");
     else
-      printf("string(\"%s\") ", s);
+      logf("string(\"%s\") ", s);
   } else if (t.kind == TermKind.TERM_REGEX) {
-    printf("regex(\"%s\") ", s);
+    logf("regex(\"%s\") ", s);
   } else if (t.kind == TermKind.TERM_CODE)
-    printf("code(\"%s\") ", s);
+    logf("code(\"%s\") ", s);
   else if (t.kind == TermKind.TERM_TOKEN)
-    printf("token(\"%s\") ", s);
+    logf("token(\"%s\") ", s);
   else
     d_fail("unknown token kind");
   if (s)
@@ -1180,9 +1175,9 @@ print_elem(Elem *ee) {
   if (ee.kind == ELEM_TERM)
     print_term(ee.e.term);
   else if (ee.kind == ElemKind.ELEM_UNRESOLVED)
-    printf("%s ", ee.e.unresolved.string);
+    logf("%s ", ee.e.unresolved.string_);
   else
-    printf("%s ", ee.e.nterm.name);
+    logf("%s ", ee.e.nterm.name);
 }
 
 struct EnumStr {
@@ -1214,13 +1209,13 @@ void
 print_rule(Rule *r) {
   int k;
 
-  printf("%s: ", r.prod.name);
+  logf("%s: ", r.prod.name);
   for (k = 0; k < r.elems.n; k++)
     print_elem(r.elems.v[k]);
   if (r.speculative_code.code)
-    printf("SPECULATIVE_CODE\n%s\nEND CODE\n", r.speculative_code.code);
+    logf("SPECULATIVE_CODE\n%s\nEND CODE\n", r.speculative_code.code);
   if (r.final_code.code)
-    printf("FINAL_CODE\n%s\nEND CODE\n", r.final_code.code);
+    logf("FINAL_CODE\n%s\nEND CODE\n", r.final_code.code);
 }
 
 void
@@ -1231,70 +1226,70 @@ print_grammar(Grammar *g) {
 
   if (!g.productions.n)
     return;
-  printf("PRODUCTIONS\n\n");
+  logf("PRODUCTIONS\n\n");
   for (i = 0; i < g.productions.n; i++) {
     pp = g.productions.v[i];
-    printf("%s (%d)\n", pp.name, i);
+    logf("%s (%d)\n", pp.name, i);
     for (j = 0; j < pp.rules.n; j++) {
       rr = pp.rules.v[j];
       if (!j) 
-	printf("\t: ");
+	logf("\t: ");
       else
-	printf("\t| ");
+	logf("\t| ");
       for (k = 0; k < rr.elems.n; k++)
 	print_elem(rr.elems.v[k]);
       if (rr.op_priority)
-	printf("op %d ", rr.op_priority);
+	logf("op %d ", rr.op_priority);
       if (rr.op_assoc)
-	printf("%s ", assoc_str(rr.op_assoc));
+	logf("%s ", assoc_str(rr.op_assoc));
       if (rr.rule_priority)
-	printf("rule %d ", rr.rule_priority);
+	logf("rule %d ", rr.rule_priority);
       if (rr.rule_assoc)
-	printf("%s ", assoc_str(rr.rule_assoc));
+	logf("%s ", assoc_str(rr.rule_assoc));
       if (rr.speculative_code.code)
-	printf("%s ", rr.speculative_code.code);
+	logf("%s ", rr.speculative_code.code);
       if (rr.final_code.code)
-	printf("%s ", rr.final_code.code);
-      printf("\n");
+	logf("%s ", rr.final_code.code);
+      logf("\n");
     }
-    printf("\t;\n");
-    printf("\n");
+    logf("\t;\n");
+    logf("\n");
   }
-  printf("TERMINALS\n\n");
+  logf("TERMINALS\n\n");
   for (i = 0; i < g.terminals.n; i++) {
-    printf("\t");
+    logf("\t");
     print_term(g.terminals.v[i]);
-    printf("(%d)\n", i + g.productions.n);
+    logf("(%d)\n", i + g.productions.n);
   }
-  printf("\n");
+  logf("\n");
 }
 
 static void
 print_item(Item *i) {
   int j, end = 1;
 
-  printf("\t%s: ", i.rule.prod.name);
+  logf("\t%s: ", i.rule.prod.name);
   for (j = 0; j < i.rule.elems.n; j++) {
     Elem *e = i.rule.elems.v[j];
     if (i == e) {
-      printf(". ");
+      logf(". ");
       end = 0;
     }
     print_elem(e);
   }
   if (end)
-    printf(". ");
-  printf("\n");
+    logf(". ");
+  logf("\n");
 }
 
 static void
 print_conflict(const char *kind, int *conflict) {
   if (!*conflict) {
-    printf("  CONFLICT (before precedence and associativity)\n");
+    logf("  CONFLICT (before precedence and associativity)\n");
     *conflict = 1;
   }
-  printf("\t%s conflict ", kind);
-  printf("\n");
+  logf("\t%s conflict ", kind);
+  logf("\n");
 }
 
 static void
@@ -1306,33 +1301,33 @@ print_state(State *s) {
   for (j = 0; j < s.items.n; j++)
     print_item(s.items.v[j]);
   if (s.gotos.n)
-    printf("  GOTO\n");
+    logf("  GOTO\n");
   for (j = 0; j < s.gotos.n; j++) {
-    printf("\t");
+    logf("\t");
     print_elem(s.gotos.v[j].elem);
-    printf(" : %d\n", s.gotos.v[j].state.index);
+    logf(" : %d\n", s.gotos.v[j].state.index);
   }
-  printf("  ACTION\n");
+  logf("  ACTION\n");
   for (j = 0; j < s.reduce_actions.n; j++) {
     Action *a = s.reduce_actions.v[j];
     writefln("\t%s\t", action_types[a.kind]);
     print_rule(a.rule);
-    printf("\n");
+    logf("\n");
   }
   for (j = 0; j < s.shift_actions.n; j++) {
     Action *a = s.shift_actions.v[j];
     writefln("\t%s\t", action_types[a.kind]);
     if (a.kind == ActionKind.ACTION_SHIFT) {
       print_term(a.term);
-      printf("%d", a.state.index);
+      logf("%d", a.state.index);
     }
-    printf("\n");
+    logf("\n");
   }
   if (s.reduce_actions.n > 1)
     print_conflict("reduce/reduce".ptr, &conflict);
   if (s.reduce_actions.n && s.shift_actions.n)
     print_conflict("shift/reduce".ptr, &conflict);
-  printf("\n");
+  logf("\n");
 }
 
 void
@@ -1440,12 +1435,12 @@ convert_regex_production_one(Grammar *g, Production *p) {
   b = buf = cast(char*)MALLOC(buf_len + 1);
   t = new_term();
   t.kind = TermKind.TERM_REGEX;
-  t.string = buf;
+  t.string_ = buf;
   t.index = g.terminals.n;
   t.regex_production = p;
   vec_add(&g.terminals, t);
   p.regex_term = t;
-  p.regex_term.term_name = dup_str(p.name, null);
+  p.regex_term.term_name = p.name;
   if (circular) { /* attempt to match to regex operators */
     if (p.rules.n != 2)
       Lfail: d_fail("unable to resolve circular regex production: '%s'", p.name);
@@ -1463,9 +1458,9 @@ convert_regex_production_one(Grammar *g, Production *p) {
       t = e.kind == ELEM_TERM ? e.e.term : e.e.nterm.regex_term;
       *b++ = '('; 
       if (t.kind == TermKind.TERM_STRING)
-	s = escape_string_for_regex(t.string);
+	s = escape_string_for_regex(t.string_);
       else
-	s = t.string;
+	s = t.string_;
       memcpy(b, s, strlen(s)); b += strlen(s);
       if (t.kind == TermKind.TERM_STRING)
 	FREE(s);
@@ -1475,7 +1470,7 @@ convert_regex_production_one(Grammar *g, Production *p) {
       else
 	*b++ = '+'; 
       *b = 0;
-      p.regex_term.string_len = cast(uint)strlen(p.regex_term.string);
+      p.regex_term.string_len = cast(uint)strlen(p.regex_term.string_);
     } else
       goto Lfail;
   } else { /* handle the base case, p = (r | r'), r = (e e') */
@@ -1489,9 +1484,9 @@ convert_regex_production_one(Grammar *g, Production *p) {
 	e = r.elems.v[k];
 	t = e.kind == ELEM_TERM ? e.e.term : e.e.nterm.regex_term;
 	if (t.kind == TermKind.TERM_STRING)
-	  s = escape_string_for_regex(t.string);
+	  s = escape_string_for_regex(t.string_);
 	else
-	  s = t.string;
+	  s = t.string_;
 	memcpy(b, s, strlen(s)); b += strlen(s);
         if (t.kind == TermKind.TERM_STRING)
 	  FREE(s);
@@ -1504,7 +1499,7 @@ convert_regex_production_one(Grammar *g, Production *p) {
     if (p.rules.n > 1)
       *b++ = ')';
     *b = 0;
-    p.regex_term.string_len = cast(int)strlen(p.regex_term.string);
+    p.regex_term.string_len = cast(int)strlen(p.regex_term.string_);
   }
   p.in_regex = 0;
 }
@@ -1619,20 +1614,20 @@ build_eq(Grammar *g) {
     e = &eq[s.index];
     if (e.eq) {
       if (d_verbose_level > 2) {
-	printf("eq %d %d ", s.index, e.eq.index); 
+	logf("eq %d %d ", s.index, e.eq.index); 
 	if (e.diff_state)
-	  printf("diff state (%d %d) ", 
+	  logf("diff state (%d %d) ", 
 		 e.diff_state.index,
 		 eq[e.eq.index].diff_state.index);
 	if (e.diff_rule) {
-	  printf("diff rule ");
-	  printf("[ ");
+	  logf("diff rule ");
+	  logf("[ ");
 	  print_rule(e.diff_rule);
-	  printf("][ ");
+	  logf("][ ");
 	  print_rule(eq[e.eq.index].diff_rule);
-	  printf("]");
+	  logf("]");
 	}
-	printf("\n");
+	logf("\n");
       }
     }
   }
@@ -1659,7 +1654,7 @@ build_eq(Grammar *g) {
     s = g.states.v[i];
     if (s.reduces_to)
       if (d_verbose_level)
-	printf("reduces_to %d %d\n", s.index, s.reduces_to.index);
+	logf("reduces_to %d %d\n", s.index, s.reduces_to.index);
   }
   FREE(eq);
 }
@@ -1710,7 +1705,6 @@ free_D_Grammar(Grammar *g) {
       free_rule(r);
     }
     vec_free(&p.rules);
-    FREE(p.name);
     if (p.elem) {
       free_rule(p.elem.rule);
       FREE(p.elem);
@@ -1720,11 +1714,8 @@ free_D_Grammar(Grammar *g) {
   vec_free(&g.productions);
   for (i = 0; i < g.terminals.n; i++) {
     Term *t = g.terminals.v[i];
-    if (t.string)
-      FREE(t.string);
-    if (t.term_name)
-      FREE(t.term_name);
-    FREE(t);
+    if (t.string_)
+      FREE(t.string_);
   }
   vec_free(&g.terminals);
   for (i = 0; i < g.actions.n; i++)
@@ -1868,11 +1859,11 @@ propogate_declarations(Grammar *g) {
                p = g.productions.v[0];
            else
            {
-               p = lookup_production(g, e.e.unresolved.string, e.e.unresolved.len);
+               p = lookup_production(g, e.e.unresolved.string_, e.e.unresolved.len);
                if (!p)
-                   d_fail("unresolved declaration '%s'", e.e.unresolved.string);
+                   d_fail("unresolved declaration '%s'", e.e.unresolved.string_);
            }
-           FREE(e.e.unresolved.string); e.e.unresolved.string = null;
+           FREE(e.e.unresolved.string_); e.e.unresolved.string_ = null;
            e.kind = ELEM_NTERM;
            e.e.nterm = p;
        }
@@ -2004,7 +1995,7 @@ build_grammar(Grammar *g) {
   build_LR_tables(g);
   map_declarations_to_states(g);
   if (d_verbose_level) {
-    printf("%d productions %d terminals %d states %d declarations\n",
+    logf("%d productions %d terminals %d states %d declarations\n",
 	   g.productions.n, g.terminals.n, g.states.n, 
 	   g.declarations.n);
   }
@@ -2025,33 +2016,33 @@ static void
 print_term_escaped(Term *t, int double_escaped) {
   char *s = null;
   if (t.term_name) {
-    printf("%s ", t.term_name);
+    logf("%s ", t.term_name);
   } else if (t.kind == TermKind.TERM_STRING) {
-    s = t.string ? escape_string_single_quote(t.string) : null;
-    if (!t.string || !*t.string)
-      printf("<EOF> ");
+    s = t.string_ ? escape_string_single_quote(t.string_) : null;
+    if (!t.string_ || !*t.string_)
+      logf("<EOF> ");
     else {
-      printf("'%s' ", double_escaped?escape_string_single_quote(s):s);
+      logf("'%s' ", double_escaped?escape_string_single_quote(s):s);
       if (t.ignore_case)
-	printf("/i ");
+	logf("/i ");
       if (t.term_priority)
 	writefln("%sterm %d ", double_escaped?"#":"$", t.term_priority);
     }
   } else if (t.kind == TermKind.TERM_REGEX) {
-    s = t.string ? escape_string(t.string) : null;
-    //char *s = t.string; // ? escape_string(t.string) : null;
+    s = t.string_ ? escape_string(t.string_) : null;
+    //char *s = t.string_; // ? escape_string(t.string_) : null;
     immutable char *quote = double_escaped ? "\\\"".ptr : "\"".ptr;
-    printf("%s%s%s ", quote, double_escaped?escape_string(s):s, quote);
+    logf("%s%s%s ", quote, double_escaped?escape_string(s):s, quote);
     if (t.ignore_case)
-      printf("/i ");
+      logf("/i ");
     if (t.term_priority)
       writefln("%sterm %d ", double_escaped?"#":"$", t.term_priority);
   } else if (t.kind == TermKind.TERM_CODE) {
-    s = t.string ? escape_string(t.string) : null;
-    printf("code(\"%s\") ", s);
+    s = t.string_ ? escape_string(t.string_) : null;
+    logf("code(\"%s\") ", s);
   } else if (t.kind == TermKind.TERM_TOKEN) {
-    s = t.string ? escape_string(t.string) : null;
-    printf("%s ", s);
+    s = t.string_ ? escape_string(t.string_) : null;
+    logf("%s ", s);
   } else
     d_fail("unknown token kind");
   if (s)
@@ -2064,31 +2055,31 @@ print_element_escaped(Elem *ee, int double_escaped) {
   if (ee.kind == ELEM_TERM)
     print_term_escaped(ee.e.term, double_escaped);
   else if (ee.kind == ElemKind.ELEM_UNRESOLVED)
-    printf("%s ", ee.e.unresolved.string);
+    logf("%s ", ee.e.unresolved.string_);
   else
-    printf("%s ", ee.e.nterm.name);
+    logf("%s ", ee.e.nterm.name);
 }
 
 static void
 print_global_code(Grammar *g) {
   int i;
   int print_stdio_h = 1;
-  printf("%%<");
+  logf("%%<");
   for (i = 0; i < g.ncode; i++) {
-    printf("%s", g.code[i].code);
+    logf("%s", g.code[i].code);
     if (strstr(g.code[i].code, "<stdio.h>") != null)
       print_stdio_h = 0;
   }
   if (print_stdio_h)
-    printf("\n  #include <stdio.h>\n");
-  printf("%%>\n\n");
+    logf("\n  #include <stdio.h>\n");
+  logf("%%>\n\n");
 }
 
 static void
 print_production(Production *p) {
   uint j, k;
   Rule *r;
-  string opening[] = [ ""        , "\n\t  [ printf(\""    , "\n\t  { printf(\"" ];
+  string opening[] = [ ""        , "\n\t  [ logf(\""    , "\n\t  { logf(\"" ];
   string closing[] = [ "\n"      , "\\n\"); ]\n"          , "\\n\"); }\n" ];
   string middle[]  = [ "\n\t:   ", "  <-  "               , "  <=  " ];
   string assoc[]   = [ "$"       , "#"                    , "#" ];
@@ -2103,7 +2094,7 @@ print_production(Production *p) {
     r = p.rules.v[j];
     if (!j) {
       //      if (p.regex) {
-      //	printf("%s%s%s", opening[variant], p.name, regex_production);
+      //	logf("%s%s%s", opening[variant], p.name, regex_production);
       //      } else {
       writefln("%s%s%s", opening[variant], p.name, middle[variant]);
       //      }
@@ -2142,24 +2133,24 @@ print_production(Production *p) {
     writefln("%s", closing[variant]);
     variant = 0;
   }
-  printf("\t;\n");
-  printf("\n");
+  logf("\t;\n");
+  logf("\n");
 }
 
 static void
 print_productions(Grammar *g, char *pathname) {
   uint i;
   if (!g.productions.n) {
-    printf("/*\n  There were no productions in the grammar %s\n*/\n", pathname);  
+    logf("/*\n  There were no productions in the grammar %s\n*/\n", pathname);  
     return;
   }
   for (i = 1; i < g.productions.n; i++)
     print_production(g.productions.v[i]);
 }
 
-static void print_declare(const char *s, char *n) {
-  while (*n && (isspace_(*n) || isdigit_(*n))) n++;
-  printf(s, n);
+static void print_declare(string s, string n) {
+    while(n.length && (n[0].isWhite() || n[0].isDigit())) n = n[1 .. $];
+  logf(s, n);
 }
 
 static void
@@ -2167,61 +2158,61 @@ print_declarations(Grammar *g) {
   int i;
 
   if (g.tokenizer)
-    printf("${declare tokenize}\n");
+    logf("${declare tokenize}\n");
   for (i = 0; i < g.declarations.n; i++) {
     Declaration *dd = g.declarations.v[i];
     Elem *ee = dd.elem;
     switch (dd.kind) {
     case DeclarationKind.DECLARE_LONGEST_MATCH:
       if (g.longest_match)
-        printf("${declare longest_match}\n");
+        logf("${declare longest_match}\n");
       else
-        print_declare("${declare longest_match %s}\n".ptr, ee.e.nterm.name);
+        print_declare("${declare longest_match %s}\n", ee.e.nterm.name);
       break;
     case DeclarationKind.DECLARE_ALL_MATCHES:
       if (!g.longest_match)
-        printf("${declare all_matches}\n");
+        logf("${declare all_matches}\n");
       else
-        print_declare("${declare all_matches %s}\n".ptr, ee.e.nterm.name);
+        print_declare("${declare all_matches %s}\n", ee.e.nterm.name);
       break;
     default:
-      printf("\n/*\nDeclaration.kind: %d", dd.kind);
-      printf("\nElem.kind:        %d\n*/\n", ee.kind);
+      logf("\n/*\nDeclaration.kind: %d", dd.kind);
+      logf("\nElem.kind:        %d\n*/\n", ee.kind);
     }
   }
   if (g.set_op_priority_from_rule)
-    printf("${declare set_op_priority_from_rule}\n");
+    logf("${declare set_op_priority_from_rule}\n");
   if (g.states_for_all_nterms)
-    printf("${declare all_subparsers}\n");
+    logf("${declare all_subparsers}\n");
   /* todo: DeclarationKind.DECLARE_STATE_FOR */
   if (g.default_white_space)
-    printf("${declare whitespace %s}\n", g.default_white_space);
+    logf("${declare whitespace %s}\n", g.default_white_space);
   if (g.save_parse_tree)
-    printf("${declare save_parse_tree}\n");
+    logf("${declare save_parse_tree}\n");
   /* todo: DECLARE_NUM */
 
   if (g.scanner.code)
-    printf("${scanner %s}\n", g.scanner.code);
+    logf("${scanner %s}\n", g.scanner.code);
 
   { int token_exists = 0;
     for (i = 0; i < g.terminals.n; i++) {
       Term *t = g.terminals.v[i];
       if (t.kind == TermKind.TERM_TOKEN) {
-	writefln("%s %s", token_exists?"":"${token", t.string);
+	writefln("%s %s", token_exists?"":"${token", t.string_);
 	token_exists = 1;
       }
     }
     if (token_exists)
-      printf("}\n");
+      logf("}\n");
   }
 
-  printf("\n");
+  logf("\n");
 }
 
 extern(C) void
 print_rdebug_grammar(Grammar *g, char *pathname) {
-  printf("/*\n  Generated by Make DParser\n");  
-  printf("  Available at http://dparser.sf.net\n*/\n\n");
+  logf("/*\n  Generated by Make DParser\n");  
+  logf("  Available at http://dparser.sf.net\n*/\n\n");
   
   print_global_code(g);
   print_declarations(g);

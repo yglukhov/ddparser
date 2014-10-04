@@ -523,7 +523,7 @@ build_state_scanner(Grammar *g, LexState *ls, State *s) {
       one = 1;
       nn = n;
       if (!a.term.ignore_case) {
-	for (c = cast(uint8*)a.term.string; *c; c++) {
+	for (c = cast(uint8*)a.term.string_; *c; c++) {
 	  if (!nn.chars[*c].n) 
 	    vec_add(&nn.chars[*c], (nnn = new_NFAState(ls)));
 	  else
@@ -531,7 +531,7 @@ build_state_scanner(Grammar *g, LexState *ls, State *s) {
 	  nn = nnn;
 	}
       } else { /* use new states */
-	for (c = cast(uint8*)a.term.string; *c; c++) {
+	for (c = cast(uint8*)a.term.string_; *c; c++) {
 	  if (isalpha(*c)) {
 	    vec_add(&nn.chars[toupper(*c)], (nnn = new_NFAState(ls)));
 	    vec_add(&nn.chars[tolower(*c)], nnn);
@@ -552,7 +552,7 @@ build_state_scanner(Grammar *g, LexState *ls, State *s) {
       trailing_context.kind = ActionKind.ACTION_SHIFT_TRAILING;
       trailing_context.index = g.action_count++;
       one = 1;
-      reg = cast(uint8*)a.term.string;
+      reg = cast(uint8*)a.term.string_;
       vec_add(&n.epsilon, (nnn = new_NFAState(ls)));
       nn = new_NFAState(ls);
       ls.ignore_case = a.term.ignore_case;
