@@ -960,7 +960,7 @@ rep_EBNF(Grammar *g, int min, int max) {
 
 void
 initialize_productions(Grammar *g) {
-  Production *pp = new_production(g, dup_str("0 Start", null));
+  Production *pp = new_production(g, "0 Start");
   pp.internal = InternalKind.INTERNAL_HIDDEN;
 }
 
@@ -971,11 +971,6 @@ finish_productions(Grammar *g) {
   vec_add(&rr.elems, new_elem_nterm(null, rr));
   vec_add(&pp.rules, rr);
   rr.elems.v[0].e.nterm = g.productions.v[1];
-}
-
-extern(C) Production *
-lookup_production(Grammar *g, const char *name, int l) {
-    return lookup_production(g, name[0 .. l]);
 }
 
 Production* lookup_production(Grammar* g, const(char)[] name)
@@ -1354,7 +1349,7 @@ make_elems_for_productions(Grammar *g) {
   if (!g.states_for_all_nterms &&
       g.states_for_whitespace)
   {
-      ppp = lookup_production(g, "whitespace".ptr, ("whitespace").sizeof-1);
+      ppp = lookup_production(g, "whitespace");
       if (ppp) 
       {
           ppp.elem = new_elem_nterm(ppp, new_rule(g, pp));
@@ -1509,7 +1504,7 @@ static void
 check_default_actions(Grammar *g) {
   Production *pdefault;
 
-  pdefault = lookup_production(g, "_", 1);
+  pdefault = lookup_production(g, "_");
   if (pdefault && pdefault.rules.n > 1)
     d_fail("number of rules in default action != 1");
 }

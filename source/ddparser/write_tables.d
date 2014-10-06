@@ -533,7 +533,7 @@ buildReductions(Grammar *g, ref BuildTables tables) {
     Production *p, pdefault;
     Rule *r, rdefault = null;
 
-    pdefault = lookup_production(g, "_", 1);
+    pdefault = lookup_production(g, "_");
     if (pdefault) {
         rdefault = pdefault.rules.v[0];
     }
