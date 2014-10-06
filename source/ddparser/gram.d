@@ -81,7 +81,7 @@ struct Hint {
 alias VecHint = Vec!(Hint*);
 
 alias VecScanStateTransition =  Vec!(ScanStateTransition*);
-alias VecScanState = Vec!(ScanState *) ;
+alias VecScanState = Vec!(ScanState *);
 
 struct Scanner {
   VecScanState			states;
@@ -530,7 +530,7 @@ new_term_string(Grammar *g, const(char)[] s, Rule *r)
   Term *t = new_term();
   Elem *elem;
 
-  t.string_ = s.toStringz();
+  t.string_ = cast(char*)s.toStringz();
   t.string_len = cast(int)s.length;
   vec_add(&g.terminals, t);
   elem = new_elem_term(t, r);

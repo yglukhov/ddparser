@@ -21,7 +21,7 @@ enum INTEGRAL_STACK_SIZE =	8;
 
 enum SET_MAX_SEQUENTIAL =	5;
 
-bool IS_BIT_SET(T, V)(T _v, V _s) { return cast(bool)((_v)[(_s) / 8] & 1 << ((_s) % 8)); }
+bool IS_BIT_SET(T, V)(T _v, V _s) { return cast(bool)(_v[_s / 8] & 1 << (_s % 8)); }
 void SET_BIT(T, V)(ref T _v, V _s) { (_v)[(_s) / 8] |= (1 << ((_s) %8)); }
 
 extern(C) __gshared int d_verbose_level = 0;
