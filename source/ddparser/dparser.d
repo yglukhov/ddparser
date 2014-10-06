@@ -588,7 +588,7 @@ private:
 
     static string symbolNameForSymbol(const D_Symbol* s) @trusted nothrow pure
     {
-        try { return s.name[0 .. s.name_len].idup; } catch(Exception e) { return null; }
+        return s.name;
     }
 
     static string stringValueForNode(D_ParseNode* cn)

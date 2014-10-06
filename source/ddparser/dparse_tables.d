@@ -157,8 +157,7 @@ enum D_SYMBOL_CODE		=6;
 enum D_SYMBOL_TOKEN		=7;
 struct D_Symbol {
   uint		kind;
-  const(char)        *name;
-  int			name_len;
+  string name;
   int			start_symbol;
 }
 

@@ -773,8 +773,7 @@ buildSymbolData(Grammar *g, ref BuildTables tables) {
         internal_index = g.productions.v[i].internal ? (is_EBNF(g.productions.v[i].internal) ? 2 : 1) : 0;
         D_Symbol sym;
         sym.kind = d_internal_values[internal_index];
-        sym.name = g.productions.v[i].name.toStringz();
-        sym.name_len = cast(int)g.productions.v[i].name.length;
+        sym.name = g.productions.v[i].name;
         sym.start_symbol = state;
         d_symbols ~= sym;
     }
@@ -784,8 +783,7 @@ buildSymbolData(Grammar *g, ref BuildTables tables) {
         int symbol_index = g.terminals.v[i].kind;
         D_Symbol sym;
         sym.kind = d_symbol_values[symbol_index];
-        sym.name = name;
-        sym.name_len = cast(int)strlen(name);
+        sym.name = name[0 .. strlen(name)].idup;
         d_symbols ~= sym;
     }
     tables.d_symbols = d_symbols;
