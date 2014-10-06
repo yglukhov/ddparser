@@ -11,15 +11,15 @@ import std.json;
 import ddparser.serialize;
 import core.vararg;
 
-enum INITIAL_SET_SIZE_INDEX =		2;
+enum INITIAL_SET_SIZE_INDEX =       2;
 
-enum INITIAL_VEC_SHIFT =	3;
-enum INITIAL_VEC_SIZE =	(1 << INITIAL_VEC_SHIFT);
-enum INTEGRAL_VEC_SIZE =	3;
-enum INTEGRAL_STACK_SIZE =	8;
-/* enum TRICK_VEC_SIZE =		(INITIAL_VEC_SIZE - INTEGRAL_VEC_ELEMENTS); */
+enum INITIAL_VEC_SHIFT =    3;
+enum INITIAL_VEC_SIZE = (1 << INITIAL_VEC_SHIFT);
+enum INTEGRAL_VEC_SIZE =    3;
+enum INTEGRAL_STACK_SIZE =  8;
+/* enum TRICK_VEC_SIZE =        (INITIAL_VEC_SIZE - INTEGRAL_VEC_ELEMENTS); */
 
-enum SET_MAX_SEQUENTIAL =	5;
+enum SET_MAX_SEQUENTIAL =   5;
 
 bool IS_BIT_SET(T, V)(T _v, V _s) { return cast(bool)(_v[_s / 8] & 1 << (_s % 8)); }
 void SET_BIT(T, V)(ref T _v, V _s) { (_v)[(_s) / 8] |= (1 << ((_s) %8)); }
@@ -71,21 +71,21 @@ struct Vec(T)
 
     void add(T _i)
     {
-        if (!v) { 							
+        if (!v) {
             v = e.ptr;
             e[n] = _i;
             n++;
-            return;								
-        } else if (v == e.ptr) { 					
-            if ((n < INTEGRAL_VEC_SIZE)) { 				
-                v[n++] = (_i); 					
-                return;								
-            }									
-        } else if (n & (INITIAL_VEC_SIZE - 1)) { 			
-            v[n++] = (_i); 						
-            return;								
-        }									
-        vec_add_internal(_i); 						
+            return;
+        } else if (v == e.ptr) {
+            if ((n < INTEGRAL_VEC_SIZE)) {
+                v[n++] = (_i);
+                return;
+            }
+        } else if (n & (INITIAL_VEC_SIZE - 1)) {
+            v[n++] = (_i);
+            return;
+        }
+        vec_add_internal(_i);
     }
 
     void opOpAssign(string s)(T v) if (s == "~=")
@@ -180,7 +180,7 @@ void vec_add(T, U)(T _v, U _i)
     _v.add(_i);
 }
 
-struct Stack(_x) 
+struct Stack(_x)
 {
     _x *start;
     _x *end;
@@ -291,28 +291,6 @@ void FREE(void* p)
 
 }
 
-
-extern(C) int
-set_find(void *av, void *t);
-/*{
-  AbstractVec *v = cast(AbstractVec*)av;
-  int j, n = v.n;
-  uint i;
-  if (n) {
-    uint h = (cast(uint)t);
-    h = h % n;
-    for (i = h, j = 0; 
-	 i < v.n && j < SET_MAX_SEQUENTIAL; 
-	 i = ((i + 1) % n), j++) 
-    {
-      if (!v.v[i]) {
-	return 0;
-      } else if (v.v[i] == t)
-	return 1;
-    }
-  }
-  return 0;
-}*/
 /*
 int
 set_add(void *av, void *t) {
@@ -322,15 +300,15 @@ set_add(void *av, void *t) {
   if (n) {
     uint h = (cast(uint)t);
     h = h % n;
-    for (i = h, j = 0; 
-	 i < v.n && j < SET_MAX_SEQUENTIAL; 
-	 i = ((i + 1) % n), j++) 
+    for (i = h, j = 0;
+     i < v.n && j < SET_MAX_SEQUENTIAL;
+     i = ((i + 1) % n), j++)
     {
       if (!v.v[i]) {
-	v.v[i] = t;
-	return 1;
+    v.v[i] = t;
+    return 1;
       } else if (v.v[i] == t)
-	return 0;
+    return 0;
     }
   }
   if (!n) {
@@ -351,13 +329,7 @@ set_add(void *av, void *t) {
   return set_add(v, t);
 }
 */
-extern(C):
-int set_add(void *av, void *t);
-int set_union(void *v, void *vv);
-char *escape_string(char *s);
-char *escape_string_single_quote(char *s);
-void *set_add_fn(void *v, void *t, hash_fns_t *fns);
-void set_to_vec(void *av);
+
 
 char *dup_code(const char *str, const char *end)
 {
@@ -399,16 +371,20 @@ void* GC_REALLOC(void* p, size_t s)
     return GC.realloc(p, s);
 }
 
+extern(C)
+{
 
 alias hash_fn_t = uint function (void *, hash_fns_t*);
 alias cmp_fn_t = int function (void *, void *, hash_fns_t*);
-struct hash_fns_t {
-  hash_fn_t	hash_fn;
-  cmp_fn_t	cmp_fn;
-  void		*data[2];
 }
 
-extern(C) void Trace(int line, char* str)
+struct hash_fns_t {
+  hash_fn_t hash_fn;
+  cmp_fn_t  cmp_fn;
+  void      *data[2];
+}
+
+void Trace(int line, char* str)
 {
     if (0)
     {
@@ -428,7 +404,7 @@ extern(C) void Trace(int line, char* str)
 }
 
 
-extern(C) char *
+char *
 d_dup_pathname_str(const(char)*s) {
     const(char)*e = s;
     if (!s)
@@ -440,7 +416,7 @@ d_dup_pathname_str(const(char)*s) {
         return dup_str(s, s+strlen(s));
 }
 
-extern(C) char *
+char *
 dup_str(const char *s, const char *e) {
   int l = cast(int)(e ? e-s : strlen(s));
   char *ss = cast(char*)MALLOC(l+1);
@@ -449,20 +425,26 @@ dup_str(const char *s, const char *e) {
   return ss;
 }
 
-extern(C) uint
-strhashl(const(char)*s, int l) {
-  uint h = 0, g;
-  int i = 0;
+uint strhashl(const(char)[] s)
+{
+    uint h = 0, g;
 
-  for (;i < l;i++,s++) {
-    h = (h << 4) + *s;
-    if ((g = h & 0xf0000000) != 0)
-      h = (h ^ (g >> 24)) ^ g;
-  }
-  return h;
+    foreach(char c; s)
+    {
+        h = (h << 4) + cast(ubyte)c;
+        if ((g = h & 0xf0000000) != 0)
+            h = (h ^ (g >> 24)) ^ g;
+    }
+    return h;
+
 }
 
-extern(C) int
+uint
+strhashl(const(char)*s, int l) {
+    return strhashl(s[0 .. l]);
+}
+
+int
 buf_read(const char *pathname, char **buf, int *len) {
     byte[] outbuf;
     foreach(chunk; File(pathname[0 .. strlen(pathname)].idup).byChunk(4096)) outbuf ~= chunk;
@@ -494,69 +476,62 @@ void d_warn(Args...)(Args args)
     writefln(args);
 }
 
-extern(C) void
+void
 vec_add_internal(void *v, void *elem) {
   AbstractVec *av = cast(AbstractVec*)v;
   av.vec_add_internal(elem);
 }
 
-void ESC(char c, ref char* ss)
+char *escape_string(const(char) *s)
 {
-    *ss = '\\';
-    ss++;
-    *ss = c;
-    ss++;
+    return cast(char*)escape_string(s[0 .. strlen(s)], false).ptr;
 }
 
-char tohex1(ubyte _x)
+char *escape_string_single_quote(const(char) *s)
 {
-    return ((((_x)&15) > 9) ? (((_x)&15) - 10 + 'A') : (((_x)&15) + '0'));
+    return cast(char*)escape_string(s[0 .. strlen(s)], true).ptr;
 }
 
-char tohex2(byte _x)
+string escape_string(const(char)[] s, bool singleQuote = false)
 {
-    return ((((_x)>>4) > 9) ? (((_x)>>4) - 10 + 'A') : (((_x)>>4) + '0'));
-}
-
-static char *
-escape_string_internal(char *s, int single_quote) {
-    char *ss = cast(char*)MALLOC((strlen(s) + 1) * 4), sss = ss;
-    for (; *s; s++) {
-        switch (*s) {
-            case '\b': ESC('b', ss); break;
-            case '\f': ESC('f', ss); break;
-            case '\n': ESC('n', ss); break;
-            case '\r': ESC('r', ss); break;
-            case '\t': ESC('t', ss); break;
-            case '\v': ESC('v', ss); break;
-            case '\a': ESC('a', ss); break;
-            case '\\': ESC('\\', ss); break;
+    auto result = appender!string();
+    result.reserve(s.length * 4);
+    foreach(c; s)
+    {
+        switch(c)
+        {
+            case '\b': result ~= "\\b"; break;
+            case '\f': result ~= "\\f"; break;
+            case '\n': result ~= "\\n"; break;
+            case '\r': result ~= "\\r"; break;
+            case '\t': result ~= "\\t"; break;
+            case '\v': result ~= "\\v"; break;
+            case '\a': result ~= "\\a"; break;
+            case '\\': result ~= "\\\\"; break;
             case '\"':
-                       if (!single_quote) { ESC(*s, ss); break; }
-                       *ss++ = *s;
-                       break;
+                if (!singleQuote) result ~= '\\';
+                result ~= c;
+                break;
             case '\'':
-                       if (single_quote) { ESC(*s, ss); break; }
-                       *ss++ = *s;
-                       break;
+                if (singleQuote) result ~= '\\';
+                result ~= c;
+                break;
             default:
-                       if (isprint(*s))
-                           *ss++ = *s;
-                       else {
-                           *ss++ = '\\';
-                           *ss++ = 'x';
-                           *ss++ = tohex2(cast(ubyte)*s);
-                           *ss++ = tohex1(cast(ubyte)*s);
-                       }
-                       break;
+                if (isPrintable(c))
+                    result ~= c;
+                else
+                    formattedWrite(result, "\\x%X", cast(uint)c);
         }
     }
-    *ss = 0;
-    return sss;
+
+    return result.data;
 }
 
-extern(C) char *escape_string(char *s) { return escape_string_internal(s, 0); }
-extern(C) char *escape_string_single_quote(char *s) { return escape_string_internal(s, 1); }
+string escape_string_single_quote(const(char)[] s)
+{
+    return escape_string(s, true);
+}
+
 
 int
 set_add(void *av, void *t) {
@@ -567,15 +542,15 @@ set_add(void *av, void *t) {
   if (n) {
     uint h = cast(uint)(cast(uintptr_t)t);
     h = h % n;
-    for (i = h, j = 0; 
-	 i < v.n && j < SET_MAX_SEQUENTIAL; 
-	 i = ((i + 1) % n), j++) 
+    for (i = h, j = 0;
+     i < v.n && j < SET_MAX_SEQUENTIAL;
+     i = ((i + 1) % n), j++)
     {
       if (!v.v[i]) {
-	v.v[i] = t;
-	return 1;
+    v.v[i] = t;
+    return 1;
       } else if (v.v[i] == t)
-	return 0;
+    return 0;
     }
   }
   if (!n) {
@@ -605,16 +580,16 @@ set_add_fn(void *av, void *t, hash_fns_t *fns) {
   uint i;
   if (n) {
     uint h = tt % n;
-    for (i = h, j = 0; 
-	 i < v.n && j < SET_MAX_SEQUENTIAL; 
-	 i = ((i + 1) % n), j++) 
+    for (i = h, j = 0;
+     i < v.n && j < SET_MAX_SEQUENTIAL;
+     i = ((i + 1) % n), j++)
     {
       if (!v.v[i]) {
-	v.v[i] = t;
-	return t;
+    v.v[i] = t;
+    return t;
       } else {
-	if (!fns.cmp_fn(v.v[i], t, fns))
-	  return v.v[i];
+    if (!fns.cmp_fn(v.v[i], t, fns))
+      return v.v[i];
       }
     }
   }
@@ -640,7 +615,7 @@ int
 set_union(void *av, void *avv) {
   AbstractVec *vv = cast(AbstractVec*)avv;
   uint i, changed = 0;
-  
+
   for (i = 0; i < vv.n; i++)
     if (vv.v[i])
       changed = set_add(av, vv.v[i]) || changed;
@@ -651,7 +626,7 @@ void
 set_union_fn(void *av, void *avv, hash_fns_t *fns) {
   AbstractVec *vv = cast(AbstractVec*)avv;
   uint i;
-  
+
   for (i = 0; i < vv.n; i++)
     if (vv.v[i])
       set_add_fn(av, vv.v[i], fns);
@@ -667,7 +642,7 @@ set_to_vec(void *av) {
   vv.v = v.v;
   if (v.v == v.e.ptr) {
     memcpy(vv.e.ptr, v.e.ptr, (v.e).sizeof);
-    vv.v = vv.e.ptr;   
+    vv.v = vv.e.ptr;
   }
   v.n = 0;
   v.v = null;
@@ -685,14 +660,14 @@ set_find(void *av, void *t) {
   if (n) {
     uint h = cast(uint)(cast(uintptr_t)t);
     h = h % n;
-    for (i = h, j = 0; 
-	 i < v.n && j < SET_MAX_SEQUENTIAL; 
-	 i = ((i + 1) % n), j++) 
+    for (i = h, j = 0;
+     i < v.n && j < SET_MAX_SEQUENTIAL;
+     i = ((i + 1) % n), j++)
     {
       if (!v.v[i]) {
-	return 0;
+    return 0;
       } else if (v.v[i] == t)
-	return 1;
+    return 1;
     }
   }
   return 0;
