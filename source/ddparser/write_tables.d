@@ -668,7 +668,7 @@ buildErrorData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
                         D_ErrorRecoveryHint hint;
                         hint.depth = cast(ushort)s.error_recovery_hints.v[j].depth;
                         hint.symbol = cast(ushort)s.error_recovery_hints.v[j].rule.prod.index;
-                        hint.str = ss;
+                        hint.str = ss[0 .. strlen(ss)].idup;
                         d_error_recovery_hints ~= hint;
                         if (j != s.error_recovery_hints.n - 1)
                             g.write_line += 1;

@@ -1924,15 +1924,15 @@ commit_stack(Parser *p, SNode *sn) {
 }
 
 static const (char) *
-find_substr(const (char) *str, const char *s) {
-  auto len = strlen(s);
+find_substr(const (char) *str, const(char)[] s) {
+  auto len = s.length;
   if (len == 1) {
-    while (*str && *str != *s) str++;
-    if (*str == *s)
+    while (*str && *str != s[0]) str++;
+    if (*str == s[0])
       return str + 1;
   } else
     while (*str) {
-      if (!strncmp(s, str, len))
+      if (!strncmp(s.ptr, str, len))
         return str + len;
       str++;
     }

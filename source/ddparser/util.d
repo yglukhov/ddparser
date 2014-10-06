@@ -484,12 +484,12 @@ vec_add_internal(void *v, void *elem) {
 
 char *escape_string(const(char) *s)
 {
-    return cast(char*)escape_string(s[0 .. strlen(s)], false).ptr;
+    return cast(char*)escape_string(s[0 .. strlen(s)], false).toStringz();
 }
 
 char *escape_string_single_quote(const(char) *s)
 {
-    return cast(char*)escape_string(s[0 .. strlen(s)], true).ptr;
+    return cast(char*)escape_string(s[0 .. strlen(s)], true).toStringz();
 }
 
 string escape_string(const(char)[] s, bool singleQuote = false)

@@ -59,7 +59,7 @@ struct D_RightEpsilonHint {
 struct D_ErrorRecoveryHint {
     ushort	depth;
     ushort	symbol;
-    const(char)	*str;
+    string str;
 }
 
 struct D_Shift {
