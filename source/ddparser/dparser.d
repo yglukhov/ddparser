@@ -132,19 +132,6 @@ class Grammar
     Production[] productions;
 }
 
-struct BinaryTables
-    {
-        D_ParserTables *parser_tables_gram;
-        char *tables;
-    }
-
-extern(C) void  print_parsetree(D_ParserTables pt, D_ParseNode *pn, void* fn = null, void *client_data = null) @trusted nothrow;
-
-extern(C) void d_version(char *v)
-    {
-        v[0] = 0;
-    }
-
 struct Location
 {
     ulong offset;
