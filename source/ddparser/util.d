@@ -74,6 +74,7 @@ struct Vec(T)
 
     ref T opIndex(size_t index)
     {
+        assert(index < n);
         return v[index];
     }
 
@@ -92,6 +93,18 @@ struct Vec(T)
         }
         return res;
     }
+
+    int opApplyReverse(int delegate(ref T) operations)
+    {
+        int res = 0;
+        for(int i = n - 1; i >= 0; --i)
+        {
+            res = operations(v[i]);
+            if (res) break;
+        }
+        return res;
+    }
+
 
     void vec_add_internal(T elem) {
         if (!n) {

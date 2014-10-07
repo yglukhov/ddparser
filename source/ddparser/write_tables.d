@@ -399,9 +399,9 @@ private Rule* original_reduction(Rule* r)
 private void
 buildGotoData(Grammar *g, ref BuildTables tables) {
     Vec!(intptr_t) vgoto;
-    int i, j, x, again, nvalid_bytes, sym, lowest_sym;
+    int i, j, x, sym, lowest_sym;
 
-    nvalid_bytes = ((g.productions.n + g.terminals.n) + 7) / 8;
+    int nvalid_bytes = ((g.productions.n + g.terminals.n) + 7) / 8;
     uint8 *goto_valid = cast(uint8 *)MALLOC(nvalid_bytes);
     vec_clear(&vgoto);
     for (i = 0; i < g.states.n; i++) {
@@ -423,9 +423,9 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
                     lowest_sym = sym;
             }
             /* insert into vgoto */
-            again = 1;
+            bool again = true;
             while (again) {
-                again = 0;
+                again = false;
                 for (j = 0; j < s.gotos.n; j++) {
                     x = elem_symbol(g, s.gotos.v[j].elem);
                     x -= lowest_sym;
@@ -437,7 +437,7 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
                                 printf("wow...\n");
                     }
                     if (vgoto.v[x]) {
-                        again = 1;
+                        again = true;
                         /* undo the damage */
                         for (--j;j >= 0;j--) {
                             x = elem_symbol(g, s.gotos.v[j].elem);
