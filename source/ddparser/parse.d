@@ -1992,9 +1992,8 @@ error_recovery(Parser *p) {
   s = p.snode_hash.last_all.loc.s;
   while (tail > head) {
     sn = q[head++];
-    if (sn.state.error_recovery_hints.n) {
-      for (i = 0; i < sn.state.error_recovery_hints.n; i++) {
-        D_ErrorRecoveryHint *er = &sn.state.error_recovery_hints.v[i];
+      foreach(ref rer; sn.state.error_recovery_hints) {
+        D_ErrorRecoveryHint *er = &rer;
         ss = find_substr(s, er.str);
         if (ss) {
           if (!best_sn || ss < best_s ||
@@ -2009,7 +2008,6 @@ error_recovery(Parser *p) {
           }
         }
       }
-    }
     for (i = 0; i < sn.zns.n; i++)
       if (sn.zns.v[i])
         for (j = 0; j < sn.zns.v[i].sns.n; j++) {

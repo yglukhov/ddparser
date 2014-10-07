@@ -111,11 +111,7 @@ struct D_State {
     int				goto_table_offset;
     D_Reduction*[]  reductions;
     D_RightEpsilonHint[] right_epsilon_hints;
-    struct _error_recovery_hints {
-        uint n;
-        D_ErrorRecoveryHint *v;
-    }
-    _error_recovery_hints error_recovery_hints;
+    D_ErrorRecoveryHint[] error_recovery_hints;
     int				shifts;
     D_ScanCode			scanner_code;
     void*				scanner_table;

@@ -691,60 +691,56 @@ buildStateData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
             s = g.states.v[i];
             shifts = s.same_shifts ? s.same_shifts : s;
             D_State state;
+
             if (s.gotos.n)
                 state.goto_valid = tables.d_goto_valid[i].ptr;
-            else
-                state.goto_valid = null;
+
             state.goto_table_offset = s.goto_table_offset;
+
             if (s.reduce_actions.n) {
                 state.reductions = tables.d_reductions1[i];
                 assert(s.reduce_actions.n == state.reductions.length);
-            } else {
-                state.reductions = null;
             }
+
             if (s.right_epsilon_hints.n) {
                 state.right_epsilon_hints = tables.d_right_epsilon_hints1[i];
                 assert(state.right_epsilon_hints.length == s.right_epsilon_hints.n);
-            } else {
-                state.right_epsilon_hints = null;
             }
+
             if (s.error_recovery_hints.n) {
                 h = cast(State*)set_add_fn(er_hash, s, &er_hint_hash_fns);
-                state.error_recovery_hints.n = s.error_recovery_hints.n;
-                state.error_recovery_hints.v = tables.d_error_recovery_hints1[h.index].ptr;
-            } else {
-                state.error_recovery_hints.n = 0;
-                state.error_recovery_hints.v = null;
+                state.error_recovery_hints = tables.d_error_recovery_hints1[h.index];
+                assert(state.error_recovery_hints.length == s.error_recovery_hints.n);
             }
+
             if (s.shift_actions.n || s.scanner_code || (g.scanner.code && s.goto_on_token))
                 state.shifts = 1;
-            else
-                state.shifts = 0;
+
             if (s.scanner.states.n) {
                 state.scanner_table = tables.d_scanner1[shifts.index].ptr;
-            } else {
-                state.scanner_table = null;
             }
+
             state.scanner_size = cast(ubyte)scanner_size(s);
             state.accept = s.accept ? 1 : 0;
             state.scan_kind = cast(ubyte)s.scan_kind;
+
             if ((shifts.scan_kind != D_SCAN_LONGEST || shifts.trailing_context)
                     && shifts.scanner.states.n) {
                 state.transition_table = tables.d_transition1[shifts.index].ptr;
-            } else {
-                state.transition_table = null;
             }
+
             if ((shifts.scan_kind != D_SCAN_LONGEST || shifts.trailing_context)
                     && shifts.scanner.states.n)
                 state.accepts_diff = tables.d_accepts_diff1[shifts.index].ptr;
-            else
-                state.accepts_diff = null;
+
             if (s.reduces_to)
                 state.reduces_to = s.reduces_to.index;
             else
                 state.reduces_to = -1;
+
             d_states ~= state;
         }
+
         tables.d_states = d_states;
     } else {
             d_fail("no states\n");
