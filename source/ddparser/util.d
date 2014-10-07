@@ -24,10 +24,10 @@ enum SET_MAX_SEQUENTIAL =   5;
 bool IS_BIT_SET(T, V)(T _v, V _s) { return cast(bool)(_v[_s / 8] & 1 << (_s % 8)); }
 void SET_BIT(T, V)(ref T _v, V _s) { (_v)[(_s) / 8] |= (1 << ((_s) %8)); }
 
-extern(C) __gshared int d_verbose_level = 0;
-extern(C) __gshared int d_debug_level = 0;
-extern(C) __gshared int test_level = 0;
-extern(C) __gshared int d_rdebug_grammar_level = 0;
+int d_verbose_level = 0;
+int d_debug_level = 0;
+int test_level = 0;
+int d_rdebug_grammar_level = 0;
 
 void trace(string file = __FILE__, int line = __LINE__, Args...)(Args args)
 {

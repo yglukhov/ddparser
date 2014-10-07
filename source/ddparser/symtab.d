@@ -8,8 +8,6 @@ import core.stdc.stdio;
 
 enum INITIAL_SYMHASH_SIZE =	3137;
 
-extern(C):
-
 struct D_SymHash {
   int		index;
   int		grow;
@@ -53,30 +51,6 @@ struct D_Scope {
   D_Scope *down_next;	/* next enclosed scope */
 }
 
-D_Scope *new_D_Scope(D_Scope *parent);
-D_Scope *enter_D_Scope(D_Scope *current, D_Scope *scope_);
-D_Scope *commit_D_Scope(D_Scope *scope_);
-D_Scope *equiv_D_Scope(D_Scope *scope_);
-D_Scope *global_D_Scope(D_Scope *scope_);
-D_Scope *scope_D_Scope(D_Scope *current, D_Scope *scope_);
-void free_D_Scope(D_Scope *st, int force);
-D_Sym *new_D_Sym(D_Scope *st, char *name, char *end, int sizeof_D_Sym);
-/* #define NEW_D_SYM(_st, _name, _end) new_D_Sym(_st, _name, _end, sizeof(D_Sym)) */
-void free_D_Sym(D_Sym *sym);
-D_Sym *find_D_Sym(D_Scope *st, char *name, char *end);
-D_Sym *find_global_D_Sym(D_Scope *st, char *name, char *end);
-/* use for first update in a production to update scope */
-D_Sym *update_D_Sym(D_Sym *sym, D_Scope **st, int sizeof_D_Sym);
-/* #define UPDATE_D_SYM(_sym, _st) update_D_Sym(_sym, _st, sizeof(D_Sym)) */
-/* use for first subsequent updates in a production */
-D_Sym *update_additional_D_Sym(D_Scope *st, D_Sym *sym, int sizeof_D_Sym);
-/* #define UPDATE_ADDITIONAL_D_SYM(_st, _sym) update_additional_D_Sym(_st, _sym, sizeof(D_Sym)) */
-D_Sym *current_D_Sym(D_Scope *st, D_Sym *sym);
-D_Sym *find_D_Sym_in_Scope(D_Scope *st, D_Scope *cur, char *name, char *end);
-D_Sym *next_D_Sym_in_Scope(D_Scope **st, D_Sym **sym);
-void print_scope(D_Scope *st);
-
-
 /*
   How this works.  In a normal symbol table there is simply
   a stack of scopes representing the scoping structure of
@@ -106,7 +80,7 @@ void print_scope(D_Scope *st);
 */
   
 
-static void
+private void
 symhash_add(D_SymHash *sh, D_Sym *s) {
   uint i, h = s.hash % sh.syms.n, n;
   D_Sym **v = sh.syms.v;
@@ -144,7 +118,7 @@ symhash_add(D_SymHash *sh, D_Sym *s) {
   }
 }
 
-static D_SymHash * 
+private D_SymHash * 
 new_D_SymHash() {
   D_SymHash *sh = cast(D_SymHash*)MALLOC((D_SymHash).sizeof);
   memset(sh, 0, (D_SymHash).sizeof);
@@ -155,7 +129,7 @@ new_D_SymHash() {
   return sh;
 }
 
-static void
+private void
 free_D_SymHash(D_SymHash *sh) {
   int i;
   D_Sym *sym;
@@ -278,7 +252,7 @@ free_D_Scope(D_Scope *st, int force) {
   FREE(st);
 }
 
-static void 
+private void 
 commit_ll(D_Scope *st, D_SymHash *sh) {
   D_Sym *sym;
   if (st.search) {
@@ -291,7 +265,7 @@ commit_ll(D_Scope *st, D_SymHash *sh) {
 }
 
 /* make direct links to the latest update */
-static void 
+private void 
 commit_update(D_Scope *st, D_SymHash *sh) {
   int i;
   D_Sym *s;
@@ -353,7 +327,7 @@ current_D_Sym(D_Scope *st, D_Sym *sym) {
   return sym;
 }
 
-static D_Sym *
+private D_Sym *
 find_D_Sym_in_Scope_internal(D_Scope *st, char *name, int len, uint h) {
     D_Sym *ll;
     for (;st ; st = st.search) {
@@ -378,7 +352,7 @@ find_D_Sym_in_Scope_internal(D_Scope *st, char *name, int len, uint h) {
     return null;
 }
 
-static D_Sym *
+private D_Sym *
 find_D_Sym_internal(D_Scope *cur, char *name, int len, uint h) {
     D_Sym *ll;
     if (!cur)
