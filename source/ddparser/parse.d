@@ -619,9 +619,9 @@ add_SNode(Parser *p, D_State *state, d_loc_t *loc, D_Scope *sc, void *g) {
   sn = new_SNode(p, state, loc, sc, g);
   if (sn.state.shifts)
     add_Shift(p, sn);
-  for (int i = 0; i < sn.state.reductions.n; i++)
-    if (!sn.state.reductions.v[i].nelements)
-      add_Reduction(p, null, sn, sn.state.reductions.v[i]);
+  foreach(r; sn.state.reductions)
+    if (!r.nelements)
+      add_Reduction(p, null, sn, r);
   return sn;
 }
 
@@ -1349,9 +1349,9 @@ goto_PNode(Parser *p, d_loc_t *loc, PNode *pn, SNode *ps) {
   z = set_find_znode(&new_ps.zns, pn);
   if (!z) { /* not found */
     set_add_znode(&new_ps.zns, (z = new_ZNode(p, pn)));
-    for (j = 0; j < new_ps.state.reductions.n; j++)
-      if (new_ps.state.reductions.v[j].nelements)
-        add_Reduction(p, z, new_ps, new_ps.state.reductions.v[j]);
+    foreach(r; new_ps.state.reductions)
+      if (r.nelements)
+        add_Reduction(p, z, new_ps, r);
     if (!pn.shift)
       for (j = 0; j < new_ps.state.right_epsilon_hints.n; j++) {
         D_RightEpsilonHint *h = &new_ps.state.right_epsilon_hints.v[j];

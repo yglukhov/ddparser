@@ -697,11 +697,10 @@ buildStateData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
                 state.goto_valid = null;
             state.goto_table_offset = s.goto_table_offset;
             if (s.reduce_actions.n) {
-                state.reductions.n = s.reduce_actions.n;
-                state.reductions.v = tables.d_reductions1[i].ptr;
+                state.reductions = tables.d_reductions1[i];
+                assert(s.reduce_actions.n == state.reductions.length);
             } else {
-                state.reductions.n = 0;
-                state.reductions.v = null;
+                state.reductions = null;
             }
             if (s.right_epsilon_hints.n) {
                 state.right_epsilon_hints.n = s.right_epsilon_hints.n;

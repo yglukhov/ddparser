@@ -109,11 +109,7 @@ enum D_SCAN_DEFAULT	=D_SCAN_ALL;
 struct D_State {
     ubyte			*goto_valid;
     int				goto_table_offset;
-    static struct _reductions {
-        uint n;
-        D_Reduction **v;
-    }
-    _reductions reductions;
+    D_Reduction*[]  reductions;
     struct _right_epsilon_hints {
         uint n;
         D_RightEpsilonHint *v;
