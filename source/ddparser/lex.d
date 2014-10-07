@@ -50,7 +50,7 @@ struct LexState {
   uint ignore_case;
 }
 
-static NFAState *
+private NFAState *
 new_NFAState(LexState *ls) {
   NFAState *n = cast(NFAState*)MALLOC((NFAState).sizeof);
   memset(n, 0, (NFAState).sizeof);
@@ -59,20 +59,20 @@ new_NFAState(LexState *ls) {
   return n;
 }
 
-static DFAState *
+private DFAState *
 new_DFAState() {
   DFAState *n = cast(DFAState*)MALLOC((DFAState).sizeof);
   memset(n, 0, (DFAState).sizeof);
   return n;
 }
 
-static void
+private void
 free_DFAState(DFAState *y) {
   vec_free(&y.states);
   FREE(y);
 }
 
-static void
+private void
 free_VecDFAState(VecDFAState *dfas) {
   int i;
   for (i = 0; i < dfas.n; i++)
@@ -80,7 +80,7 @@ free_VecDFAState(VecDFAState *dfas) {
   vec_free(dfas);
 }
 
-static void
+private void
 free_NFAState(NFAState *y) {
   int i;
   for (i = 0; i < 256; i++)
@@ -90,7 +90,7 @@ free_NFAState(NFAState *y) {
   FREE(y);
 }
 
-static void
+private void
 free_VecNFAState(VecNFAState *nfas) {
   int i;
   for (i = 0; i < nfas.n; i++)
@@ -98,21 +98,21 @@ free_VecNFAState(VecNFAState *nfas) {
   vec_free(nfas);
 }
 
-static ScanState *
+private ScanState *
 new_ScanState() {
   ScanState *n = cast(ScanState*)MALLOC((ScanState).sizeof);
   memset(n, 0, (ScanState).sizeof);
   return n;
 }
 
-extern(C) static int 
+extern(C) private int 
 nfacmp(const void *ai, const void *aj) {
   uint32 i = (*cast(NFAState**)ai).index;
   uint32 j = (*cast(NFAState**)aj).index;
   return (i > j) ? 1 : ((i < j) ? -1 : 0);
 }
 
-static void
+private void
 nfa_closure(DFAState *x) {
     int i, j, k;
 
@@ -130,7 +130,7 @@ Lbreak:;
     qsort(x.states.v, x.states.n, (x.states.v[0]).sizeof, &nfacmp);
 }
 
-static int
+private int
 eq_dfa_state(DFAState *x, DFAState *y) {
   int i;
 
@@ -142,7 +142,7 @@ eq_dfa_state(DFAState *x, DFAState *y) {
   return 1;
 }
 
-static void
+private void
 dfa_to_scanner(VecDFAState *alldfas, VecScanState *scanner) {
   int i, j, k, highest, p;
 
@@ -173,7 +173,7 @@ dfa_to_scanner(VecDFAState *alldfas, VecScanState *scanner) {
   }
 }
 
-static void
+private void
 nfa_to_scanner(NFAState *n, Scanner *s) {
   DFAState *x = new_DFAState(), y;
   VecDFAState alldfas;
@@ -215,7 +215,7 @@ nfa_to_scanner(NFAState *n, Scanner *s) {
 }
 
 /* build a NFA for the regular expression */
-static int
+private int
 build_regex_nfa(LexState *ls, uint8 **areg, NFAState *pp, NFAState *nn, Action *trailing) {
   uint8 c, pc;
   uint8 *reg = *areg;
@@ -318,7 +318,7 @@ Lsetdone:
   return has_trailing;
 }
 
-static void
+private void
 action_diff(VecAction *a, VecAction *b, VecAction *c) {
   int bb = 0, cc = 0;
   while (1) {
@@ -347,7 +347,7 @@ action_diff(VecAction *a, VecAction *b, VecAction *c) {
   }
 }
 
-static void
+private void
 action_intersect(VecAction *a, VecAction *b, VecAction *c) {
   int bb = 0, cc = 0;
   while (1) {
@@ -373,7 +373,7 @@ action_intersect(VecAction *a, VecAction *b, VecAction *c) {
   }
 }
 
-static void
+private void
 compute_liveness(Scanner *scanner) {
   int i, j, changed = 1;
   ScanState *ss, sss;
@@ -405,7 +405,7 @@ compute_liveness(Scanner *scanner) {
   }
 }
 
-extern(C) static uint32
+extern(C) private uint32
 trans_hash_fn(ScanStateTransition *a, hash_fns_t *fns) {
   uint h = 0;
   int i;
@@ -418,7 +418,7 @@ trans_hash_fn(ScanStateTransition *a, hash_fns_t *fns) {
   return h;
 }
 
-extern(C) static int
+extern(C) private int
 trans_cmp_fn(ScanStateTransition *a, ScanStateTransition *b, hash_fns_t *fns) {
   int i;
   
@@ -437,7 +437,7 @@ trans_cmp_fn(ScanStateTransition *a, ScanStateTransition *b, hash_fns_t *fns) {
   return 0;
 }
 
-static hash_fns_t trans_hash_fns;
+private hash_fns_t trans_hash_fns;
 
 static this()
 {
@@ -449,7 +449,7 @@ static this()
 
 }
 
-static void
+private void
 build_transitions(LexState *ls, Scanner *s) {
   int i, j;
   ScanState *ss;
@@ -494,13 +494,13 @@ build_transitions(LexState *ls, Scanner *s) {
   ls.transitions += s.transitions.n;
 }
 
-static void
+private void
 compute_transitions(LexState *ls, Scanner *s) {
   compute_liveness(s);
   build_transitions(ls, s);
 }
 
-static void
+private void
 build_state_scanner(Grammar *g, LexState *ls, State *s) {
   NFAState *n, nn, nnn;
   Action *a;
@@ -573,7 +573,7 @@ build_state_scanner(Grammar *g, LexState *ls, State *s) {
   ls.scanners++;
 }
 
-static LexState *
+private LexState *
 new_LexState() {
   LexState *ls = cast(LexState*)MALLOC((LexState).sizeof);
   memset(ls, 0, (LexState).sizeof);
@@ -581,7 +581,7 @@ new_LexState() {
   return ls;
 }
 
-extern(C) void 
+void 
 build_scanners(Grammar *g) {
   int i, j, k;
   State *s;

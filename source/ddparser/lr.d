@@ -7,13 +7,13 @@ import core.stdc.stdlib;
 
 enum INITIAL_ALLITEMS =	3359;
 
-uint item_hash(Item* _i)
+private uint item_hash(Item* _i)
 {
     return  ((cast(uint)(_i).rule.index << 8) + 			
      (cast(uint)((_i).kind != ElemKind.ELEM_END ? (_i).index : (_i).rule.elems.n)));
-};
+}
 
-static int
+private int
 insert_item(State *s, Elem *e) {
   Item *i = e;
   if (set_add(&s.items_hash, i)) {
@@ -23,28 +23,28 @@ insert_item(State *s, Elem *e) {
   return 0;
 }
 
-extern(C) static int 
+extern(C) private int 
 itemcmp(const void *ai, const void *aj) {
   uint i = item_hash(*cast(Item**)ai);	
   uint j = item_hash(*cast(Item**)aj);
   return (i > j) ? 1 : ((i < j) ? -1 : 0);
 }
 
-static State *
+private State *
 new_state() {
   State *s = new State();
   memset(s, 0, (State).sizeof);
   return s;
 }
 
-static void
+private void
 free_state(State *s) {
   vec_free(&s.items);
   vec_free(&s.items_hash);
   FREE(s);
 }
 
-static State *
+private State *
 maybe_add_state(Grammar *g, State *s) {
   int i, j;
 
@@ -64,7 +64,7 @@ maybe_add_state(Grammar *g, State *s) {
   return s;
 }
 
-static Elem *
+private Elem *
 next_elem(Item *i) {
   if (i.index + 1 >= i.rule.elems.n)
     return i.rule.end;
@@ -72,7 +72,7 @@ next_elem(Item *i) {
     return i.rule.elems.v[i.index + 1];
 }
 
-static State *
+private State *
 build_closure(Grammar *g, State *s) {
   int j, k;
 
@@ -93,14 +93,14 @@ build_closure(Grammar *g, State *s) {
   return maybe_add_state(g, s);
 }
 
-static Elem *
+private Elem *
 clone_elem(Elem *e) {
   Elem *ee = new Elem();
   memcpy(ee, e, (*ee).sizeof);
   return ee;
 }
 
-static void
+private void
 add_goto(State *s, State *ss, Elem *e) {
   Goto *g = new Goto();
   g.state = ss;
@@ -108,7 +108,7 @@ add_goto(State *s, State *ss, Elem *e) {
   vec_add(&s.gotos, g);
 }
 
-static void
+private void
 build_state_for(Grammar *g, State *s, Elem *e) {
   int j;
   Item *i;
@@ -127,7 +127,7 @@ build_state_for(Grammar *g, State *s, Elem *e) {
     add_goto(s, build_closure(g, ss), e);
 }
 
-static void
+private void
 build_new_states(Grammar *g) {
   int i, j;
   State *s;
@@ -148,7 +148,7 @@ build_new_states(Grammar *g) {
   }
 }
 
-static void
+private void
 build_states_for_each_production(Grammar *g) {
   int i;
   for (i = 0; i < g.productions.n; i++)
@@ -159,7 +159,7 @@ build_states_for_each_production(Grammar *g) {
     }
 }
 
-extern(C) uint
+uint
 elem_symbol(Grammar *g, Elem *e) {
   if (e.kind == ELEM_NTERM)
     return e.e.nterm.index;
@@ -167,14 +167,14 @@ elem_symbol(Grammar *g, Elem *e) {
     return g.productions.n + e.e.term.index;
 }
 
-extern(C) static int 
+extern(C) private int 
 gotocmp(const void *aa, const void *bb) {
   Goto *a = *cast(Goto **)aa, b = *cast(Goto **)bb;
   int i = a.state.index, j = b.state.index;
   return ((i > j) ? 1 : ((i < j) ? -1 : 0));
 }
 
-static void
+private void
 sort_Gotos(Grammar *g) {
   int i;
 
@@ -184,7 +184,7 @@ sort_Gotos(Grammar *g) {
   }
 }
 
-static void
+private void
 build_LR_sets(Grammar *g) {
   State *s = new_state();
   insert_item(s, g.productions.v[0].rules.v[0].elems.v[0]);
@@ -194,7 +194,7 @@ build_LR_sets(Grammar *g) {
   sort_Gotos(g);
 }
 
-static Action *
+private Action *
 new_Action(Grammar *g, ActionKind akind, Term *aterm, Rule *arule, State *astate) {
   Action *a = new Action();
   memset(a, 0, (Action).sizeof);
@@ -212,7 +212,7 @@ free_Action(Action *a) {
   FREE(a);
 }
 
-static void
+private void
 add_action(Grammar *g, State *s, ActionKind akind, Term *aterm, 
 	   Rule *arule, State *astate) 
 {
@@ -238,12 +238,12 @@ add_action(Grammar *g, State *s, ActionKind akind, Term *aterm,
   }
 }
 
-static void 
+private void 
 init_LR(Grammar *g) {
   g.action_count = 0;
 }
 
-extern(C) static int 
+extern(C) private int 
 actioncmp(const void *aa, const void *bb) {
   Action *a = *cast(Action **)aa, b = *cast(Action **)bb;
   int i, j;
@@ -267,7 +267,7 @@ sort_VecAction(VecAction *v) {
   qsort(v.v, v.n, (Action*).sizeof, &actioncmp);
 }
 
-static void
+private void
 build_actions(Grammar *g) {
     import std.stdio;
     foreach(s; g.states)
@@ -301,7 +301,7 @@ goto_State(State *s, Elem *e) {
   return null;
 }
 
-static Hint *
+private Hint *
 new_Hint(uint d, State *s, Rule *r) {
   Hint *h = new Hint();
   h.depth = d;
@@ -310,7 +310,7 @@ new_Hint(uint d, State *s, Rule *r) {
   return h;
 }
 
-extern(C) static int 
+extern(C) private int 
 hintcmp(const void *ai, const void *aj) {
   Hint *i = *cast(Hint**)ai;	
   Hint *j = *cast(Hint**)aj;
@@ -321,7 +321,7 @@ hintcmp(const void *ai, const void *aj) {
 	  (i.rule.index < j.rule.index) ? -1 : 0)));
 }
 
-static void
+private void
 build_right_epsilon_hints(Grammar *g) {
   int x, y, z;
   State *s, ss;
@@ -355,7 +355,7 @@ build_right_epsilon_hints(Grammar *g) {
   }
 }
 
-static void
+private void
 build_error_recovery(Grammar *g) {
   int i, j, k, depth;
   State *s;
