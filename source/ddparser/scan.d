@@ -14,13 +14,13 @@ struct ShiftResult {
     d_loc_t	loc;
 }
 
-private void do_smth(ScanTbl, TransTbl, State)(ref d_loc_t loc, ref d_loc_t last_loc,
+private void do_smth(State)(ref d_loc_t loc, ref d_loc_t last_loc,
                 ref char* s, ref int col, ref int line, ref int nresults, 
                 ref D_Shift** shift, D_State* parse_state, ShiftResult* results)
 {
     /* all matches */
-    ScanTbl *st = cast(ScanTbl*)parse_state.scanner_table;
-    TransTbl *tst = cast(TransTbl*)parse_state.transition_table;
+    auto st = cast(SB_!(State)*)parse_state.scanner_table;
+    auto tst = cast(SB_trans!(State)*)parse_state.transition_table;
     State state = 0, last = state, prev = state;
     uint8 c;
     uint32 sb, so;
@@ -61,13 +61,13 @@ scan_buffer(d_loc_t loc, D_State *parse_state, ShiftResult *results) {
 
     switch (parse_state.scanner_size) {
         case 1:
-            do_smth!(SB_uint8, SB_trans_uint8, uint8)(loc, last_loc, s, col, line, nresults, shift, parse_state, results);
+            do_smth!ubyte(loc, last_loc, s, col, line, nresults, shift, parse_state, results);
             break;
         case 2:
-            do_smth!(SB_uint16, SB_trans_uint16, uint16)(loc, last_loc, s, col, line, nresults, shift, parse_state, results);
+            do_smth!ushort(loc, last_loc, s, col, line, nresults, shift, parse_state, results);
             break;
         case 4:
-            do_smth!(SB_uint32, SB_trans_uint32, uint32)(loc, last_loc, s, col, line, nresults, shift, parse_state, results);
+            do_smth!uint(loc, last_loc, s, col, line, nresults, shift, parse_state, results);
             break;
         default:
     }

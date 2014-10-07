@@ -72,32 +72,25 @@ struct D_Shift {
   D_ReductionCode	speculative_code;
 }
 
-struct SB_uint8 {
-  D_Shift 		**shift;
-  ubyte		*scanner_block[SCANNER_BLOCKS];
+struct SB_(T)
+{
+    D_Shift** shift;
+    T* scanner_block[SCANNER_BLOCKS];
 }
 
-struct SB_uint16 {
-  D_Shift 		**shift;
-  ushort 	*scanner_block[SCANNER_BLOCKS];
+alias SB_uint8 = SB_!ubyte;
+alias SB_uint16 = SB_!ushort;
+alias SB_uint32 = SB_!uint;
+
+struct SB_trans(T)
+{
+    T* scanner_block[SCANNER_BLOCKS];
 }
 
-struct SB_uint32 {
-  D_Shift 		**shift;
-  uint		*scanner_block[SCANNER_BLOCKS];
-}
+alias SB_trans_uint8 = SB_trans!ubyte;
+alias SB_trans_uint16 = SB_trans!ushort;
+alias SB_trans_uint32 = SB_trans!uint;
 
-struct SB_trans_uint8 {
-  ubyte		*scanner_block[SCANNER_BLOCKS];
-}
-
-struct SB_trans_uint16 {
-  ushort 	*scanner_block[SCANNER_BLOCKS];
-}
-
-struct SB_trans_uint32 {
-  uint		*scanner_block[SCANNER_BLOCKS];
-}
 
 enum D_SCAN_ALL=	0;
 enum D_SCAN_LONGEST	=1;
