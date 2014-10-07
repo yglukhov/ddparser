@@ -2220,7 +2220,7 @@ bool parseGrammar(Grammar* g, string str)
     return true;
 }
 
-extern(C) int
+int
 parse_grammar(Grammar *g, char *pathname, char *sarg) {
     char *s = sarg;
 

@@ -186,6 +186,3 @@ struct D_ParserTables {
     uint		save_parse_tree;
 }
 
-extern(C) void parse_whitespace(D_Parser *p, d_loc_t *loc, void **p_globals);
-
-

@@ -474,19 +474,19 @@ Production* new_production(Grammar *g, string name) {
   return p;
 }
 
-extern(C) Production *
+Production *
 new_production(Grammar *g, char *name) {
     return new_production(g, name[0 .. strlen(name)].idup);
 }
 
-static Elem *
+private Elem *
 new_elem() {
   Elem *e = new Elem();
   memset(e, 0, (Elem).sizeof);
   return e;
 }
 
-extern(C) Rule *
+Rule *
 new_rule(Grammar *g, Production *p) {
   Rule *r = new Rule();
   memset(r, 0, (Rule).sizeof);
@@ -498,14 +498,14 @@ new_rule(Grammar *g, Production *p) {
   return r;
 }
 
-static Term *
+private Term *
 new_term() {
   Term *term = new Term();
   memset(term, 0, (Term).sizeof);
   return term;
 }
 
-static Elem *
+private Elem *
 new_elem_term(Term *t, Rule *r) {
   Elem *e = new_elem();
   e.kind = ELEM_TERM;
@@ -515,7 +515,7 @@ new_elem_term(Term *t, Rule *r) {
   return e;
 }
 
-extern(C) Elem *
+Elem *
 new_elem_nterm(Production *p, Rule *r) {
   Elem *e = new_elem();
   e.kind = ELEM_NTERM;
@@ -524,7 +524,7 @@ new_elem_nterm(Production *p, Rule *r) {
   return e;
 }
 
-static Elem *
+private Elem *
 new_term_string(Grammar *g, const(char)[] s, Rule *r)
 {
   Term *t = new_term();
@@ -537,7 +537,7 @@ new_term_string(Grammar *g, const(char)[] s, Rule *r)
   return elem;
 }
 
-static Elem *
+private Elem *
 new_term_string(Grammar *g, char *s, char *e, Rule *r) { 
     return new_term_string(g, s[0 .. e - s], r);
 }
@@ -566,7 +566,7 @@ escape_string_for_regex(const(char) *s) {
   return sss;
 }
 
-static void
+private void
 unescape_term_string(Term *t) {
   char *s;
   char *start = null;
@@ -675,12 +675,12 @@ Elem * new_string(Grammar *g, const(char)[] s, Rule *r)
   return x;
 }
 
-extern(C) Elem *
+Elem *
 new_string(Grammar *g, char *s, char *e, Rule *r) {
     return new_string(g, s[0 .. e - s], r);
 }
 
-extern(C) Elem *
+Elem *
 new_utf8_char(Grammar *g, char *s, char *e, Rule *r) {
   char utf8_code [4];
   ulong utf32_code, base, len = 0;
@@ -733,12 +733,12 @@ new_ident(string s, Rule *r)
 
 }
 
-extern(C) Elem *
+Elem *
 new_ident(char *s, char *e, Rule *r) {
     return new_ident(s[0 .. e - s].idup, r);
 }
 
-extern(C) void
+void
 new_token(Grammar *g, char *s, char *e) {
   Term *t = new_term();
   t.string_ = cast(char*)MALLOC(e - s + 1);
@@ -749,7 +749,7 @@ new_token(Grammar *g, char *s, char *e) {
   t.kind = TermKind.TERM_TOKEN;
 }
 
-extern(C) Elem *
+Elem *
 new_code(Grammar *g, char *s, char *e, Rule *r) {
   Elem *x = new_term_string(g, s, e, r);
   x.e.term.kind = TermKind.TERM_CODE;
@@ -775,7 +775,7 @@ new_declaration(Grammar *g, Elem *e, uint kind) {
   vec_add(&g.declarations, d);
 }
 
-extern(C) void
+void
 add_declaration(Grammar *g, char *start, char *end, uint kind, uint line) {
   if (start == end) {
     switch (kind) {
@@ -799,7 +799,7 @@ add_declaration(Grammar *g, char *start, char *end, uint kind, uint line) {
   }
 }
 
-extern(C) D_Pass *
+D_Pass *
 find_pass(Grammar *g, char *start, char *end) {
   while (*start && isspace_(*start)) start++;
   auto l = end - start;
@@ -810,7 +810,7 @@ find_pass(Grammar *g, char *start, char *end) {
   return null;
 }
 
-extern(C) void 
+void 
 add_pass(Grammar *g, char *start, char *end, uint kind, uint line) {
   if (find_pass(g, start, end))
     d_fail("duplicate pass '%s' line %d", dup_str(start, end), line);
@@ -824,7 +824,7 @@ add_pass(Grammar *g, char *start, char *end, uint kind, uint line) {
   }
 }
 
-extern(C) void
+void
 add_pass_code(Grammar *g, Rule *r, char *pass_start, char *pass_end,
 	      char *code_start, char *code_end, uint pass_line, uint code_line)
 {
@@ -838,7 +838,7 @@ add_pass_code(Grammar *g, Rule *r, char *pass_start, char *pass_end,
 }
 
     
-extern(C) Production *
+Production *
 new_internal_production(Grammar *g, Production *p) {
   string n = p ? p.name : " _synthetic";
   string name = n ~ "__" ~ g.productions.length.to!string();
@@ -864,7 +864,7 @@ new_internal_production(Grammar *g, Production *p) {
   return pp;
 }
 
-extern(C) void
+void
 conditional_EBNF(Grammar *g) {
   Production *pp;
   Rule *rr;
@@ -880,7 +880,7 @@ conditional_EBNF(Grammar *g) {
   last_elem(g.r) = new_elem_nterm(pp, g.r);
 }
 
-extern(C) void
+void
 star_EBNF(Grammar *g) {
   Production *pp;
   Rule *rr;
@@ -903,7 +903,7 @@ star_EBNF(Grammar *g) {
   vec_add(&pp.rules, new_rule(g, pp));
 }
 
-extern(C) void
+void
 plus_EBNF(Grammar *g) {
   Production *pp;
   Rule *rr;
@@ -938,7 +938,7 @@ plus_EBNF(Grammar *g) {
   vec_add(&pp.rules, rr);
 }
 
-extern(C) void
+void
 rep_EBNF(Grammar *g, int min, int max) {
   Production *pp;
   Rule *rr;
@@ -980,7 +980,7 @@ Production* lookup_production(Grammar* g, const(char)[] name)
     return null;
 }
 
-static Term *
+private Term *
 lookup_token(Grammar *g, const(char)[] name) {
     foreach(t; g.terminals)
         if (t.kind == TermKind.TERM_TOKEN && t.string_[0 .. t.string_len] == name)
@@ -988,7 +988,7 @@ lookup_token(Grammar *g, const(char)[] name) {
     return null;
 }
 
-static Term *
+private Term *
 unique_term(Grammar *g, Term *t) {
   int i;
   for (i = 0; i < g.terminals.n; i++) 
@@ -1004,7 +1004,7 @@ unique_term(Grammar *g, Term *t) {
   return t;
 }
 
-static void
+private void
 compute_nullable(Grammar *g) {
   int i, j, k, changed = 1;
   Elem *e;
@@ -1042,7 +1042,7 @@ compute_nullable(Grammar *g) {
   - resolve non-terminals
   - set element indexes
 */
-static void
+private void
 resolve_grammar(Grammar *g) {
   int i, j, k;
   Production *p, pp;
@@ -1098,7 +1098,7 @@ resolve_grammar(Grammar *g) {
   compute_nullable(g);
 }
 
-static void
+private void
 merge_identical_terminals(Grammar *g) {
   int i, j, k;
   Production *p;
@@ -1166,7 +1166,7 @@ EnumStr[] assoc_strings = [
   { ASSOC_NO, "$noassoc" }
 ];
 
-static const(char) *
+private const(char) *
 assoc_str(uint e) {
     foreach(i; assoc_strings)
     {
@@ -1234,7 +1234,7 @@ print_grammar(Grammar *g) {
   logf("\n");
 }
 
-static void
+private void
 print_item(Item *i) {
   int j, end = 1;
 
@@ -1252,7 +1252,7 @@ print_item(Item *i) {
   logf("\n");
 }
 
-static void
+private void
 print_conflict(const char *kind, int *conflict) {
   if (!*conflict) {
     logf("  CONFLICT (before precedence and associativity)\n");
@@ -1262,7 +1262,7 @@ print_conflict(const char *kind, int *conflict) {
   logf("\n");
 }
 
-static void
+private void
 print_state(State *s) {
   int j, conflict = 0;
 
@@ -1308,7 +1308,7 @@ print_states(Grammar *g) {
     print_state(g.states.v[i]);
 }
 
-extern(C) int
+int
 state_for_declaration(Grammar *g, int iproduction) {
   int i;
   for (i = 0; i < g.declarations.n; i++)
@@ -1318,7 +1318,7 @@ state_for_declaration(Grammar *g, int iproduction) {
   return 0;
 }
 
-static void
+private void
 make_elems_for_productions(Grammar *g) {
   int i, j, k, l;
   Rule *rr;
@@ -1358,7 +1358,7 @@ make_elems_for_productions(Grammar *g) {
   }
 }
 
-static void
+private void
 convert_regex_production_one(Grammar *g, Production *p) {
   int j, k, l;
   Production *pp;
@@ -1474,7 +1474,7 @@ convert_regex_production_one(Grammar *g, Production *p) {
   p.in_regex = 0;
 }
 
-static void
+private void
 convert_regex_productions(Grammar *g) {
   int i, j, k;
   Production *p;
@@ -1500,7 +1500,7 @@ convert_regex_productions(Grammar *g) {
   }
 }
 
-static void
+private void
 check_default_actions(Grammar *g) {
   Production *pdefault;
 
@@ -1629,7 +1629,7 @@ build_eq(Grammar *g) {
   FREE(eq);
 }
 
-extern(C) Grammar *
+Grammar *
 new_D_Grammar(const char *pathname) {
   Grammar *g = cast(Grammar *)MALLOC((Grammar).sizeof);
   memset(g, 0, (Grammar).sizeof);
@@ -1637,7 +1637,7 @@ new_D_Grammar(const char *pathname) {
   return g;
 }
 
-static void
+private void
 free_rule(Rule *r) {
   int i;
   FREE(r.end);
@@ -1654,7 +1654,7 @@ free_rule(Rule *r) {
   FREE(r);
 }
 
-extern(C) void
+void
 free_D_Grammar(Grammar *g) {
   int i, j, k;
 
@@ -1747,7 +1747,7 @@ free_D_Grammar(Grammar *g) {
   FREE(g);
 }
 /*
-extern(C) int
+int
 parse_grammar(Grammar *g, char *pathname, char *sarg) {
   D_Parser *p;
   int res = 0;
@@ -1776,7 +1776,7 @@ parse_grammar(Grammar *g, char *pathname, char *sarg) {
   return res;
 }*/
 
-static int
+private int
 scanner_declaration(Declaration *d) {
   switch (d.kind) {
     case DeclarationKind.DECLARE_TOKENIZE:
@@ -1788,7 +1788,7 @@ scanner_declaration(Declaration *d) {
   }
 }
 
-static void
+private void
 set_declaration_group(Production *p, Production *root, Declaration *d) {
   int i, j;
   if (p.declaration_group[d.kind] == root)
@@ -1806,7 +1806,7 @@ set_declaration_group(Production *p, Production *root, Declaration *d) {
   }
 }
 
-static void
+private void
 propogate_declarations(Grammar *g) {
   int i, j, k;
   Production *p, start = g.productions.v[0];
@@ -1878,7 +1878,7 @@ propogate_declarations(Grammar *g) {
   }
 }
 
-static void
+private void
 merge_shift_actions(State *to, State *from) {
   int i, j;
   for (i = 0; i < from.shift_actions.n; i++) {
@@ -1890,7 +1890,7 @@ merge_shift_actions(State *to, State *from) {
   }
 }
 
-static void
+private void
 compute_declaration_states(Grammar *g, Production *p, Declaration *d) {
   State *s, base_s = null;
   int j, k, scanner = scanner_declaration(d);
@@ -1930,7 +1930,7 @@ compute_declaration_states(Grammar *g, Production *p, Declaration *d) {
   }
 }
 
-static void
+private void
 map_declarations_to_states(Grammar *g) {
   int i;
   State *s;
@@ -1951,7 +1951,7 @@ map_declarations_to_states(Grammar *g) {
   }
 }
 
-extern(C) int
+int
 build_grammar(Grammar *g) {
   resolve_grammar(g);
   convert_regex_productions(g);
@@ -1979,7 +1979,7 @@ build_grammar(Grammar *g) {
 /*   Wlodek Bzyl, <matwb@univ.gda.pl>  
  */
 
-static void
+private void
 print_term_escaped(Term *t, int double_escaped) {
   char *s = null;
   if (t.term_name) {
@@ -2017,7 +2017,7 @@ print_term_escaped(Term *t, int double_escaped) {
 }
 
 /* print_elem changed to call print_term_escaped */
-static void
+private void
 print_element_escaped(Elem *ee, int double_escaped) {
   if (ee.kind == ELEM_TERM)
     print_term_escaped(ee.e.term, double_escaped);
@@ -2027,7 +2027,7 @@ print_element_escaped(Elem *ee, int double_escaped) {
     logf("%s ", ee.e.nterm.name);
 }
 
-static void
+private void
 print_production(Production *p) {
   uint j, k;
   Rule *r;
@@ -2089,7 +2089,7 @@ print_production(Production *p) {
   logf("\n");
 }
 
-static void
+private void
 print_productions(Grammar *g, char *pathname) {
   uint i;
   if (!g.productions.n) {
@@ -2100,12 +2100,12 @@ print_productions(Grammar *g, char *pathname) {
     print_production(g.productions.v[i]);
 }
 
-static void print_declare(string s, string n) {
+private void print_declare(string s, string n) {
     while(n.length && (n[0].isWhite() || n[0].isDigit())) n = n[1 .. $];
   logf(s, n);
 }
 
-static void
+private void
 print_declarations(Grammar *g) {
   int i;
 
@@ -2161,7 +2161,7 @@ print_declarations(Grammar *g) {
   logf("\n");
 }
 
-extern(C) void
+void
 print_rdebug_grammar(Grammar *g, char *pathname) {
   logf("/*\n  Generated by Make DParser\n");  
   logf("  Available at http://dparser.sf.net\n*/\n\n");
