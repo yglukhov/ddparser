@@ -817,8 +817,8 @@ D_ParserTables* createTablesFromGrammar(Grammar* g, D_ReductionCode spec_code, D
     result.goto_table = tables.d_gotos;
     auto ws = lookup_production(g, "whitespace");
     if (ws) result.whitespace_state = ws.state.index;
-    result.nsymbols = g.productions.n + g.terminals.n;
-    result.symbols = tables.d_symbols.ptr;
+    result.symbols = tables.d_symbols;
+    assert(result.symbols.length == g.productions.n + g.terminals.n);
     result.npasses = g.passes.n;
     result.passes = tables.d_passes.ptr;
     result.save_parse_tree = g.save_parse_tree;

@@ -1149,7 +1149,7 @@ PNode_equal(Parser *p, PNode *pn, D_Reduction *r, VecZNode *path, D_Shift *sh) {
     return 1;
   if (n == path.n) {
     for (i = 0; i < n; i++) {
-      PNode *x = pn.children.v[i], y = path.v[n - i - 1].pn;
+      PNode *x = pn.children[i], y = (*path)[n - i - 1].pn;
       LATEST(x);
       LATEST(y);
       if (x != y)
@@ -1215,10 +1215,9 @@ add_PNode(Parser *p, int symbol, d_loc_t *start_loc, char *e, PNode *pn,
 
 private void
 set_union_znode(VecZNode *v, VecZNode *vv) {
-  int i;
-  for (i = 0; i < vv.n; i++)
-    if (vv.v[i])
-      set_add_znode(v, vv.v[i]);
+  foreach(z; *vv)
+    if (z)
+      set_add_znode(v, z);
 }
 
 private ZNode *
@@ -1303,15 +1302,13 @@ private int GOTO_STATE(Parser* _p, PNode* _pn, SNode* _ps)
 
 private SNode *
 goto_PNode(Parser *p, d_loc_t *loc, PNode *pn, SNode *ps) {
-  SNode *new_ps, pre_ps;
-  ZNode *z = null;
-  int i, j, k, state_index;
+  int i, j;
 
   if (!IS_BIT_SET(p.t.states[ps.stateIndex].goto_valid, pn.parse_node.symbol))
     return null;
-  state_index = GOTO_STATE(p, pn, ps);
+  int state_index = GOTO_STATE(p, pn, ps);
   D_State *state = &p.t.states[state_index];
-  new_ps = add_SNode(p, state_index, loc, pn.parse_node.scope_, pn.parse_node.globals);
+  SNode *new_ps = add_SNode(p, state_index, loc, pn.parse_node.scope_, pn.parse_node.globals);
   new_ps.last_pn = pn;
 
   debug(trace) logf("goto %d (%s) . %d %X\n",
@@ -1321,7 +1318,7 @@ goto_PNode(Parser *p, d_loc_t *loc, PNode *pn, SNode *ps) {
   if (ps != new_ps && new_ps.depth < ps.depth + 1)
     new_ps.depth = ps.depth + 1;
   /* find/create ZNode */
-  z = set_find_znode(&new_ps.zns, pn);
+  ZNode *z = set_find_znode(&new_ps.zns, pn);
   if (!z) { /* not found */
     set_add_znode(&new_ps.zns, (z = new_ZNode(p, pn)));
     foreach(r; state.reductions)
@@ -1329,12 +1326,11 @@ goto_PNode(Parser *p, d_loc_t *loc, PNode *pn, SNode *ps) {
         add_Reduction(p, z, new_ps, r);
     if (!pn.shift)
       foreach(h; state.right_epsilon_hints) {
-        pre_ps = find_SNode(p, h.preceeding_state, new_ps.initial_scope, new_ps.initial_globals);
+        SNode *pre_ps = find_SNode(p, h.preceeding_state, new_ps.initial_scope, new_ps.initial_globals);
         if (!pre_ps) continue;
-        for (k = 0; k < pre_ps.zns.n; k++)
-          if (pre_ps.zns.v[k]) {
-            Reduction *r =
-              add_Reduction(p, pre_ps.zns.v[k], pre_ps, h.reduction);
+        foreach (k; pre_ps.zns)
+          if (k) {
+            Reduction *r = add_Reduction(p, k, pre_ps, h.reduction);
             if (r) {
               r.new_snode = new_ps;
               r.new_depth = h.depth;
@@ -1371,8 +1367,6 @@ shift_all(Parser *p, char *pos) {
   int i, j, nshifts = 0, ncode = 0;
   d_loc_t loc, skip_loc;
   D_WhiteSpaceFn skip_fn = null;
-  PNode *new_pn;
-  D_State *state;
   ShiftResult *r;
   Shift *saved_s = p.shifts_todo, s = saved_s, ss;
 
@@ -1380,14 +1374,14 @@ shift_all(Parser *p, char *pos) {
   skip_loc.s = null;
 
   s = p.shifts_todo;
-  for (; s && s.snode.loc.s == pos;) {
-    if (p.nshift_results - nshifts < p.t.nsymbols * 2) {
-      p.nshift_results = nshifts + p.t.nsymbols * 3;
+  while (s && s.snode.loc.s == pos) {
+    if (p.nshift_results - nshifts < p.t.symbols.length * 2) {
+      p.nshift_results = nshifts + cast(int)p.t.symbols.length * 3;
       p.shift_results = cast(ShiftResult*)REALLOC(p.shift_results, p.nshift_results * (ShiftResult).sizeof);
     }
     p.shifts_todo = p.shifts_todo.next;
     p.scans++;
-    state = &p.t.states[s.snode.stateIndex];
+    D_State *state = &p.t.states[s.snode.stateIndex];
     if (state.scanner_code) {
       if (p.ncode_shifts < ncode + 1) {
         p.ncode_shifts = ncode + 2;
@@ -1457,7 +1451,7 @@ shift_all(Parser *p, char *pos) {
     debug(trace) logf("shift %d %X %d (%s)\n",
                r.snode.stateIndex, r.snode, r.shift.symbol,
                p.t.symbols[r.shift.symbol].name);
-    new_pn = add_PNode(p, r.shift.symbol, &r.snode.loc, r.loc.s,
+    PNode *new_pn = add_PNode(p, r.shift.symbol, &r.snode.loc, r.loc.s,
                        r.snode.last_pn, null, null, r.shift);
     if (new_pn) {
       if (!skip_loc.s || skip_loc.s != r.loc.s || skip_fn != new_pn.parse_node.white_space) {

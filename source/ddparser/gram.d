@@ -399,55 +399,11 @@ struct Grammar {
 
 alias D_Grammar = Grammar;
 
-
-
-/* automatically add %op_XXX to rightmost token of %XXX rule, default off */
-/+
-Grammar *new_D_Grammar(char *pathname);
-void free_D_Grammar(Grammar *g);
-int build_grammar(Grammar *g);
-int parse_grammar(Grammar *g, char *pathname, char *str);
-void print_grammar(Grammar *g);
-void print_rdebug_grammar(Grammar *g, char *pathname);
-void print_states(Grammar *g);
-void print_rule(Rule *r);
-void print_term(Term *t);
-Production *lookup_production(Grammar *g, char *name, int len);
-+/
-
-
 /* for creating grammars */
 ref auto last_elem(Rule* _r)
 {
-    return  ((_r).elems.v[(_r).elems.n-1]);
+    return (_r.elems.v[_r.elems.n-1]);
 }
-
-/+
-Rule *new_rule(Grammar *g, Production *p);
-Elem *new_elem_nterm(Production *p, Rule *r);
-void new_declaration(Grammar *g, Elem *e, uint kind);
-Production *new_production(Grammar *g, char *name);
-Elem *new_string(Grammar *g, char *s, char *e, Rule *r);
-Elem *new_utf8_char(Grammar *g, char *s, char *e, Rule *r);
-Elem *new_ident(char *s, char *e, Rule *r);
-void new_token(Grammar *g, char *s, char *e);
-Elem *new_code(Grammar *g, char *s, char *e, Rule *r);
-void add_global_code(Grammar *g, char *start, char *end, int line);
-Production *new_internal_production(Grammar *g, Production *p);
-Elem * dup_elem(Elem *e, Rule *r);
-void add_declaration(Grammar *g, char *start, char *end, uint kind, uint line);
-void add_pass(Grammar *g, char *start, char *end, uint kind, uint line);
-void add_pass_code(Grammar *g, Rule *r, char *pass_start, char *pass_end,
-		   char *code_start, char *code_end, uint line, uint pass_line);
-D_Pass *find_pass(Grammar *g, char *start, char *end);
-void conditional_EBNF(Grammar *g); /* applied to g.e,g.r,g.p */
-void star_EBNF(Grammar *g); /* ditto */
-void plus_EBNF(Grammar *g); /* ditto */
-void rep_EBNF(Grammar *g, int minimum, int maximum);
-void initialize_productions(Grammar *g);
-void finalize_productions(Grammar *g);
-int state_for_declaration(Grammar *g, int iproduction);
-+/
 
 /*
   Copyright 2002-2004 John Plevyak, All Rights Reserved
@@ -522,7 +478,7 @@ new_elem_nterm(Production *p, Rule *r) {
 }
 
 private Elem *
-new_term_string(Grammar *g, const(char)[] s, Rule *r)
+new_term_string(Grammar *g, string s, Rule *r)
 {
   Term *t = new_term();
   Elem *elem;
@@ -536,7 +492,7 @@ new_term_string(Grammar *g, const(char)[] s, Rule *r)
 
 private Elem *
 new_term_string(Grammar *g, char *s, char *e, Rule *r) { 
-    return new_term_string(g, s[0 .. e - s], r);
+    return new_term_string(g, s[0 .. e - s].idup, r);
 }
 
 char *
@@ -664,7 +620,7 @@ unescape_term_string(Term *t) {
     d_fail("empty string after unescape '%s'", t.string_);
 }
 
-Elem * new_string(Grammar *g, const(char)[] s, Rule *r)
+Elem * new_string(Grammar *g, string s, Rule *r)
 {
   Elem *x = new_term_string(g, s[1 .. $ - 1], r);
   x.e.term.kind = (s[0] == '"') ? TermKind.TERM_REGEX : TermKind.TERM_STRING;
@@ -674,14 +630,13 @@ Elem * new_string(Grammar *g, const(char)[] s, Rule *r)
 
 Elem *
 new_string(Grammar *g, char *s, char *e, Rule *r) {
-    return new_string(g, s[0 .. e - s], r);
+    return new_string(g, s[0 .. e - s].idup, r);
 }
 
 Elem *
 new_utf8_char(Grammar *g, char *s, char *e, Rule *r) {
-  char utf8_code [4];
+  char utf8_code[4];
   ulong utf32_code, base, len = 0;
-  Elem *x;
   for (utf32_code=0, base=1; e>=s+3; base*=16) {
     e--;
     if (*e >= '0' && *e <= '9')
@@ -712,7 +667,7 @@ new_utf8_char(Grammar *g, char *s, char *e, Rule *r) {
   } else {
     d_fail("UTF32 Unicode value U+%8X too large for valid UTF-8 encoding (cf. Unicode Spec 4.0, section 3.9)", utf32_code);
   }
-  x = new_term_string(g, utf8_code.ptr, utf8_code.ptr + len, r);
+  Elem *x = new_term_string(g, utf8_code.ptr, utf8_code.ptr + len, r);
   x.e.term.kind = TermKind.TERM_STRING;
   return x;
 }
@@ -839,19 +794,19 @@ Production *
 new_internal_production(Grammar *g, Production *p) {
   string n = p ? p.name : " _synthetic";
   string name = n ~ "__" ~ g.productions.length.to!string();
-  Production *pp = null, tp = null, ttp;
-  int i, found = 0;
-  pp = new_production(g, name);
+  Production *pp = new_production(g, name);
   pp.internal = InternalKind.INTERNAL_HIDDEN;
   pp.regex = p ? p.regex : 0;
   if (p) {
-      for (i = 0; i < g.productions.n; i++) {
+      bool found = false;
+      Production *tp = null, ttp;
+      for (int i = 0; i < g.productions.n; i++) {
           if (found) {
               ttp = g.productions.v[i];
               g.productions.v[i] = tp;
               tp = ttp;
           } else if (p == g.productions.v[i]) {
-              found = 1;
+              found = true;
               tp = g.productions.v[i+1];
               g.productions.v[i+1] = pp;
               i++;
@@ -863,12 +818,9 @@ new_internal_production(Grammar *g, Production *p) {
 
 void
 conditional_EBNF(Grammar *g) {
-  Production *pp;
-  Rule *rr;
-  
-  pp = new_internal_production(g, g.p);
+  Production *pp = new_internal_production(g, g.p);
   pp.internal = InternalKind.INTERNAL_CONDITIONAL;
-  rr = new_rule(g, pp);
+  Rule *rr = new_rule(g, pp);
   vec_add(&rr.elems, last_elem(g.r));
   last_elem(g.r).rule = rr;
   rr.elems.v[rr.elems.n - 1].rule = rr;
@@ -879,12 +831,9 @@ conditional_EBNF(Grammar *g) {
 
 void
 star_EBNF(Grammar *g) {
-  Production *pp;
-  Rule *rr;
-
-  pp = new_internal_production(g, g.p);
+  Production *pp = new_internal_production(g, g.p);
   pp.internal = InternalKind.INTERNAL_STAR;
-  rr = new_rule(g, pp);
+  Rule *rr = new_rule(g, pp);
   if (!g.right_recursive_BNF) {
     vec_add(&rr.elems, new_elem_nterm(pp, rr));
     vec_add(&rr.elems, last_elem(g.r));
@@ -902,15 +851,11 @@ star_EBNF(Grammar *g) {
 
 void
 plus_EBNF(Grammar *g) {
-  Production *pp;
-  Rule *rr;
-  Elem *elem;
-
-  pp = new_internal_production(g, g.p);
+  Production *pp = new_internal_production(g, g.p);
   pp.internal = InternalKind.INTERNAL_PLUS;
-  rr = new_rule(g, pp);
+  Rule *rr = new_rule(g, pp);
+  Elem *elem = last_elem(g.r);
   if (!g.right_recursive_BNF) {
-    elem = last_elem(g.r);
     vec_add(&rr.elems, new_elem_nterm(pp, rr));
     vec_add(&rr.elems, dup_elem(elem, rr));
     last_elem(g.r) = new_elem_nterm(pp, g.r);
@@ -919,7 +864,6 @@ plus_EBNF(Grammar *g) {
       rr.rule_assoc = ASSOC_NARY_LEFT;
     }
   } else {
-    elem = last_elem(g.r);
     vec_add(&rr.elems, dup_elem(elem, rr));
     last_elem(g.r) = new_elem_nterm(pp, g.r);
     vec_add(&rr.elems, new_elem_nterm(pp, rr));
@@ -937,17 +881,13 @@ plus_EBNF(Grammar *g) {
 
 void
 rep_EBNF(Grammar *g, int min, int max) {
-  Production *pp;
-  Rule *rr;
-  Elem *elem;
-  int i, j;
   if (max < min) max = min;
 
-  pp = new_internal_production(g, g.p);
-  elem = last_elem(g.r);
-  for (i = min; i <= max; i++) {
-    rr = new_rule(g, pp);
-    for (j = 0; j < i; j++)
+  Production *pp = new_internal_production(g, g.p);
+  Elem *elem = last_elem(g.r);
+  for (int i = min; i <= max; i++) {
+    Rule *rr = new_rule(g, pp);
+    for (int j = 0; j < i; j++)
       vec_add(&rr.elems, dup_elem(elem, rr));
     vec_add(&pp.rules, rr);
   }
@@ -1003,35 +943,34 @@ unique_term(Grammar *g, Term *t) {
 
 private void
 compute_nullable(Grammar *g) {
-  int i, j, k, changed = 1;
-  Elem *e;
-    
-  /* ensure that the trivial case is the first cause */
-  for (i = 0; i < g.productions.n; i++) {
-    for (j = 0; j < g.productions.v[i].rules.n; j++)
-      if (!g.productions.v[i].rules.v[j].elems.n) {
-	g.productions.v[i].nullable = g.productions.v[i].rules.v[j];
-	break;
-      }
-  }
-  /* transitive closure */
-  while (changed) {
-    changed = 0;
-    for (i = 0; i < g.productions.n; i++) {
-      if (!g.productions.v[i].nullable)
-        for (j = 0; j < g.productions.v[i].rules.n; j++) {
-	  for (k = 0; k < g.productions.v[i].rules.v[j].elems.n; k++) {
-	    e = g.productions.v[i].rules.v[j].elems.v[k];
-	    if (e.kind != ElemKind.ELEM_NTERM || !e.e.nterm.nullable) 
-	      goto Lnot_nullable;
-	  }
-	  changed = 1;
-	  g.productions.v[i].nullable = g.productions.v[i].rules.v[j];
-	  break;
-	}
-    Lnot_nullable:;
+    /* ensure that the trivial case is the first cause */
+    foreach(p; g.productions) {
+        foreach (r; p.rules)
+            if (!r.elems.n) {
+                p.nullable = r;
+                break;
+            }
     }
-  }
+
+    bool changed = true;
+    /* transitive closure */
+    while (changed) {
+        changed = false;
+        for (int i = 0; i < g.productions.n; i++) {
+            if (!g.productions.v[i].nullable)
+                for (int j = 0; j < g.productions.v[i].rules.n; j++) {
+                    for (int k = 0; k < g.productions.v[i].rules.v[j].elems.n; k++) {
+                        Elem *e = g.productions.v[i].rules.v[j].elems.v[k];
+                        if (e.kind != ElemKind.ELEM_NTERM || !e.e.nterm.nullable) 
+                            goto Lnot_nullable;
+                    }
+                    changed = true;
+                    g.productions.v[i].nullable = g.productions.v[i].rules.v[j];
+                    break;
+                }
+Lnot_nullable:;
+        }
+    }
 }
 
 /*
