@@ -1353,8 +1353,7 @@ goto_PNode(Parser *p, d_loc_t *loc, PNode *pn, SNode *ps) {
       if (r.nelements)
         add_Reduction(p, z, new_ps, r);
     if (!pn.shift)
-      for (j = 0; j < new_ps.state.right_epsilon_hints.n; j++) {
-        D_RightEpsilonHint *h = &new_ps.state.right_epsilon_hints.v[j];
+      foreach(h; new_ps.state.right_epsilon_hints) {
         pre_ps = find_SNode(p, h.preceeding_state, new_ps.initial_scope, new_ps.initial_globals);
         if (!pre_ps) continue;
         for (k = 0; k < pre_ps.zns.n; k++)

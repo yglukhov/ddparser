@@ -703,11 +703,10 @@ buildStateData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
                 state.reductions = null;
             }
             if (s.right_epsilon_hints.n) {
-                state.right_epsilon_hints.n = s.right_epsilon_hints.n;
-                state.right_epsilon_hints.v = tables.d_right_epsilon_hints1[i].ptr;
+                state.right_epsilon_hints = tables.d_right_epsilon_hints1[i];
+                assert(state.right_epsilon_hints.length == s.right_epsilon_hints.n);
             } else {
-                state.right_epsilon_hints.n = 0;
-                state.right_epsilon_hints.v = null;
+                state.right_epsilon_hints = null;
             }
             if (s.error_recovery_hints.n) {
                 h = cast(State*)set_add_fn(er_hash, s, &er_hint_hash_fns);

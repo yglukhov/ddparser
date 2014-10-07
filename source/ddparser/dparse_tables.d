@@ -110,11 +110,7 @@ struct D_State {
     ubyte			*goto_valid;
     int				goto_table_offset;
     D_Reduction*[]  reductions;
-    struct _right_epsilon_hints {
-        uint n;
-        D_RightEpsilonHint *v;
-    }
-    _right_epsilon_hints right_epsilon_hints;
+    D_RightEpsilonHint[] right_epsilon_hints;
     struct _error_recovery_hints {
         uint n;
         D_ErrorRecoveryHint *v;
