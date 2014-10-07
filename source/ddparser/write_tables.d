@@ -402,7 +402,6 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
     int i, j, x, sym, lowest_sym;
 
     int nvalid_bytes = ((g.productions.n + g.terminals.n) + 7) / 8;
-    uint8 *goto_valid = cast(uint8 *)MALLOC(nvalid_bytes);
     vec_clear(&vgoto);
     for (i = 0; i < g.states.n; i++) {
         State *s = g.states.v[i];
@@ -412,13 +411,14 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
                 if (s.gotos.v[j].elem.kind == ElemKind.ELEM_TERM &&
                         s.gotos.v[j].elem.e.term.kind == TermKind.TERM_TOKEN)
                     s.goto_on_token = 1;
+
+            ubyte[] d_goto_valid = new ubyte[nvalid_bytes];
             /* find lowest goto, set valid bits */
-            memset(goto_valid, 0, nvalid_bytes);
             lowest_sym = elem_symbol(g, s.gotos.v[0].elem);
-            SET_BIT(goto_valid, lowest_sym);
+            SET_BIT(d_goto_valid, lowest_sym);
             for (j = 1; j < s.gotos.n; j++) {
                 sym = elem_symbol(g, s.gotos.v[j].elem);
-                SET_BIT(goto_valid, sym);
+                SET_BIT(d_goto_valid, sym);
                 if (sym < lowest_sym)
                     lowest_sym = sym;
             }
@@ -452,9 +452,6 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
             }
             s.goto_table_offset = lowest_sym;
             /* valid bits */
-            ubyte[] d_goto_valid;
-            for (j = 0; j < nvalid_bytes; j++)
-                d_goto_valid ~= goto_valid[j];
             tables.d_goto_valid[i] = d_goto_valid;
         } else
             s.goto_table_offset = -int.max;
@@ -682,18 +679,15 @@ buildErrorData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
 
 private void
 buildStateData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
-    int i;
-    State *s, h, shifts;
-
     D_State[] d_states;
     if (g.states.n) {
-        for (i = 0; i < g.states.n; i++) {
-            s = g.states.v[i];
-            shifts = s.same_shifts ? s.same_shifts : s;
+        for (int i = 0; i < g.states.n; i++) {
+            State *s = g.states.v[i];
+            State *shifts = s.same_shifts ? s.same_shifts : s;
             D_State state;
 
             if (s.gotos.n)
-                state.goto_valid = tables.d_goto_valid[i].ptr;
+                state.goto_valid = tables.d_goto_valid[i];
 
             state.goto_table_offset = s.goto_table_offset;
 
@@ -708,7 +702,7 @@ buildStateData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
             }
 
             if (s.error_recovery_hints.n) {
-                h = cast(State*)set_add_fn(er_hash, s, &er_hint_hash_fns);
+                State* h = cast(State*)set_add_fn(er_hash, s, &er_hint_hash_fns);
                 state.error_recovery_hints = tables.d_error_recovery_hints1[h.index];
                 assert(state.error_recovery_hints.length == s.error_recovery_hints.n);
             }
@@ -731,7 +725,7 @@ buildStateData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
 
             if ((shifts.scan_kind != D_SCAN_LONGEST || shifts.trailing_context)
                     && shifts.scanner.states.n)
-                state.accepts_diff = tables.d_accepts_diff1[shifts.index].ptr;
+                state.accepts_diff = tables.d_accepts_diff1[shifts.index];
 
             if (s.reduces_to)
                 state.reduces_to = s.reduces_to.index;

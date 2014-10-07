@@ -97,7 +97,7 @@ enum D_SCAN_RESERVED	=4;
 enum D_SCAN_DEFAULT	=D_SCAN_ALL;
 
 struct D_State {
-    ubyte			*goto_valid;
+    ubyte[]			goto_valid;
     int				goto_table_offset;
     D_Reduction*[]  reductions;
     D_RightEpsilonHint[] right_epsilon_hints;
@@ -108,8 +108,8 @@ struct D_State {
     ubyte			scanner_size;
     ubyte			accept;
     ubyte			scan_kind;
-    void*				transition_table;
-    D_Shift			***accepts_diff;
+    void*			transition_table;
+    D_Shift**[]     accepts_diff;
     int				reduces_to;
 }
 
