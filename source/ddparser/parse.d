@@ -6,6 +6,7 @@
 module ddparser.parse;
 
 import std.stdio;
+import std.ascii;
 
 import ddparser.util;
 import ddparser.dparse_tables;
@@ -2234,9 +2235,9 @@ white_space(D_Parser *p, d_loc_t *loc, void **p_user_globals) {
           while (wspace(*s)) s++;
         }
       }
-      if (isdigit_(*s)) {
+      if (isDigit(*s)) {
         loc.line = atoi(s) - 1;
-        while (isdigit_(*s)) s++;
+        while (isDigit(*s)) s++;
         while (wspace(*s)) s++;
         if (*s == '"')
           loc.pathname = s;

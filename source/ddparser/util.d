@@ -35,22 +35,6 @@ void trace(string file = __FILE__, int line = __LINE__, Args...)(Args args)
     /* writeln(args); */
 }
 
-bool isdigit_(T)(T c)
-{
-    return c.isDigit();
-    /* return c >= cast(T)'0' && c <= cast(T)'9'; */
-}
-
-bool isxdigit_(T)(T c)
-{
-    return c.isHexDigit();
-}
-
-bool isspace_(T)(T c)
-{
-    return c.isWhite();
-}
-
 struct Vec(T)
 {
     uint n;
@@ -140,28 +124,6 @@ struct Vec(T)
             T t;
             s.deserializeValue(t, i);
             add(t);
-        }
-    }
-
-
-    JSONValue toJSON()
-    {
-        static if (__traits(hasMember, T, "toJSON"))
-        {
-
-            JSONValue[] result;
-            for (int i = 0; i < n; ++i)
-            {
-                if (v[i])
-                    result ~= v[i].toJSON();
-                else
-                    result ~= JSONValue(null);
-            }
-            return JSONValue(result);
-        }
-        else
-        {
-            return JSONValue("ERROR!!!");
         }
     }
 }
@@ -290,46 +252,6 @@ void FREE(void* p)
 {
 
 }
-
-/*
-int
-set_add(void *av, void *t) {
-  AbstractVec *v = cast(AbstractVec*)av, vv;
-  int j, n = v.n;
-  uint i;
-  if (n) {
-    uint h = (cast(uint)t);
-    h = h % n;
-    for (i = h, j = 0;
-     i < v.n && j < SET_MAX_SEQUENTIAL;
-     i = ((i + 1) % n), j++)
-    {
-      if (!v.v[i]) {
-    v.v[i] = t;
-    return 1;
-      } else if (v.v[i] == t)
-    return 0;
-    }
-  }
-  if (!n) {
-    vv.v = null;
-    v.i = INITIAL_SET_SIZE_INDEX;
-  } else {
-    vv.v = v.v;
-    vv.n = v.n;
-    v.i = v.i + 1;
-  }
-  v.n = d_prime2[v.i];
-  v.v = cast(void**)MALLOC(v.n * (void *).sizeof);
-  memset(v.v, 0, v.n * (void *).sizeof);
-  if (vv.v) {
-    set_union(av, &vv);
-    FREE(vv.v);
-  }
-  return set_add(v, t);
-}
-*/
-
 
 char *dup_code(const char *str, const char *end)
 {

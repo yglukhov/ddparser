@@ -601,24 +601,24 @@ unescape_term_string(Term *t) {
 	    goto Ldefault;
 	case 'x':
 	  length = 0;
-	  if (isxdigit_(s[2])) {
+	  if (s[2].isHexDigit()) {
 	    base = 16;
 	    start = s + 2;
 	    length++;
-	    if (isxdigit_(s[3]))
+	    if (s[3].isHexDigit())
 	      length++;
 	  }
 	  s += length + 1;
 	  goto Lncont;
 	case 'd':
 	  length = 0;
-	  if (isdigit_(s[2])) {
+	  if (s[2].isDigit()) {
 	    base = 10;
 	    start = s + 2;
 	    length++;
-	    if (isdigit_(s[3])) {
+	    if ((s[3]).isDigit()) {
 	      length++;
-	      if (isdigit_(s[4]) && ((s[2] < '2') || ((s[2] == '2') && ((s[3] < '5') || 
+	      if (s[4].isDigit() && ((s[2] < '2') || ((s[2] == '2') && ((s[3] < '5') || 
                    ((s[3] == '5') && (s[4] < '6')))))) 
 		length++;
 	    }
@@ -630,9 +630,9 @@ unescape_term_string(Term *t) {
 	  length = 1;
 	  base = 8;
 	  start = s + 1;
-	  if (isdigit_(s[2]) && (s[2] != '8') && (s[2] != '9')) {
+	  if (s[2].isDigit() && (s[2] != '8') && (s[2] != '9')) {
 	    length++;
-	    if (isdigit_(s[3]) && (s[3] != '8') && (s[3] != '9')) {
+	    if (s[3].isDigit() && (s[3] != '8') && (s[3] != '9')) {
 	      length++;
 	    }
 	  }
@@ -801,7 +801,7 @@ add_declaration(Grammar *g, char *start, char *end, uint kind, uint line) {
 
 D_Pass *
 find_pass(Grammar *g, char *start, char *end) {
-  while (*start && isspace_(*start)) start++;
+  while (*start && isWhite(*start)) start++;
   auto l = end - start;
   for (int i = 0; i < g.passes.n; i++)
     if (l == g.passes.v[i].name_len &&
