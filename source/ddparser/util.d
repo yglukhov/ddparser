@@ -72,6 +72,11 @@ struct Vec(T)
         vec_add_internal(_i);
     }
 
+    ref T opIndex(size_t index)
+    {
+        return v[index];
+    }
+
     void opOpAssign(string s)(T v) if (s == "~=")
     {
         add(v);
