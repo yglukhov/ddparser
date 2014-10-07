@@ -402,7 +402,7 @@ private:
         parser.error_recovery = _errorRecoveryEnabled;
     }
 
-    static extern(C) D_ParseNode * ambigfn(D_Parser* p, int n, D_ParseNode **v)
+    static D_ParseNode * ambigfn(D_Parser* p, int n, D_ParseNode **v)
     {
         if (p.initial_globals)
         {
@@ -463,7 +463,7 @@ private:
         return null;
     }
 
-    static extern(C) void free_node(D_ParseNode *d)
+    static void free_node(D_ParseNode *d)
     {
         if (d.user)
         {
@@ -471,7 +471,7 @@ private:
         }
     }
 
-    static extern(C) void syntaxErrorFn(D_Parser* p)
+    static void syntaxErrorFn(D_Parser* p)
     {
         assert(p.initial_globals);
         (cast(Parser)p.initial_globals).syntaxError();
@@ -486,7 +486,7 @@ private:
         }
     }
 
-    static extern(C) int spec_code(void *new_ps, void **children, int n_children, int pn_offset, D_Parser *parser)
+    static int spec_code(void *new_ps, void **children, int n_children, int pn_offset, D_Parser *parser)
     {
         if (parser.initial_globals)
         {
@@ -495,7 +495,7 @@ private:
         return 0;
     }
 
-    static extern(C) int final_code(void *new_ps, void **children, int n_children, int pn_offset, D_Parser *parser)
+    static int final_code(void *new_ps, void **children, int n_children, int pn_offset, D_Parser *parser)
     {
         if (parser.initial_globals)
         {

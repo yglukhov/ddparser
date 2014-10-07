@@ -1375,7 +1375,7 @@ goto_PNode(Parser *p, d_loc_t *loc, PNode *pn, SNode *ps) {
   return new_ps;
 }
 
-extern(C) void
+void
 parse_whitespace(D_Parser *ap, d_loc_t *loc, void **p_globals) {
   Parser *pp = (cast(Parser*)ap).whitespace_parser;
   pp.start = loc.s;
@@ -1752,14 +1752,14 @@ free_D_ParseTreeBelow(D_Parser *p, D_ParseNode *dpn) {
   free_ParseTreeBelow(cast(Parser*)p, DPN_TO_PN(dpn));
 }
 
-extern(C) D_ParseNode *
+D_ParseNode *
 ambiguity_count_fn(D_Parser *pp, int n, D_ParseNode **v) {
   Parser *p = cast(Parser*)pp;
   p.ambiguities += n - 1;
   return v[0];
 }
 
-extern(C) D_ParseNode *
+D_ParseNode *
 ambiguity_abort_fn(D_Parser *pp, int n, D_ParseNode **v) {
   int i;
   if (d_verbose_level) {
@@ -1939,7 +1939,7 @@ find_substr(const (char) *str, const(char)[] s) {
   return null;
 }
 
-extern(C) private void
+private void
 syntax_error_report_fn(D_Parser *ap) {
   Parser *p = cast(Parser *)ap;
   char *fn = d_dup_pathname_str(p.user.loc.pathname);
@@ -2215,7 +2215,7 @@ bool wspace(char _x)
     return _wspace[cast(ubyte)_x];
 }
 
-extern(C) void
+void
 white_space(D_Parser *p, d_loc_t *loc, void **p_user_globals) {
   int rec = 0;
   char *s = loc.s, scol = null;
@@ -2295,7 +2295,7 @@ white_space(D_Parser *p, d_loc_t *loc, void **p_user_globals) {
   return;
 }
 
-extern(C) void null_white_space(D_Parser *p, d_loc_t *loc, void **p_globals) { }
+void null_white_space(D_Parser *p, d_loc_t *loc, void **p_globals) { }
 
 D_Parser *
 new_D_Parser(D_ParserTables *t, int sizeof_ParseNode_User) {

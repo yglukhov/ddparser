@@ -25,8 +25,8 @@ struct d_loc_t {
   int col, line;
 }
 
-extern(C)
-{
+//extern(C)
+//{
     alias D_WhiteSpaceFn = void function(D_Parser *p, 
             d_loc_t *loc, void **p_globals);
     alias D_ScanCode = int function(d_loc_t *loc, ushort *symbol, 
@@ -34,7 +34,7 @@ extern(C)
     alias D_ReductionCode = int function(
             void *new_ps, void **children, int n_children, int pn_offset,
             D_Parser *parser);
-}
+//}
 
 struct D_Reduction {
     ushort	nelements;

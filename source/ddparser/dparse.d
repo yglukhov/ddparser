@@ -8,13 +8,10 @@ alias d_voidp = void *;
 alias D_ParseNode_User = d_voidp;
 alias D_ParseNode_Globals = void;
 
-extern(C)
-{
 alias D_SyntaxErrorFn = void function(D_Parser *);
 alias D_AmbiguityFn = D_ParseNode * function(D_Parser *, 
 					     int n, D_ParseNode **v);
 alias D_FreeNodeFn = void function(D_ParseNode *d);
-}
 
 struct D_Parser {
   D_ParseNode_Globals	*initial_globals;		/* global values */
