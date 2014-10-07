@@ -154,7 +154,7 @@ struct D_Pass {
 struct D_ParserTables {
     uint		nstates;
     D_State		*state;
-    ushort	*goto_table;
+    ushort[]    goto_table;
     uint		whitespace_state;
     uint		nsymbols;
     D_Symbol		*symbols;
