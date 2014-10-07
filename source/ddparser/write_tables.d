@@ -18,7 +18,7 @@ import std.array;
 import std.string;
 
 
-struct ScannerBlock { 
+private struct ScannerBlock { 
   int state_index; 
   int scanner_index; 
   int block_index; 
@@ -26,10 +26,10 @@ struct ScannerBlock {
   ScanStateTransition **transitions; 
 }
 
-alias VecScannerBlock = Vec!(ScannerBlock*);
-alias VecState = Vec!(State*);
+private alias VecScannerBlock = Vec!(ScannerBlock*);
+private alias VecState = Vec!(State*);
 
-static int
+private int
 scanner_size(State *s) {
   if (s.scanner.states.n < 255 && s.scanner.transitions.n < 255)
     return 1;
@@ -38,7 +38,7 @@ scanner_size(State *s) {
   return 4;
 }
 
-extern(C) static uint32
+extern(C) private uint32
 scanner_block_hash_fn(ScannerBlock *b, hash_fns_t *fns) {
   uint32 hash = 0;
   intptr_t i, block_size = cast(intptr_t)fns.data[0];
@@ -51,7 +51,7 @@ scanner_block_hash_fn(ScannerBlock *b, hash_fns_t *fns) {
   return hash;
 }
 
-extern(C) static int
+extern(C) private int
 scanner_block_cmp_fn(ScannerBlock *a, ScannerBlock *b, hash_fns_t *fns) {
   intptr_t i, block_size = cast(intptr_t)fns.data[0];
   ScanState **sa = a.chars;
@@ -79,7 +79,7 @@ scanner_block_fns = hash_fns_t(
 );
 }
 
-extern(C) static uint32
+extern(C) private uint32
 trans_scanner_block_hash_fn(ScannerBlock *b, hash_fns_t *fns) {
   uint32 hash = 0;
   intptr_t i, block_size = cast(intptr_t)fns.data[0];
@@ -92,7 +92,7 @@ trans_scanner_block_hash_fn(ScannerBlock *b, hash_fns_t *fns) {
   return hash;
 }
 
-extern(C) static int
+extern(C) private int
 trans_scanner_block_cmp_fn(ScannerBlock *a, ScannerBlock *b, hash_fns_t *fns) {
   intptr_t i, block_size = cast(intptr_t)fns.data[0];
   ScanStateTransition **sa = a.transitions;
@@ -121,12 +121,12 @@ trans_scanner_block_fns = hash_fns_t(
 );
 }
 
-extern(C) static uint32
+extern(C) private uint32
 shift_hash_fn(Action *sa, hash_fns_t *fns) {
   return sa.term.index + (sa.kind == ActionKind.ACTION_SHIFT_TRAILING ? 1000000 : 0);
 }
 
-extern(C) static int
+extern(C) private int
 shift_cmp_fn(Action *sa, Action *sb, hash_fns_t *fns) {
   return (sa.term.index != sb.term.index) || (sa.kind != sb.kind);
 }
@@ -144,7 +144,7 @@ shift_fns = hash_fns_t(
 }
 
 
-static void
+private void
 buildScannerData(Grammar *g, ref BuildTables tables) {
     State *s;
     ScannerBlock *vsblock, xv, yv;
@@ -396,7 +396,7 @@ private Rule* original_reduction(Rule* r)
     return r.same_reduction ? r.same_reduction : r;
 }
 
-static void
+private void
 buildGotoData(Grammar *g, ref BuildTables tables) {
     Vec!(intptr_t) vgoto;
     int i, j, x, again, nvalid_bytes, sym, lowest_sym;
@@ -493,7 +493,7 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
     }
 }
 
-static int find_symbol(Grammar *g, const(char)[] s, int kind) {
+private int find_symbol(Grammar *g, const(char)[] s, int kind) {
     s = s.stripLeft();
         if (kind == D_SYMBOL_NTERM) {
             Production *p = lookup_production(g, s);
@@ -519,7 +519,7 @@ static int find_symbol(Grammar *g, const(char)[] s, int kind) {
     return -1;
 }
 
-static int
+private int
 find_symbol(Grammar *g, char *s, char *e, int kind) {
     if (e > s) {
         return find_symbol(g, s[0 .. e - s], kind);
@@ -527,7 +527,7 @@ find_symbol(Grammar *g, char *s, char *e, int kind) {
     return -1;
 }
 
-static void
+private void
 buildReductions(Grammar *g, ref BuildTables tables) {
     int i, j, k, l, pmax;
     Production *p, pdefault;
@@ -599,7 +599,7 @@ Lcontinue:;
     }
 }
 
-extern(C) static uint32
+extern(C) private uint32
 er_hint_hash_fn(State *a, hash_fns_t *fns) {
   VecHint *sa = &a.error_recovery_hints;
   uint32 hash = 0, i;
@@ -615,7 +615,7 @@ er_hint_hash_fn(State *a, hash_fns_t *fns) {
   return hash;
 }
 
-extern(C) static int
+extern(C) private int
 er_hint_cmp_fn(State *a, State *b, hash_fns_t *fns) {
   int i;
   VecHint *sa = &a.error_recovery_hints, sb = &b.error_recovery_hints;
@@ -646,7 +646,7 @@ er_hint_hash_fns = hash_fns_t(
 }
 
 
-static void
+private void
 buildErrorData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
     int i, j;
     State *s;
@@ -680,7 +680,7 @@ buildErrorData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
     }
 }
 
-static void
+private void
 buildStateData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
     int i;
     State *s, h, shifts;
@@ -758,11 +758,11 @@ bool is_EBNF(uint _x)
     return _x == InternalKind.INTERNAL_CONDITIONAL || _x == InternalKind.INTERNAL_STAR || _x == InternalKind.INTERNAL_PLUS;
 }
 
-static int d_internal_values[] = [D_SYMBOL_NTERM, D_SYMBOL_EBNF, D_SYMBOL_INTERNAL];
-static int d_symbol_values[] = [ 
+private int d_internal_values[] = [D_SYMBOL_NTERM, D_SYMBOL_EBNF, D_SYMBOL_INTERNAL];
+private int d_symbol_values[] = [ 
   D_SYMBOL_STRING, D_SYMBOL_REGEX, D_SYMBOL_CODE, D_SYMBOL_TOKEN ];
 
-static void
+private void
 buildSymbolData(Grammar *g, ref BuildTables tables) {
     int i;
     D_Symbol d_symbols[];
@@ -789,7 +789,7 @@ buildSymbolData(Grammar *g, ref BuildTables tables) {
     tables.d_symbols = d_symbols;
 }
 
-static void
+private void
 buildPassesData(Grammar *g, ref BuildTables tables) {
   int i;
   if (g.passes.n) {
@@ -840,7 +840,7 @@ struct TableMap(T, int dimention = 1)
 {
     T[string] storage;
 
-    static string keyWithArgs(int i, int j, int k, int l) pure
+    private string keyWithArgs(int i, int j, int k, int l) pure
     {
         assert((dimention == 1 && j == 0 && k == 0 && l == 0)
                 || (dimention == 2 && k == 0 && l == 0)
