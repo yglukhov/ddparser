@@ -409,7 +409,7 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
         if (s.gotos.n) {
             /* check for goto on token */
             for (j = 0; j < s.gotos.n; j++)
-                if (s.gotos.v[j].elem.kind == ELEM_TERM &&
+                if (s.gotos.v[j].elem.kind == ElemKind.ELEM_TERM &&
                         s.gotos.v[j].elem.e.term.kind == TermKind.TERM_TOKEN)
                     s.goto_on_token = 1;
             /* find lowest goto, set valid bits */

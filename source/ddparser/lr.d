@@ -79,7 +79,7 @@ build_closure(Grammar *g, State *s) {
   for (j = 0; j < s.items.n; j++) {
     Item *i = s.items.v[j];
     Elem *e = i;
-    if (e.kind == ELEM_NTERM) {
+    if (e.kind == ElemKind.ELEM_NTERM) {
       Production *pp = e.e.nterm;
       for (k = 0; k < e.e.nterm.rules.n; k++)
 	insert_item(s, pp.rules.v[k].elems.v ? 
@@ -136,12 +136,12 @@ build_new_states(Grammar *g) {
   for (i = 0; i < g.states.n; i++) {
     s = g.states.v[i];
     for (j = 0; j < g.terminals.n; j++) {
-      e.kind = ELEM_TERM;
+      e.kind = ElemKind.ELEM_TERM;
       e.e.term = g.terminals.v[j];
       build_state_for(g, s, &e);
     }
     for (j = 0; j < g.productions.n; j++) {
-      e.kind = ELEM_NTERM;
+      e.kind = ElemKind.ELEM_NTERM;
       e.e.nterm = g.productions.v[j];
       build_state_for(g, s, &e);
     }
@@ -161,7 +161,7 @@ build_states_for_each_production(Grammar *g) {
 
 uint
 elem_symbol(Grammar *g, Elem *e) {
-  if (e.kind == ELEM_NTERM)
+  if (e.kind == ElemKind.ELEM_NTERM)
     return e.e.nterm.index;
   else
     return g.productions.n + e.e.term.index;
@@ -275,7 +275,7 @@ build_actions(Grammar *g) {
         foreach(e; s.items)
         {
             if (e.kind != ElemKind.ELEM_END) {
-                if (e.kind == ELEM_TERM) {
+                if (e.kind == ElemKind.ELEM_TERM) {
                     for (int z = 0; z < s.gotos.n; z++) {
                         if (s.gotos.v[z].elem.e.term == e.e.term)
                             add_action(g, s, ActionKind.ACTION_SHIFT, 
@@ -335,7 +335,7 @@ build_right_epsilon_hints(Grammar *g) {
       r = e.rule;
       if (e.kind != ElemKind.ELEM_END) {
 	for (z = e.index; z < r.elems.n; z++) {
-          if ((r.elems.v[z].kind != ELEM_NTERM ||
+          if ((r.elems.v[z].kind != ElemKind.ELEM_NTERM ||
 	       !r.elems.v[z].e.nterm.nullable))
 	    goto Lnext;
 	}
@@ -367,7 +367,7 @@ build_error_recovery(Grammar *g) {
     for (j = 0; j < s.items.n; j++) {
       r = s.items.v[j].rule;
       if (r.elems.n > 1 &&
-	  r.elems.v[r.elems.n - 1].kind == ELEM_TERM &&
+	  r.elems.v[r.elems.n - 1].kind == ElemKind.ELEM_TERM &&
 	  r.elems.v[r.elems.n - 1].e.term.kind == TermKind.TERM_STRING)
       {
 	depth = s.items.v[j].index;

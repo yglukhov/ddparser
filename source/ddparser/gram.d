@@ -296,9 +296,6 @@ enum ElemKind {
   ELEM_NTERM, ELEM_TERM, ELEM_UNRESOLVED, ELEM_END
 }
 
-alias ELEM_NTERM = ElemKind.ELEM_NTERM;
-alias ELEM_TERM = ElemKind.ELEM_TERM;
-
 struct Elem {
   ElemKind	kind;
   uint		index;
@@ -508,7 +505,7 @@ new_term() {
 private Elem *
 new_elem_term(Term *t, Rule *r) {
   Elem *e = new_elem();
-  e.kind = ELEM_TERM;
+  e.kind = ElemKind.ELEM_TERM;
   e.e.term = t;
   e.rule = r;
   vec_add(&r.elems, e);
@@ -518,7 +515,7 @@ new_elem_term(Term *t, Rule *r) {
 Elem *
 new_elem_nterm(Production *p, Rule *r) {
   Elem *e = new_elem();
-  e.kind = ELEM_NTERM;
+  e.kind = ElemKind.ELEM_NTERM;
   e.e.nterm = p;
   e.rule = r;
   return e;
@@ -1025,7 +1022,7 @@ compute_nullable(Grammar *g) {
         for (j = 0; j < g.productions.v[i].rules.n; j++) {
 	  for (k = 0; k < g.productions.v[i].rules.v[j].elems.n; k++) {
 	    e = g.productions.v[i].rules.v[j].elems.v[k];
-	    if (e.kind != ELEM_NTERM || !e.e.nterm.nullable) 
+	    if (e.kind != ElemKind.ELEM_NTERM || !e.e.nterm.nullable) 
 	      goto Lnot_nullable;
 	  }
 	  changed = 1;
@@ -1067,21 +1064,21 @@ resolve_grammar(Grammar *g) {
       pp = lookup_production(g, e.e.unresolved);
 	  if (pp) {
 	    e.e.unresolved = null;
-	    e.kind = ELEM_NTERM;
+	    e.kind = ElemKind.ELEM_NTERM;
 	    e.e.nterm = pp;
 	  } else
       {
           t = lookup_token(g, e.e.unresolved);
           if (t) {
               e.e.unresolved = null;
-              e.kind = ELEM_TERM;
+              e.kind = ElemKind.ELEM_TERM;
               e.e.term = t;
           } else {
               d_fail("unresolved identifier: '%s'", e.e.unresolved);
           }
       }
 	}
-	if (e.kind == ELEM_TERM)
+	if (e.kind == ElemKind.ELEM_TERM)
 	  last_term = e.e.term;
       }
       r.end.index = r.elems.n;
@@ -1111,7 +1108,7 @@ merge_identical_terminals(Grammar *g) {
       r = p.rules.v[j];
       for (k = 0; k < r.elems.n; k++) {
 	e = r.elems.v[k];
-	if (e.kind == ELEM_TERM)
+	if (e.kind == ElemKind.ELEM_TERM)
 	  e.e.term = unique_term(g, e.e.term);
       }
     }
@@ -1142,7 +1139,7 @@ print_term(Term *t) {
 
 void
 print_elem(Elem *ee) {
-  if (ee.kind == ELEM_TERM)
+  if (ee.kind == ElemKind.ELEM_TERM)
     print_term(ee.e.term);
   else if (ee.kind == ElemKind.ELEM_UNRESOLVED)
     logf("%s ", ee.e.unresolved);
@@ -1380,7 +1377,7 @@ convert_regex_production_one(Grammar *g, Production *p) {
       d_fail("final and/or multi-rule code not permitted in regex productions '%s'", p.name);
     for (k = 0; k < r.elems.n; k++) {
       e = r.elems.v[k];
-      if (e.kind == ELEM_NTERM) {
+      if (e.kind == ElemKind.ELEM_NTERM) {
 	if (!e.e.nterm.regex)
 	  d_fail("regex production '%s' cannot invoke non-regex production '%s'",
 	       p.name, e.e.nterm.name);
@@ -1395,7 +1392,7 @@ convert_regex_production_one(Grammar *g, Production *p) {
 	  circular = 1;
 	  buf_len += 5;
 	}
-      } else { /* e.kind == ELEM_TERM */
+      } else { /* e.kind == ElemKind.ELEM_TERM */
 	if (e.e.term.kind == TermKind.TERM_CODE || e.e.term.kind == TermKind.TERM_TOKEN)
 	  d_fail("regex production '%s' cannot include scanners or tokens");
 	buf_len += e.e.term.string_len + 5;
@@ -1425,7 +1422,7 @@ convert_regex_production_one(Grammar *g, Production *p) {
       e = r.elems.v[0].e.nterm == p ? r.elems.v[1] : r.elems.v[1];
       if (rr.elems.n && e.e.term_or_nterm != rr.elems.v[0].e.term_or_nterm)
 	goto Lfail;
-      t = e.kind == ELEM_TERM ? e.e.term : e.e.nterm.regex_term;
+      t = e.kind == ElemKind.ELEM_TERM ? e.e.term : e.e.nterm.regex_term;
       *b++ = '('; 
       if (t.kind == TermKind.TERM_STRING)
 	s = escape_string_for_regex(t.string_);
@@ -1452,7 +1449,7 @@ convert_regex_production_one(Grammar *g, Production *p) {
 	*b++ = '(';
       for (k = 0; k < r.elems.n; k++) {
 	e = r.elems.v[k];
-	t = e.kind == ELEM_TERM ? e.e.term : e.e.nterm.regex_term;
+	t = e.kind == ElemKind.ELEM_TERM ? e.e.term : e.e.nterm.regex_term;
 	if (t.kind == TermKind.TERM_STRING)
 	  s = escape_string_for_regex(t.string_);
 	else
@@ -1491,9 +1488,9 @@ convert_regex_productions(Grammar *g) {
     for (j = 0; j < p.rules.n; j++) {
       r = p.rules.v[j];
       for (k = 0; k < r.elems.n; k++) {
-	if (r.elems.v[k].kind == ELEM_NTERM && r.elems.v[k].e.nterm.regex_term) {
+	if (r.elems.v[k].kind == ElemKind.ELEM_NTERM && r.elems.v[k].e.nterm.regex_term) {
 	  r.elems.v[k].e.term = r.elems.v[k].e.nterm.regex_term;
-	  r.elems.v[k].kind = ELEM_TERM;
+	  r.elems.v[k].kind = ElemKind.ELEM_TERM;
 	}
       }
     }
@@ -1801,7 +1798,7 @@ set_declaration_group(Production *p, Production *root, Declaration *d) {
   p.last_declaration[d.kind] = d;
   for (i = 0; i < p.rules.n; i++) {
     for (j = 0; j < p.rules.v[i].elems.n; j++)
-      if (p.rules.v[i].elems.v[j].kind == ELEM_NTERM)
+      if (p.rules.v[i].elems.v[j].kind == ElemKind.ELEM_NTERM)
 	set_declaration_group(p.rules.v[i].elems.v[j].e.nterm, root, d);
   }
 }
@@ -1831,7 +1828,7 @@ propogate_declarations(Grammar *g) {
                    d_fail("unresolved declaration '%s'", e.e.unresolved);
            }
            e.e.unresolved = null;
-           e.kind = ELEM_NTERM;
+           e.kind = ElemKind.ELEM_NTERM;
            e.e.nterm = p;
        }
    }
@@ -1855,7 +1852,7 @@ propogate_declarations(Grammar *g) {
       r = p.rules.v[j];
       for (k = 0; k < r.elems.n; k++) {
 	e = r.elems.v[k];
-	if (e.kind == ELEM_TERM) {
+	if (e.kind == ElemKind.ELEM_TERM) {
 	  if (!p.declaration_group[DeclarationKind.DECLARE_LONGEST_MATCH] &&
 	      !p.declaration_group[DeclarationKind.DECLARE_ALL_MATCHES])
 	    e.e.term.scan_kind = D_SCAN_DEFAULT;
@@ -1907,7 +1904,7 @@ compute_declaration_states(Grammar *g, Production *p, Declaration *d) {
     }
     if (scanner) {
       for (k = 0; k < s.items.n; k++)
-	if (s.items.v[k].kind == ELEM_TERM)
+	if (s.items.v[k].kind == ElemKind.ELEM_TERM)
 	  switch (s.items.v[k].e.term.scan_kind) {
 	    case D_SCAN_LONGEST:
 	      if (s.scan_kind == D_SCAN_RESERVED || 
@@ -2019,7 +2016,7 @@ print_term_escaped(Term *t, int double_escaped) {
 /* print_elem changed to call print_term_escaped */
 private void
 print_element_escaped(Elem *ee, int double_escaped) {
-  if (ee.kind == ELEM_TERM)
+  if (ee.kind == ElemKind.ELEM_TERM)
     print_term_escaped(ee.e.term, double_escaped);
   else if (ee.kind == ElemKind.ELEM_UNRESOLVED)
     logf("%s ", ee.e.unresolved);

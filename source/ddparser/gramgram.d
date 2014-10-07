@@ -1242,7 +1242,7 @@ g.r = new_rule(g, g.p);
      mixin(commonValues);
 
  
-      if (g.e.kind != ELEM_TERM) 
+      if (g.e.kind != ElemKind.ELEM_TERM) 
         d_fail("terminal priority on non-terminal");
       g.e.e.term.term_priority = cast(int)strtol(n1.start_loc.s, null, 0); 
     
@@ -1298,7 +1298,7 @@ g.e = new_elem_nterm(g.p, var0x10fccb700); g.p = var0x10fcc8200; g.r = var0x10fc
      mixin(commonValues);
 
  
-      if (g.e.kind != ELEM_TERM) 
+      if (g.e.kind != ElemKind.ELEM_TERM) 
 	d_fail("terminal name on non-terminal");
       g.e.e.term.term_name = n1.start_loc.s[1 .. n1.end - n1.start_loc.s - 1].idup;
     
@@ -1322,7 +1322,7 @@ g.r = new_rule(g, g.p);
      mixin(commonValues);
 
  
-      if (g.e.kind != ELEM_TERM) 
+      if (g.e.kind != ElemKind.ELEM_TERM) 
 	d_fail("ignore-case (/i) on non-terminal");
       g.e.e.term.ignore_case = 1; 
     
@@ -2119,8 +2119,8 @@ g.r = new_rule(g, g.p);
  g.e = new_string(g, `"[a-zA-Z_][a-zA-Z_0-9]*"`, g.r);
 // new_elem: 0x10FD88800
 // TRACE 147
-/// if (g.e.kind != ELEM_TERM) d_fail("terminal priority on non-terminal"); 
- assert(g.e.kind == ELEM_TERM);
+/// if (g.e.kind != ElemKind.ELEM_TERM) d_fail("terminal priority on non-terminal"); 
+ assert(g.e.kind == ElemKind.ELEM_TERM);
  g.e.e.term.term_priority = -1;
 // TRACE 93
 vec_add(&g.p.rules, g.r);
