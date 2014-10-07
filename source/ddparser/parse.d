@@ -129,15 +129,15 @@ struct PNode {
   State Node - the 'state'.
 */
 struct SNode {
-  D_State	*state;
   D_Scope	*initial_scope;
   void		*initial_globals;
   d_loc_t	loc;
-  uint		depth;	     	/* max stack depth (less loops) */
   PNode		*last_pn;
   VecZNode	zns;
   SNode  *bucket_next;
   SNode	*all_next;
+  uint stateIndex;
+  uint		depth;	     	/* max stack depth (less loops) */
 }
 
 /*
@@ -150,7 +150,6 @@ struct ZNode {
 
 ZNode* znode_next(ZNode* _z)
 {
-    writeln("check");
     assert((*cast(ZNode**)&(_z.pn)) == cast(ZNode*)_z.pn);
     return  (*cast(ZNode**)&(_z.pn));
 }
@@ -287,14 +286,14 @@ uint SNODE_HASH(uint _s, D_Scope* _sc, void* _g)
 }
 
 private SNode *
-find_SNode(Parser *p, uint state, D_Scope *sc, void *g) {
+find_SNode(Parser *p, uint stateIndex, D_Scope *sc, void *g) {
   SNodeHash *ph = &p.snode_hash;
   SNode *sn;
-  uint h = SNODE_HASH(state, sc, g);
+  uint h = SNODE_HASH(stateIndex, sc, g);
   
   if (ph.v)
     for (sn = ph.v[h % ph.m]; sn; sn = sn.bucket_next)
-      if (sn.state - p.t.state == state &&
+      if (stateIndex == sn.stateIndex &&
           sn.initial_scope == sc &&
           sn.initial_globals == g)
         return sn;
@@ -304,7 +303,7 @@ find_SNode(Parser *p, uint state, D_Scope *sc, void *g) {
 private void
 insert_SNode_internal(Parser *p, SNode *sn) {
   SNodeHash *ph = &p.snode_hash;
-  uint h = SNODE_HASH(cast(uint)(sn.state - p.t.state), sn.initial_scope, sn.initial_globals), i;
+  uint h = SNODE_HASH(sn.stateIndex, sn.initial_scope, sn.initial_globals), i;
   SNode *t;
 
   if (ph.n + 1 > ph.m) {
@@ -338,7 +337,7 @@ insert_SNode(Parser *p, SNode *sn) {
 }
 
 private SNode *
-new_SNode(Parser *p, D_State *state, d_loc_t *loc, D_Scope *sc, void *g) {
+new_SNode(Parser *p, uint stateIndex, d_loc_t *loc, D_Scope *sc, void *g) {
   SNode *sn = p.free_snodes;
   if (!sn)
     sn = cast(SNode*)MALLOC((*sn).sizeof);
@@ -348,13 +347,13 @@ new_SNode(Parser *p, D_State *state, d_loc_t *loc, D_Scope *sc, void *g) {
   vec_clear(&sn.zns);
   sn.all_next = null;
   p.states++;
-  sn.state = state;
+  sn.stateIndex = stateIndex;
   sn.initial_scope = sc;
   sn.initial_globals = g;
   sn.last_pn = null;
   sn.loc = *loc;
   insert_SNode(p, sn);
-  if (sn.state.accept) {
+  if (p.t.states[stateIndex].accept) {
     if (!p.accept) {
       p.accept = sn;
     } else if (sn.loc.s > p.accept.loc.s) {
@@ -452,7 +451,7 @@ free_old_nodes(Parser *p) {
   SNode*tsn;
   SNode** lsn;
   while (sn) {
-    h = SNODE_HASH(cast(uint)(sn.state - p.t.state), sn.initial_scope, sn.initial_globals);
+    h = SNODE_HASH(sn.stateIndex, sn.initial_scope, sn.initial_globals);
     lsn = &p.snode_hash.v[h % p.snode_hash.m];
     tsn = sn; sn = sn.all_next;
     while (*lsn != tsn) lsn = &(*lsn).bucket_next;
@@ -612,14 +611,15 @@ add_Shift(Parser *p, SNode *snode) {
 }
 
 private SNode *
-add_SNode(Parser *p, D_State *state, d_loc_t *loc, D_Scope *sc, void *g) {
-  SNode *sn = find_SNode(p, cast(uint)(state - p.t.state), sc, g);
+add_SNode(Parser *p, uint stateIndex, d_loc_t *loc, D_Scope *sc, void *g) {
+  SNode *sn = find_SNode(p, stateIndex, sc, g);
   if (sn)
     return sn;
-  sn = new_SNode(p, state, loc, sc, g);
-  if (sn.state.shifts)
+  sn = new_SNode(p, stateIndex, loc, sc, g);
+  auto state = &p.t.states[stateIndex];
+  if (state.shifts)
     add_Shift(p, sn);
-  foreach(r; sn.state.reductions)
+  foreach(r; state.reductions)
     if (!r.nelements)
       add_Reduction(p, null, sn, r);
   return sn;
@@ -1320,27 +1320,27 @@ set_add_znode(VecZNode *v, ZNode *z) {
   set_add_znode_hash(v, z);
 }
 
-int GOTO_STATE(Parser* _p, PNode* _pn, SNode* _ps)
+private int GOTO_STATE(Parser* _p, PNode* _pn, SNode* _ps)
 {
-    return _p.t.goto_table[_pn.parse_node.symbol -          
-                      _ps.state.goto_table_offset] - 1;
+    auto offset = _p.t.states[_ps.stateIndex].goto_table_offset;
+    return _p.t.goto_table[_pn.parse_node.symbol - offset] - 1;
 }
+
 private SNode *
 goto_PNode(Parser *p, d_loc_t *loc, PNode *pn, SNode *ps) {
   SNode *new_ps, pre_ps;
   ZNode *z = null;
-  D_State *state;
   int i, j, k, state_index;
 
-  if (!IS_BIT_SET(ps.state.goto_valid, pn.parse_node.symbol))
+  if (!IS_BIT_SET(p.t.states[ps.stateIndex].goto_valid, pn.parse_node.symbol))
     return null;
   state_index = GOTO_STATE(p, pn, ps);
-  state = &p.t.state[state_index];
-  new_ps = add_SNode(p, state, loc, pn.parse_node.scope_, pn.parse_node.globals);
+  D_State *state = &p.t.states[state_index];
+  new_ps = add_SNode(p, state_index, loc, pn.parse_node.scope_, pn.parse_node.globals);
   new_ps.last_pn = pn;
 
   debug(trace) logf("goto %d (%s) . %d %X\n",
-             cast(int)(ps.state - p.t.state),
+             ps.state,
              p.t.symbols[pn.parse_node.symbol].name,
              state_index, new_ps);
   if (ps != new_ps && new_ps.depth < ps.depth + 1)
@@ -1349,11 +1349,11 @@ goto_PNode(Parser *p, d_loc_t *loc, PNode *pn, SNode *ps) {
   z = set_find_znode(&new_ps.zns, pn);
   if (!z) { /* not found */
     set_add_znode(&new_ps.zns, (z = new_ZNode(p, pn)));
-    foreach(r; new_ps.state.reductions)
+    foreach(r; state.reductions)
       if (r.nelements)
         add_Reduction(p, z, new_ps, r);
     if (!pn.shift)
-      foreach(h; new_ps.state.right_epsilon_hints) {
+      foreach(h; state.right_epsilon_hints) {
         pre_ps = find_SNode(p, h.preceeding_state, new_ps.initial_scope, new_ps.initial_globals);
         if (!pre_ps) continue;
         for (k = 0; k < pre_ps.zns.n; k++)
@@ -1412,7 +1412,7 @@ shift_all(Parser *p, char *pos) {
     }
     p.shifts_todo = p.shifts_todo.next;
     p.scans++;
-    state = s.snode.state;
+    state = &p.t.states[s.snode.stateIndex];
     if (state.scanner_code) {
       if (p.ncode_shifts < ncode + 1) {
         p.ncode_shifts = ncode + 2;
@@ -1708,8 +1708,8 @@ cmp_stacks(Parser *p) {
         continue;
       if (!VecSNode_equal(&az.sns, &bz.sns))
         continue;
-      if ((a.snode.state.reduces_to != b.snode.state - p.t.state) &&
-          (b.snode.state.reduces_to != a.snode.state - p.t.state))
+      if ((p.t.states[a.snode.stateIndex].reduces_to != b.snode.stateIndex) &&
+          (p.t.states[b.snode.stateIndex].reduces_to != a.snode.stateIndex))
         continue;
       if (az.pn.op_priority > bz.pn.op_priority) {
         debug(trace){logf("DELETE ");
@@ -1992,7 +1992,7 @@ error_recovery(Parser *p) {
   s = p.snode_hash.last_all.loc.s;
   while (tail > head) {
     sn = q[head++];
-      foreach(ref rer; sn.state.error_recovery_hints) {
+      foreach(ref rer; p.t.states[sn.stateIndex].error_recovery_hints) {
         D_ErrorRecoveryHint *er = &rer;
         ss = find_substr(s, er.str);
         if (ss) {
@@ -2037,7 +2037,7 @@ error_recovery(Parser *p) {
     best_pn.parse_node.white_space(
       cast(D_Parser*)p, &best_loc, cast(void**)&best_pn.parse_node.globals);
     new_pn = add_PNode(p, 0, &p.user.loc,  best_loc.s, best_pn, null, null, null);
-    new_sn = new_SNode(p, best_sn.state, &best_loc, new_pn.initial_scope, new_pn.initial_globals);
+    new_sn = new_SNode(p, best_sn.stateIndex, &best_loc, new_pn.initial_scope, new_pn.initial_globals);
     new_sn.last_pn = new_pn;
     set_add_znode(&new_sn.zns, (z = new_ZNode(p, new_pn)));
     vec_add(&z.sns, best_sn);
@@ -2133,7 +2133,7 @@ exhaustive_parse(Parser *p, int state) {
   loc = p.user.loc;
   p.user.initial_white_space_fn(cast(D_Parser*)p, &loc, &p.user.initial_globals);
   /* initial state */
-  sn = add_SNode(p, &p.t.state[state], &loc, p.top_scope, p.user.initial_globals);
+  sn = add_SNode(p, state, &loc, p.top_scope, p.user.initial_globals);
   memset(&tpn, 0, (tpn).sizeof);
   tpn.parse_node.white_space = p.user.initial_white_space_fn;
   tpn.parse_node.globals = p.user.initial_globals;
