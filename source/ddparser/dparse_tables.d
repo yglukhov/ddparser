@@ -109,7 +109,7 @@ struct D_State {
     ubyte			accept;
     ubyte			scan_kind;
     void*			transition_table;
-    D_Shift**[]     accepts_diff;
+    D_Shift*[][]     accepts_diff;
     int				reduces_to;
 }
 

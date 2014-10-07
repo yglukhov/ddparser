@@ -31,10 +31,10 @@ private void do_smth(State)(ref d_loc_t loc, ref d_loc_t last_loc,
     {
         state -= 1;
         if (prev && parse_state.accepts_diff) {
-            D_Shift** shift_diff = parse_state.accepts_diff[tst[prev].scanner_block[sb][so]];
-            for (; *shift_diff; shift_diff++) {
+            D_Shift*[] shift_diff = parse_state.accepts_diff[tst[prev].scanner_block[sb][so]];
+            foreach(sd; shift_diff) {
                 results[nresults].loc = loc;
-                results[nresults++].shift = *shift_diff;
+                results[nresults++].shift = sd;
             }
         }
         prev = state;

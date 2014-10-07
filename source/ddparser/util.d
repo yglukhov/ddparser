@@ -475,40 +475,40 @@ string escape_string_single_quote(const(char)[] s)
 
 int
 set_add(void *av, void *t) {
-  AbstractVec *v = cast(AbstractVec*)av;
-  AbstractVec vv;
-  int j, n = v.n;
-  uint i;
-  if (n) {
-    uint h = cast(uint)(cast(uintptr_t)t);
-    h = h % n;
-    for (i = h, j = 0;
-     i < v.n && j < SET_MAX_SEQUENTIAL;
-     i = ((i + 1) % n), j++)
-    {
-      if (!v.v[i]) {
-    v.v[i] = t;
-    return 1;
-      } else if (v.v[i] == t)
-    return 0;
+    AbstractVec *v = cast(AbstractVec*)av;
+    AbstractVec vv;
+    int j, n = v.n;
+    uint i;
+    if (n) {
+        uint h = cast(uint)(cast(uintptr_t)t);
+        h = h % n;
+        for (i = h, j = 0;
+                i < v.n && j < SET_MAX_SEQUENTIAL;
+                i = ((i + 1) % n), j++)
+        {
+            if (!v.v[i]) {
+                v.v[i] = t;
+                return 1;
+            } else if (v.v[i] == t)
+                return 0;
+        }
     }
-  }
-  if (!n) {
-    vv.v = null;
-    v.i = INITIAL_SET_SIZE_INDEX;
-  } else {
-    vv.v = v.v;
-    vv.n = v.n;
-    v.i = v.i + 1;
-  }
-  v.n = d_prime2[v.i];
-  v.v = cast(void**)MALLOC(v.n * (void *).sizeof);
-  memset(v.v, 0, v.n * (void *).sizeof);
-  if (vv.v) {
-    set_union(av, &vv);
-    FREE(vv.v);
-  }
-  return set_add(v, t);
+    if (!n) {
+        vv.v = null;
+        v.i = INITIAL_SET_SIZE_INDEX;
+    } else {
+        vv.v = v.v;
+        vv.n = v.n;
+        v.i = v.i + 1;
+    }
+    v.n = d_prime2[v.i];
+    v.v = cast(void**)MALLOC(v.n * (void *).sizeof);
+    memset(v.v, 0, v.n * (void *).sizeof);
+    if (vv.v) {
+        set_union(av, &vv);
+        FREE(vv.v);
+    }
+    return set_add(v, t);
 }
 
 void *
@@ -554,11 +554,10 @@ set_add_fn(void *av, void *t, hash_fns_t *fns) {
 int
 set_union(void *av, void *avv) {
   AbstractVec *vv = cast(AbstractVec*)avv;
-  uint i, changed = 0;
-
-  for (i = 0; i < vv.n; i++)
-    if (vv.v[i])
-      changed = set_add(av, vv.v[i]) || changed;
+  int changed = 0;
+  foreach (i; *vv)
+    if (i)
+      changed = set_add(av, i) || changed;
   return changed;
 }
 

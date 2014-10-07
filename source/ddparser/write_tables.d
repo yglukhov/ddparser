@@ -146,51 +146,50 @@ shift_fns = hash_fns_t(
 
 private void
 buildScannerData(Grammar *g, ref BuildTables tables) {
-    State *s;
     ScannerBlock *vsblock, xv, yv;
     VecScannerBlock scanner_block_hash[4];
     VecScannerBlock *pscanner_block_hash;
     VecScannerBlock trans_scanner_block_hash[4];
     VecScannerBlock *ptrans_scanner_block_hash;
     VecAction shift_hash;
-    int nvsblocks, ivsblock, i, j, k, x, xx;
+    int i, j, k, x, xx;
     VecScanState *ss;
 
-    D_Shift*[uint] allShifts;
+    D_Shift*[] allShifts = new D_Shift*[g.terminals.n];
     D_Shift*[uint] allTShifts;
 
     /* shift_actions */
     for (i = 0; i < g.terminals.n; i++) {
         int action_index = -1;
-        Term *t = g.terminals.v[i];
+        Term *t = g.terminals[i];
         if (t.regex_production) {
             action_index = t.regex_production.rules.v[0].action_index;
         }
         D_Shift* shift = new D_Shift();
-        shift.symbol = cast(ushort)(g.terminals.v[i].index + g.productions.n);
-        shift.shift_kind = cast(ubyte)g.terminals.v[i].scan_kind;
-        shift.op_assoc = cast(ubyte)g.terminals.v[i].op_assoc;
-        shift.op_priority = g.terminals.v[i].op_priority;
-        shift.term_priority = g.terminals.v[i].term_priority;
+        shift.symbol = cast(ushort)(t.index + g.productions.n);
+        shift.shift_kind = cast(ubyte)t.scan_kind;
+        shift.op_assoc = cast(ubyte)t.op_assoc;
+        shift.op_priority = t.op_priority;
+        shift.term_priority = t.term_priority;
         shift.action_index = action_index;
         shift.speculative_code = tables.spec_code;
         allShifts[i] = shift;
-        if (g.terminals.v[i].trailing_context) {
+        if (t.trailing_context) {
             shift = new D_Shift();
-            shift.symbol = cast(ushort)(g.terminals.v[i].index + g.productions.n);
+            shift.symbol = cast(ushort)(t.index + g.productions.n);
             shift.shift_kind = D_SCAN_TRAILING;
-            shift.op_assoc = cast(ubyte)g.terminals.v[i].op_assoc;
-            shift.op_priority = g.terminals.v[i].op_priority;
-            shift.term_priority = g.terminals.v[i].term_priority;
+            shift.op_assoc = cast(ubyte)t.op_assoc;
+            shift.op_priority = t.op_priority;
+            shift.term_priority = t.term_priority;
             shift.action_index = action_index;
             shift.speculative_code = tables.spec_code;
             allTShifts[i] = shift;
         }
     }
     /* scanners */
-    nvsblocks = 0;
-    for (i = 0; i < g.states.n; i++)
-        nvsblocks += g.states.v[i].scanner.states.n * g.scanner_blocks;
+    int nvsblocks = 0;
+    foreach (i; g.states)
+        nvsblocks += i.scanner.states.n * g.scanner_blocks;
     vsblock = cast(ScannerBlock *)MALLOC((nvsblocks ? nvsblocks : 1) * (ScannerBlock).sizeof);
     for (i = 0; i < 4; i++) {
         vec_clear(&scanner_block_hash[i]);
@@ -202,14 +201,14 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
     trans_scanner_block_fns.data[1] = cast(void*)g;
     /* shift */
     vec_clear(&shift_hash);
-    ivsblock = 0;
+    int ivsblock = 0;
 
     TableMap!(D_Shift*[], 2) tables_d_accepts_diff2;
     TableMap!(D_Shift *[], 2) tables_d_shift2;
 
 
     for (i = 0; i < g.states.n; i++) {
-        s = g.states.v[i];
+        State *s = g.states.v[i];
         if (s.same_shifts)
             continue;
         ss = &s.scanner.states;
@@ -224,13 +223,13 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                 else
                     d_accepts_diff2 ~= allTShifts[va.v[k].term.index];
             }
-            d_accepts_diff2 ~= null;
+            //d_accepts_diff2 ~= null;
             tables_d_accepts_diff2[i, j] = d_accepts_diff2;
         }
         if (s.scanner.transitions.n) {
-            D_Shift** d_accepts_diff1[];
+            D_Shift*[] d_accepts_diff1[];
             for (j = 0; j < s.scanner.transitions.n; j++) {
-                d_accepts_diff1 ~= tables_d_accepts_diff2[i,j].ptr;
+                d_accepts_diff1 ~= tables_d_accepts_diff2[i,j];
             }
             tables.d_accepts_diff1[i] = d_accepts_diff1;
         }
@@ -325,7 +324,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
         }
     }
     for (i = 0; i < g.states.n; i++) {
-        s = g.states.v[i];
+        State *s = g.states.v[i];
         ss = &s.scanner.states;
         ivsblock = 0;
         if (ss.n && !s.same_shifts) {
@@ -399,7 +398,7 @@ private Rule* original_reduction(Rule* r)
 private void
 buildGotoData(Grammar *g, ref BuildTables tables) {
     Vec!(intptr_t) vgoto;
-    int i, j, x, sym, lowest_sym;
+    int i, j;
 
     int nvalid_bytes = ((g.productions.n + g.terminals.n) + 7) / 8;
     vec_clear(&vgoto);
@@ -407,17 +406,20 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
         State *s = g.states.v[i];
         if (s.gotos.n) {
             /* check for goto on token */
-            for (j = 0; j < s.gotos.n; j++)
-                if (s.gotos.v[j].elem.kind == ElemKind.ELEM_TERM &&
-                        s.gotos.v[j].elem.e.term.kind == TermKind.TERM_TOKEN)
+            foreach (j; s.gotos)
+                if (j.elem.kind == ElemKind.ELEM_TERM &&
+                        j.elem.e.term.kind == TermKind.TERM_TOKEN)
+                {
                     s.goto_on_token = 1;
+                    break;
+                }
 
             ubyte[] d_goto_valid = new ubyte[nvalid_bytes];
             /* find lowest goto, set valid bits */
-            lowest_sym = elem_symbol(g, s.gotos.v[0].elem);
+            int lowest_sym = elem_symbol(g, s.gotos.v[0].elem);
             SET_BIT(d_goto_valid, lowest_sym);
             for (j = 1; j < s.gotos.n; j++) {
-                sym = elem_symbol(g, s.gotos.v[j].elem);
+                int sym = elem_symbol(g, s.gotos.v[j].elem);
                 SET_BIT(d_goto_valid, sym);
                 if (sym < lowest_sym)
                     lowest_sym = sym;
@@ -427,7 +429,7 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
             while (again) {
                 again = false;
                 for (j = 0; j < s.gotos.n; j++) {
-                    x = elem_symbol(g, s.gotos.v[j].elem);
+                    int x = elem_symbol(g, s.gotos.v[j].elem);
                     x -= lowest_sym;
                     while (vgoto.n <= x) {
                         int qq = 0;
@@ -862,7 +864,7 @@ struct TableMap(T, int dimention = 1)
 
 struct BuildTables
 {
-    TableMap!(D_Shift**[], 1) d_accepts_diff1;
+    TableMap!(D_Shift*[][], 1) d_accepts_diff1;
     TableMap!(ubyte[], 3) d_scanner3;
     TableMap!(ubyte[], 3) d_accepts_diff3;
     D_Symbol d_symbols[];

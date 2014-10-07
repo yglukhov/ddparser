@@ -100,9 +100,7 @@ free_VecNFAState(VecNFAState *nfas) {
 
 private ScanState *
 new_ScanState() {
-  ScanState *n = cast(ScanState*)MALLOC((ScanState).sizeof);
-  memset(n, 0, (ScanState).sizeof);
-  return n;
+  return new ScanState();
 }
 
 extern(C) private int 
@@ -115,7 +113,6 @@ nfacmp(const void *ai, const void *aj) {
 private void
 nfa_closure(DFAState *x) {
     int i, j, k;
-
     NFAState *s;
 
     for (i = 0; i < x.states.n; i++)
@@ -224,7 +221,7 @@ build_regex_nfa(LexState *ls, uint8 **areg, NFAState *pp, NFAState *nn, Action *
   uint8 mark[256];
 
   s = p;
-  while ({(c = *reg++); return c;}()) {
+  while ((c = *reg++) != 0) {
       switch(c) {
           case '(':
               has_trailing = build_regex_nfa(ls, &reg, s, (x = new_NFAState(ls)), trailing) ||
@@ -505,22 +502,22 @@ build_state_scanner(Grammar *g, LexState *ls, State *s) {
   NFAState *n, nn, nnn;
   Action *a;
   uint8 *c, reg; 
-  int j, one;
+  int j;
 
-  one = 0;
+  bool one = false;
   n = new_NFAState(ls);
   /* first strings since they can be trivially combined as a tree */
   for (j = 0; j < s.shift_actions.n; j++) {
     a = s.shift_actions.v[j];
     if (a.kind == ActionKind.ACTION_ACCEPT) {
-      one = 1;
+      one = true;
       if (!n.chars[0].n) 
 	vec_add(&n.chars[0], (nnn = new_NFAState(ls)));
       else
 	nnn = n.chars[0].v[0];
       vec_add(&nnn.accepts, a);
     } else if (a.kind == ActionKind.ACTION_SHIFT && a.term.kind == TermKind.TERM_STRING) {
-      one = 1;
+      one = true;
       nn = n;
       if (!a.term.ignore_case) {
 	for (c = cast(uint8*)a.term.string_; *c; c++) {
@@ -551,7 +548,7 @@ build_state_scanner(Grammar *g, LexState *ls, State *s) {
       memcpy(trailing_context, a, (Action).sizeof);
       trailing_context.kind = ActionKind.ACTION_SHIFT_TRAILING;
       trailing_context.index = g.action_count++;
-      one = 1;
+      one = true;
       reg = cast(uint8*)a.term.string_;
       vec_add(&n.epsilon, (nnn = new_NFAState(ls)));
       nn = new_NFAState(ls);
@@ -575,10 +572,7 @@ build_state_scanner(Grammar *g, LexState *ls, State *s) {
 
 private LexState *
 new_LexState() {
-  LexState *ls = cast(LexState*)MALLOC((LexState).sizeof);
-  memset(ls, 0, (LexState).sizeof);
-  vec_clear(&ls.allnfas);
-  return ls;
+  return new LexState();
 }
 
 void 
