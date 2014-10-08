@@ -9,15 +9,14 @@ enum INITIAL_ALLITEMS =	3359;
 
 private uint item_hash(Item* _i)
 {
-    return  ((cast(uint)(_i).rule.index << 8) + 			
-     (cast(uint)((_i).kind != ElemKind.ELEM_END ? (_i).index : (_i).rule.elems.n)));
+    return  ((cast(uint)_i.rule.index << 8) + 			
+     (cast(uint)(_i.kind != ElemKind.ELEM_END ? _i.index : _i.rule.elems.n)));
 }
 
 private int
 insert_item(State *s, Elem *e) {
-  Item *i = e;
-  if (set_add(&s.items_hash, i)) {
-    vec_add(&s.items, i);
+  if (set_add(&s.items_hash, e)) {
+    vec_add(&s.items, e);
     return 1;
   }
   return 0;
@@ -46,22 +45,25 @@ free_state(State *s) {
 
 private State *
 maybe_add_state(Grammar *g, State *s) {
-  int i, j;
-
-  for (i = 0; i < g.states.n; i++) {
-    if (s.hash == g.states.v[i].hash && 
-	s.items.n == g.states.v[i].items.n) {
-      for (j = 0; j < s.items.n; j++)
-	if (s.items.v[j] != g.states.v[i].items.v[j])
-	  goto Lcont;
-      free_state(s);
-      return g.states.v[i];
-    Lcont:;
+    foreach (i; g.states) {
+        if (s.hash == i.hash && s.items.n == i.items.n) {
+            bool cont = false;
+            for (int j = 0; j < s.items.n; j++)
+                if (s.items.v[j] != i.items.v[j])
+                {
+                    cont = true;
+                    break;
+                }
+            if (!cont)
+            {
+                free_state(s);
+                return i;
+            }
+        }
     }
-  }
-  s.index = g.states.n;
-  vec_add(&g.states, s);
-  return s;
+    s.index = g.states.n;
+    vec_add(&g.states, s);
+    return s;
 }
 
 private Elem *
@@ -74,22 +76,17 @@ next_elem(Item *i) {
 
 private State *
 build_closure(Grammar *g, State *s) {
-  int j, k;
-
-  for (j = 0; j < s.items.n; j++) {
-    Item *i = s.items.v[j];
-    Elem *e = i;
-    if (e.kind == ElemKind.ELEM_NTERM) {
-      Production *pp = e.e.nterm;
-      for (k = 0; k < e.e.nterm.rules.n; k++)
-	insert_item(s, pp.rules.v[k].elems.v ? 
-		    pp.rules.v[k].elems.v[0] : pp.rules.v[k].end);
+  foreach (i; s.items) {
+    if (i.kind == ElemKind.ELEM_NTERM) {
+      foreach (r; i.e.nterm.rules)
+	insert_item(s, r.elems.v ? 
+		    r.elems.v[0] : r.end);
     }
   }
   qsort(s.items.v, s.items.n, (Item*).sizeof, &itemcmp);
   s.hash = 0;
-  for (j = 0; j < s.items.n; j++)
-    s.hash += item_hash(s.items.v[j]);
+  foreach (i; s.items)
+    s.hash += item_hash(i);
   return maybe_add_state(g, s);
 }
 
@@ -110,12 +107,9 @@ add_goto(State *s, State *ss, Elem *e) {
 
 private void
 build_state_for(Grammar *g, State *s, Elem *e) {
-  int j;
-  Item *i;
   State *ss = null;
 
-  for (j = 0; j < s.items.n; j++) {
-    i = s.items.v[j];
+  foreach (i; s.items) {
     if (i.kind != ElemKind.ELEM_END && i.kind == e.kind &&
         i.e.term_or_nterm == e.e.term_or_nterm)
     {
@@ -129,20 +123,16 @@ build_state_for(Grammar *g, State *s, Elem *e) {
 
 private void
 build_new_states(Grammar *g) {
-  int i, j;
-  State *s;
   Elem e;
-
-  for (i = 0; i < g.states.n; i++) {
-    s = g.states.v[i];
-    for (j = 0; j < g.terminals.n; j++) {
+  foreach (s; g.states) {
+    foreach (t; g.terminals) {
       e.kind = ElemKind.ELEM_TERM;
-      e.e.term = g.terminals.v[j];
+      e.e.term = t;
       build_state_for(g, s, &e);
     }
-    for (j = 0; j < g.productions.n; j++) {
+    foreach (p; g.productions) {
       e.kind = ElemKind.ELEM_NTERM;
-      e.e.nterm = g.productions.v[j];
+      e.e.nterm = p;
       build_state_for(g, s, &e);
     }
   }
@@ -150,12 +140,11 @@ build_new_states(Grammar *g) {
 
 private void
 build_states_for_each_production(Grammar *g) {
-  int i;
-  for (i = 0; i < g.productions.n; i++)
-    if (!g.productions.v[i].internal && g.productions.v[i].elem) {
+  foreach (p; g.productions)
+    if (!p.internal && p.elem) {
       State *s = new_state();
-      insert_item(s, g.productions.v[i].elem);
-      g.productions.v[i].state = build_closure(g, s);
+      insert_item(s, p.elem);
+      p.state = build_closure(g, s);
     }
 }
 
@@ -176,10 +165,8 @@ gotocmp(const void *aa, const void *bb) {
 
 private void
 sort_Gotos(Grammar *g) {
-  int i;
-
-  for (i = 0; i < g.states.n; i++) {
-    VecGoto *vg = &g.states.v[i].gotos;
+  foreach (s; g.states) {
+    VecGoto *vg = &s.gotos;
     qsort(vg.v, vg.n, (Goto*).sizeof, &gotocmp);
   }
 }
@@ -197,7 +184,6 @@ build_LR_sets(Grammar *g) {
 private Action *
 new_Action(Grammar *g, ActionKind akind, Term *aterm, Rule *arule, State *astate) {
   Action *a = new Action();
-  memset(a, 0, (Action).sizeof);
   a.kind = akind;
   a.term = aterm;
   a.rule = arule;
@@ -216,22 +202,21 @@ private void
 add_action(Grammar *g, State *s, ActionKind akind, Term *aterm, 
 	   Rule *arule, State *astate) 
 {
-  int i;
   Action *a;
   
   if (akind == ActionKind.ACTION_REDUCE) {
     /* eliminate duplicates */
-    for (i = 0; i < s.reduce_actions.n; i++)
-      if (s.reduce_actions.v[i].rule == arule)
+    foreach (i; s.reduce_actions)
+      if (i.rule == arule)
 	return;
     a = new_Action(g, akind, aterm, arule, astate);
     vec_add(&s.reduce_actions, a);
   } else {
     /* eliminate duplicates */
-    for (i = 0; i < s.shift_actions.n; i++)
-      if (s.shift_actions.v[i].term == aterm &&
-	  s.shift_actions.v[i].state == astate &&
-	  s.shift_actions.v[i].kind == akind)
+    foreach (i; s.shift_actions)
+      if (i.term == aterm &&
+	  i.state == astate &&
+	  i.kind == akind)
 	return;
     a = new_Action(g, akind, aterm, arule, astate);
     vec_add(&s.shift_actions, a);
@@ -262,24 +247,23 @@ actioncmp(const void *aa, const void *bb) {
   return ((i > j) ? 1 : ((i < j) ? -1 : 0));
 }
 
-extern(C) void
+void
 sort_VecAction(VecAction *v) {
   qsort(v.v, v.n, (Action*).sizeof, &actioncmp);
 }
 
 private void
 build_actions(Grammar *g) {
-    import std.stdio;
     foreach(s; g.states)
     {
         foreach(e; s.items)
         {
             if (e.kind != ElemKind.ELEM_END) {
                 if (e.kind == ElemKind.ELEM_TERM) {
-                    for (int z = 0; z < s.gotos.n; z++) {
-                        if (s.gotos.v[z].elem.e.term == e.e.term)
+                    foreach (z; s.gotos) {
+                        if (z.elem.e.term == e.e.term)
                             add_action(g, s, ActionKind.ACTION_SHIFT, 
-                                    e.e.term, null, s.gotos.v[z].state);
+                                    e.e.term, null, z.state);
                     }
                 }
             } else if (e.rule.prod.index)
@@ -294,10 +278,9 @@ build_actions(Grammar *g) {
 
 State *
 goto_State(State *s, Elem *e) {
-  int i;
-  for (i = 0; i < s.gotos.n; i++)
-    if (s.gotos.v[i].elem.e.term_or_nterm == e.e.term_or_nterm)
-      return s.gotos.v[i].state;
+  foreach (i; s.gotos)
+    if (i.elem.e.term_or_nterm == e.e.term_or_nterm)
+      return i.state;
   return null;
 }
 
@@ -323,73 +306,70 @@ hintcmp(const void *ai, const void *aj) {
 
 private void
 build_right_epsilon_hints(Grammar *g) {
-  int x, y, z;
-  State *s, ss;
-  Elem *e;
-  Rule *r;
-
-  for (x = 0; x < g.states.n; x++) {
-    s = g.states.v[x];
-    for (y = 0; y < s.items.n; y++) {
-      e = s.items.v[y];
-      r = e.rule;
-      if (e.kind != ElemKind.ELEM_END) {
-	for (z = e.index; z < r.elems.n; z++) {
-          if ((r.elems.v[z].kind != ElemKind.ELEM_NTERM ||
-	       !r.elems.v[z].e.nterm.nullable))
-	    goto Lnext;
-	}
-	ss = s;
-	for (z = e.index; z < r.elems.n; z++)
-	  ss = goto_State(ss, r.elems.v[z]);
-	if (ss && r.elems.n)
-	  vec_add(&s.right_epsilon_hints, 
-		  new_Hint(r.elems.n - e.index - 1, ss, r));
-	else { /* ignore for states_for_each_productions */ }
+  foreach (s; g.states) {
+      foreach (e; s.items) {
+          Rule *r = e.rule;
+          if (e.kind != ElemKind.ELEM_END) {
+              bool next = false;
+              for (int z = e.index; z < r.elems.n; z++) {
+                  if ((r.elems.v[z].kind != ElemKind.ELEM_NTERM ||
+                              !r.elems.v[z].e.nterm.nullable))
+                  {
+                      next = true;
+                      break;
+                  }
+              }
+              if (!next)
+              {
+                  State *ss = s;
+                  for (int z = e.index; z < r.elems.n; z++)
+                      ss = goto_State(ss, r.elems.v[z]);
+                  if (ss && r.elems.n)
+                      vec_add(&s.right_epsilon_hints, 
+                              new_Hint(r.elems.n - e.index - 1, ss, r));
+                  else { /* ignore for states_for_each_productions */ }
+              }
+          }
       }
-      Lnext:;
-    }
-    if (s.right_epsilon_hints.n > 1)
-      qsort(s.right_epsilon_hints.v, s.right_epsilon_hints.n, 
-	    (Hint*).sizeof, &hintcmp);
+      if (s.right_epsilon_hints.n > 1)
+          qsort(s.right_epsilon_hints.v, s.right_epsilon_hints.n, 
+                  (Hint*).sizeof, &hintcmp);
   }
 }
 
 private void
 build_error_recovery(Grammar *g) {
-  int i, j, k, depth;
-  State *s;
-  Rule *r, rr;
-  Elem *e, ee;
-
-  for (i = 0; i < g.states.n; i++) {
-    s = g.states.v[i];
-    for (j = 0; j < s.items.n; j++) {
-      r = s.items.v[j].rule;
-      if (r.elems.n > 1 &&
-	  r.elems.v[r.elems.n - 1].kind == ElemKind.ELEM_TERM &&
-	  r.elems.v[r.elems.n - 1].e.term.kind == TermKind.TERM_STRING)
-      {
-	depth = s.items.v[j].index;
-	e = r.elems.v[r.elems.n - 1];
-	for (k = 0; k < s.error_recovery_hints.n; k++) {
-	  rr = s.error_recovery_hints.v[k].rule;
-	  ee = rr.elems.v[rr.elems.n - 1];
-	  if (e.e.term.string_len == ee.e.term.string_len &&
-	      !strcmp(e.e.term.string_, ee.e.term.string_)) 
-	  {
-	    if (s.error_recovery_hints.v[k].depth > depth)
-	      s.error_recovery_hints.v[k].depth = depth;
-	    goto Ldone;
-	  }
-	}
-	vec_add(&s.error_recovery_hints, new_Hint(depth, null, r));
-      Ldone:;
-      }
+    foreach (s; g.states) {
+        foreach (i; s.items) {
+            Rule *r = i.rule;
+            if (r.elems.n > 1 &&
+                    r.elems.v[r.elems.n - 1].kind == ElemKind.ELEM_TERM &&
+                    r.elems.v[r.elems.n - 1].e.term.kind == TermKind.TERM_STRING)
+            {
+                int depth = i.index;
+                Elem *e = r.elems.v[r.elems.n - 1];
+                bool done = false;
+                foreach (erh; s.error_recovery_hints) {
+                    Rule *rr = erh.rule;
+                    Elem *ee = rr.elems.v[rr.elems.n - 1];
+                    if (e.e.term.string_len == ee.e.term.string_len &&
+                            !strcmp(e.e.term.string_, ee.e.term.string_)) 
+                    {
+                        if (erh.depth > depth)
+                            erh.depth = depth;
+                        done = true;
+                        break;
+                    }
+                }
+                if (!done)
+                {
+                   vec_add(&s.error_recovery_hints, new_Hint(depth, null, r));
+                }
+            }
+        }
+        qsort(s.error_recovery_hints.v, s.error_recovery_hints.n, 
+                (Hint*).sizeof, &hintcmp);
     }
-    qsort(s.error_recovery_hints.v, s.error_recovery_hints.n, 
-	  (Hint*).sizeof, &hintcmp);
-  }
 }
 
 void

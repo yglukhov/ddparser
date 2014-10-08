@@ -2030,8 +2030,8 @@ error_recovery(Parser *p) {
 
 bool PASS_CODE_FOUND(D_Pass* _p, PNode* _pn)
 {
-    return ((_pn).reduction && (_pn).reduction.npass_code > (_p).index &&
-                                  (_pn).reduction.pass_code[(_p).index]);
+    return (_pn.reduction && _pn.reduction.npass_code > _p.index &&
+                                  _pn.reduction.pass_code[_p.index]);
 }
 
 private void
@@ -2054,11 +2054,11 @@ pass_preorder(Parser *p, D_Pass *pp, PNode *pn) {
 
 private void
 pass_postorder(Parser *p, D_Pass *pp, PNode *pn) {
-  int found = PASS_CODE_FOUND(pp, pn), i;
+  int found = PASS_CODE_FOUND(pp, pn);
   if ((pp.kind & D_PASS_FOR_ALL) ||
       ((pp.kind & D_PASS_FOR_UNDEFINED) && !found))
-    for (i = 0; i < pn.children.n; i++)
-      pass_postorder(p, pp, pn.children.v[i]);
+    foreach (i; pn.children)
+      pass_postorder(p, pp, i);
   pass_call(p, pp, pn);
 }
 
@@ -2246,8 +2246,7 @@ void null_white_space(D_Parser *p, d_loc_t *loc, void **p_globals) { }
 
 D_Parser *
 new_D_Parser(D_ParserTables *t, int sizeof_ParseNode_User) {
-  Parser *p = cast(Parser*)MALLOC((Parser).sizeof);
-  memset(p, 0, (Parser).sizeof);
+  Parser* p = new Parser();
   p.t = t;
   p.user.loc.line = 1;
   p.user.sizeof_user_parse_node = sizeof_ParseNode_User;
@@ -2319,15 +2318,14 @@ free_whitespace_parser(Parser *p) {
 
 private PNode *
 handle_top_level_ambiguities(Parser *p, SNode *sn) {
-  int i;
   ZNode *z = null;
-  PNode *pn = null, last = null, x;
-  for (i = 0; i < sn.zns.n; i++) {
-    if (sn.zns.v[i]) {
-      x = sn.zns.v[i].pn;
+  PNode *pn = null, last = null;
+  foreach (i; sn.zns) {
+    if (i) {
+      PNode *x = i.pn;
       LATEST(x);
       if (!pn) {
-        z = sn.zns.v[i];
+        z = i;
         pn = x;
       } else  {
         if (x != pn && !x.ambiguities && x != last) {
