@@ -108,7 +108,7 @@ struct PNode {
   AssocKind		op_assoc;
   int			op_priority;
   D_Reduction		*reduction;
-  D_Shift		*shift;
+  const(D_Shift)* shift;
   VecPNode		children;
   uint			height;		/* max tree height */
   uint8			evaluated;
@@ -1048,7 +1048,7 @@ cmp_pnodes(Parser *p, PNode *x, PNode *y) {
 
 private PNode *
 make_PNode(Parser *p, uint hash, int symbol, d_loc_t *start_loc, char *e, PNode *pn,
-           D_Reduction *r, VecZNode *path, D_Shift *sh, D_Scope *scope_)
+           D_Reduction *r, VecZNode *path, const D_Shift *sh, D_Scope *scope_)
 {
   int l = cast(int)((PNode).sizeof - (d_voidp).sizeof + p.user.sizeof_user_parse_node);
   PNode *new_pn = p.free_pnodes;
@@ -1122,7 +1122,7 @@ make_PNode(Parser *p, uint hash, int symbol, d_loc_t *start_loc, char *e, PNode 
 }
 
 private int
-PNode_equal(Parser *p, PNode *pn, D_Reduction *r, VecZNode *path, D_Shift *sh) {
+PNode_equal(Parser *p, PNode *pn, D_Reduction *r, VecZNode *path, const D_Shift* sh) {
   int i, n = pn.children.n;
   if (sh)
     return sh == pn.shift;
@@ -1146,7 +1146,7 @@ PNode_equal(Parser *p, PNode *pn, D_Reduction *r, VecZNode *path, D_Shift *sh) {
 /* find/create PNode */
 private PNode *
 add_PNode(Parser *p, int symbol, d_loc_t *start_loc, char *e, PNode *pn,
-          D_Reduction *r, VecZNode *path, D_Shift *sh)
+          D_Reduction *r, VecZNode *path, const D_Shift* sh)
 {
   D_Scope *scope_ = equiv_D_Scope(pn.parse_node.scope_);
   uint hash;
@@ -1344,115 +1344,115 @@ parse_whitespace(D_Parser *ap, d_loc_t *loc, void **p_globals) {
 }
 
 private void
-shift_all(Parser *p, char *pos) {
-  int i, j, nshifts = 0, ncode = 0;
-  d_loc_t loc, skip_loc;
-  D_WhiteSpaceFn skip_fn = null;
-  ShiftResult *r;
-  Shift *saved_s = p.shifts_todo, s = saved_s, ss;
+shift_all(Parser *p, const char *pos) {
+    int i, j, nshifts = 0, ncode = 0;
+    d_loc_t loc, skip_loc;
+    D_WhiteSpaceFn skip_fn = null;
+    ShiftResult *r;
+    Shift *saved_s = p.shifts_todo, s = saved_s, ss;
 
-  loc = s.snode.loc;
-  skip_loc.s = null;
+    loc = s.snode.loc;
+    skip_loc.s = null;
 
-  s = p.shifts_todo;
-  while (s && s.snode.loc.s == pos) {
-    if (p.nshift_results - nshifts < p.t.symbols.length * 2) {
-      p.nshift_results = nshifts + cast(int)p.t.symbols.length * 3;
-      p.shift_results = cast(ShiftResult*)REALLOC(p.shift_results, p.nshift_results * (ShiftResult).sizeof);
-    }
-    p.shifts_todo = p.shifts_todo.next;
-    p.scans++;
-    D_State *state = &p.t.states[s.snode.stateIndex];
-    if (state.scanner_code) {
-      if (p.ncode_shifts < ncode + 1) {
-        p.ncode_shifts = ncode + 2;
-        p.code_shifts = cast(D_Shift*)REALLOC(p.code_shifts, p.ncode_shifts * (D_Shift).sizeof);
-      }
-      p.code_shifts[ncode].shift_kind = D_SCAN_ALL;
-      p.code_shifts[ncode].term_priority = 0;
-      p.code_shifts[ncode].op_assoc = 0;
-      p.code_shifts[ncode].action_index = 0;
-      p.code_shifts[ncode].speculative_code = null;
-      p.shift_results[nshifts].loc = loc;
-      if ((state.scanner_code(
-        &p.shift_results[nshifts].loc,
-        &p.code_shifts[ncode].symbol, &p.code_shifts[ncode].term_priority,
-        &p.code_shifts[ncode].op_assoc, &p.code_shifts[ncode].op_priority)))
-      {
-        p.shift_results[nshifts].snode = s.snode;
-        p.shift_results[nshifts++].shift = &p.code_shifts[ncode++];
-      }
-    }
-    if (state.scanner_table) {
-      int n = scan_buffer(loc, state, &p.shift_results[nshifts]);
-      for (i = 0; i < n; i++)
-        p.shift_results[nshifts + i].snode = s.snode;
-      nshifts += n;
-    }
     s = p.shifts_todo;
-  }
-  for (i = 0; i < nshifts; i++) {
-    r = &p.shift_results[i];
-    if (!r.shift)
-      continue;
-    if (r.shift.shift_kind == D_SCAN_TRAILING) {
-      int symbol = r.shift.symbol;
-      SNode *sn = r.snode;
-      r.shift = null;
-      for (j = i + 1; j < nshifts; j++) {
-        if (p.shift_results[j].shift &&
-            sn == p.shift_results[j].snode &&
-            symbol == p.shift_results[j].shift.symbol) {
-          r.shift = p.shift_results[j].shift;
-          p.shift_results[j].shift = null;
+    while (s && s.snode.loc.s == pos) {
+        if (p.nshift_results - nshifts < p.t.symbols.length * 2) {
+            p.nshift_results = nshifts + cast(int)p.t.symbols.length * 3;
+            p.shift_results = cast(ShiftResult*)REALLOC(p.shift_results, p.nshift_results * (ShiftResult).sizeof);
         }
-      }
+        p.shifts_todo = p.shifts_todo.next;
+        p.scans++;
+        D_State *state = &p.t.states[s.snode.stateIndex];
+        if (state.scanner_code) {
+            if (p.ncode_shifts < ncode + 1) {
+                p.ncode_shifts = ncode + 2;
+                p.code_shifts = cast(D_Shift*)REALLOC(p.code_shifts, p.ncode_shifts * (D_Shift).sizeof);
+            }
+            p.code_shifts[ncode].shift_kind = D_SCAN_ALL;
+            p.code_shifts[ncode].term_priority = 0;
+            p.code_shifts[ncode].op_assoc = 0;
+            p.code_shifts[ncode].action_index = 0;
+            p.code_shifts[ncode].speculative_code = null;
+            p.shift_results[nshifts].loc = loc;
+            if ((state.scanner_code(
+                            &p.shift_results[nshifts].loc,
+                            &p.code_shifts[ncode].symbol, &p.code_shifts[ncode].term_priority,
+                            &p.code_shifts[ncode].op_assoc, &p.code_shifts[ncode].op_priority)))
+            {
+                p.shift_results[nshifts].snode = s.snode;
+                p.shift_results[nshifts++].shift = &p.code_shifts[ncode++];
+            }
+        }
+        if (state.scanner_table) {
+            int n = scan_buffer(loc, *state, &p.shift_results[nshifts]);
+            for (i = 0; i < n; i++)
+                p.shift_results[nshifts + i].snode = s.snode;
+            nshifts += n;
+        }
+        s = p.shifts_todo;
     }
-    if (r.shift && r.shift.term_priority) {
-      /* potentially n^2 but typically small */
-      for (j = 0; j < nshifts; j++) {
-        if (!p.shift_results[j].shift)
-          continue;
-        if (r.loc.s == p.shift_results[j].loc.s && j != i) {
-          if (r.shift.term_priority < p.shift_results[j].shift.term_priority) {
+    for (i = 0; i < nshifts; i++) {
+        r = &p.shift_results[i];
+        if (!r.shift)
+            continue;
+        if (r.shift.shift_kind == D_SCAN_TRAILING) {
+            int symbol = r.shift.symbol;
+            SNode *sn = r.snode;
             r.shift = null;
-            break;
-          }
-          if (r.shift.term_priority > p.shift_results[j].shift.term_priority)
-            p.shift_results[j].shift = null;
+            for (j = i + 1; j < nshifts; j++) {
+                if (p.shift_results[j].shift &&
+                        sn == p.shift_results[j].snode &&
+                        symbol == p.shift_results[j].shift.symbol) {
+                    r.shift = p.shift_results[j].shift;
+                    p.shift_results[j].shift = null;
+                }
+            }
         }
-      }
+        if (r.shift && r.shift.term_priority) {
+            /* potentially n^2 but typically small */
+            for (j = 0; j < nshifts; j++) {
+                if (!p.shift_results[j].shift)
+                    continue;
+                if (r.loc.s == p.shift_results[j].loc.s && j != i) {
+                    if (r.shift.term_priority < p.shift_results[j].shift.term_priority) {
+                        r.shift = null;
+                        break;
+                    }
+                    if (r.shift.term_priority > p.shift_results[j].shift.term_priority)
+                        p.shift_results[j].shift = null;
+                }
+            }
+        }
     }
-  }
-  for (i = 0; i < nshifts; i++) {
-    r = &p.shift_results[i];
-    if (!r.shift)
-      continue;
-    p.shifts++;
-    debug(trace) logf("shift %d %X %d (%s)\n",
-               r.snode.stateIndex, r.snode, r.shift.symbol,
-               p.t.symbols[r.shift.symbol].name);
-    PNode *new_pn = add_PNode(p, r.shift.symbol, &r.snode.loc, r.loc.s,
-                       r.snode.last_pn, null, null, r.shift);
-    if (new_pn) {
-      if (!skip_loc.s || skip_loc.s != r.loc.s || skip_fn != new_pn.parse_node.white_space) {
-        skip_loc = r.loc;
-        skip_fn = new_pn.parse_node.white_space;
-        new_pn.parse_node.white_space(
-          cast(D_Parser*)p, &skip_loc, cast(void**)&new_pn.parse_node.globals);
-        skip_loc.ws = r.loc.s;
-        new_pn.ws_before = loc.ws;
-        new_pn.ws_after = skip_loc.s;
-      }
-      goto_PNode(p, &skip_loc, new_pn, r.snode);
+    for (i = 0; i < nshifts; i++) {
+        r = &p.shift_results[i];
+        if (!r.shift)
+            continue;
+        p.shifts++;
+        debug(trace) logf("shift %d %X %d (%s)\n",
+                r.snode.stateIndex, r.snode, r.shift.symbol,
+                p.t.symbols[r.shift.symbol].name);
+        PNode *new_pn = add_PNode(p, r.shift.symbol, &r.snode.loc, r.loc.s,
+                r.snode.last_pn, null, null, r.shift);
+        if (new_pn) {
+            if (!skip_loc.s || skip_loc.s != r.loc.s || skip_fn != new_pn.parse_node.white_space) {
+                skip_loc = r.loc;
+                skip_fn = new_pn.parse_node.white_space;
+                new_pn.parse_node.white_space(
+                        cast(D_Parser*)p, &skip_loc, cast(void**)&new_pn.parse_node.globals);
+                skip_loc.ws = r.loc.s;
+                new_pn.ws_before = loc.ws;
+                new_pn.ws_after = skip_loc.s;
+            }
+            goto_PNode(p, &skip_loc, new_pn, r.snode);
+        }
     }
-  }
-  for (s = saved_s; s && s.snode.loc.s == pos;) {
-    ss = s;
-    s = s.next;
-    ss.next = p.free_shifts;
-    p.free_shifts = ss;
-  }
+    for (s = saved_s; s && s.snode.loc.s == pos;) {
+        ss = s;
+        s = s.next;
+        ss.next = p.free_shifts;
+        p.free_shifts = ss;
+    }
 }
 
 private VecZNode path1; /* static first path for speed */

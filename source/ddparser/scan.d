@@ -8,30 +8,34 @@ import ddparser.util;
 import core.stdc.string;
 import std.stdio;
 
-struct ShiftResult {
-    SNode	*snode;
-    D_Shift 	*shift;
+struct ShiftResult
+{
+    SNode* snode;
+    const(D_Shift)* shift;
     d_loc_t	loc;
 }
 
 private void do_smth(State)(ref d_loc_t loc, ref d_loc_t last_loc,
                 ref char* s, ref int col, ref int line, ref int nresults, 
-                ref D_Shift** shift, D_State* parse_state, ShiftResult* results)
+                ref D_Shift** shift, const ref D_State parse_state, ShiftResult* results)
 {
     /* all matches */
     auto st = cast(SB_!(State)*)parse_state.scanner_table;
     auto tst = cast(SB_trans!(State)*)parse_state.transition_table;
-    State state = 0, last = state, prev = state;
-    uint8 c;
-    uint32 sb, so;
-    c = cast(uint8)*s++;
-    state = st[state].scanner_block[sb = (c >> SCANNER_BLOCK_SHIFT)]
-     [so = c & SCANNER_BLOCK_MASK];
-    while (state)
+    State state, last, prev;
+
+    while (true)
     {
-        state -= 1;
+        uint8 c = cast(uint8)*s++;
+        uint32 sb = c >> SCANNER_BLOCK_SHIFT;
+        uint32 so = c & SCANNER_BLOCK_MASK;
+        state = st[state].scanner_block[sb][so];
+        if (!state) break;
+
+        --state;
+
         if (prev && parse_state.accepts_diff) {
-            D_Shift*[] shift_diff = parse_state.accepts_diff[tst[prev].scanner_block[sb][so]];
+            const D_Shift*[] shift_diff = parse_state.accepts_diff[tst[prev].scanner_block[sb][so]];
             foreach(sd; shift_diff) {
                 results[nresults].loc = loc;
                 results[nresults++].shift = sd;
@@ -44,15 +48,12 @@ private void do_smth(State)(ref d_loc_t loc, ref d_loc_t last_loc,
             last = state;
             last_loc = loc;
         }
-        c = cast(uint8)*s++;
-        state = st[state].scanner_block[sb = (c >> SCANNER_BLOCK_SHIFT)]
-         [so = c & SCANNER_BLOCK_MASK];
     }
     shift = st[last].shift;
 }
 
 int
-scan_buffer(d_loc_t loc, D_State *parse_state, ShiftResult *results) {
+scan_buffer(d_loc_t loc, const ref D_State parse_state, ShiftResult *results) {
     d_loc_t last_loc = loc;
     char *s = loc.s;
     int col = loc.col, line = loc.line;
