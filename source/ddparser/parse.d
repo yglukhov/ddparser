@@ -317,7 +317,6 @@ insert_SNode_internal(Parser *p, SNode *sn) {
         t = v[i];
       }
     }
-    FREE(v);
   }
   sn.bucket_next = ph.v[h % ph.m];
   assert(sn.bucket_next != sn);
@@ -422,7 +421,6 @@ insert_PNode_internal(Parser *p, PNode *pn) {
         t = v[i];
       }
     }
-    FREE(v);
   }
   pn.bucket_next = ph.v[h % ph.m];
   ph.v[h % ph.m] = pn;
@@ -498,10 +496,6 @@ free_parser_working_data(Parser *p) {
 
   free_old_nodes(p);
   free_old_nodes(p); /* to catch SNodes saved for error repair */
-  if (p.pnode_hash.v)
-    FREE(p.pnode_hash.v);
-  if (p.snode_hash.v)
-    FREE(p.snode_hash.v);
   memset(&p.pnode_hash, 0, (p.pnode_hash).sizeof);
   memset(&p.snode_hash, 0, (p.snode_hash).sizeof);
   while (p.reductions_todo) {
@@ -532,15 +526,11 @@ free_parser_working_data(Parser *p) {
     SNode *sn = p.free_snodes.all_next;
     FREE(p.free_snodes); p.free_snodes = sn;
   }
-  for (i = 0; i < p.error_reductions.n; i++)
-    FREE(p.error_reductions.v[i]);
   vec_free(&p.error_reductions);
   if (p.whitespace_parser)
     free_parser_working_data(p.whitespace_parser);
-  FREE(p.shift_results);
   p.shift_results = null;
   p.nshift_results = 0;
-  FREE(p.code_shifts);
   p.code_shifts = null;
   p.ncode_shifts = 0;
 }
@@ -730,18 +720,17 @@ check_assoc_priority(PNode *pn0, PNode *pn1, PNode *pn2) {
    the associativity and priority of its operators */
 private int
 check_path_priorities_internal(VecZNode *path) {
-  int i = 0, j, k, jj, kk, one = 0;
-  ZNode *z, zz, zzz;
-  PNode *pn0, pn1;
+  bool one = false;
 
-  if (path.n < i + 1)
-    return 0;
-  pn0 = path.v[i].pn;
+  if (path.length == 0) return 0;
+
+  int i = 0;
+  PNode *pn0 = path.v[i].pn;
   if (!pn0.op_assoc) { /* deal with top expression directly */
     i = 1;
     if (path.n < i + 1)
       return 0;
-    pn1 = path.v[i].pn;
+    PNode *pn1 = path.v[i].pn;
     if (!pn1.op_assoc)
       return 0;
     if (pn0.assoc) {
@@ -752,15 +741,13 @@ check_path_priorities_internal(VecZNode *path) {
     pn0 = pn1;
   }
   if (path.n > i + 1) { /* entirely in the path */
-    pn1 = path.v[i + 1].pn;
+    PNode *pn1 = path.v[i + 1].pn;
     if (path.n > i + 2)
       return check_assoc_priority(pn0, pn1, path.v[i + 2].pn);
     else { /* one level from the stack beyond the path */
-      z = path.v[i + 1];
-      for (k = 0; k < z.sns.n; k++)
-        for (j = 0; j < z.sns.v[k].zns.n; j++) {
-          one = 1;
-          zz = z.sns.v[k].zns.v[j];
+      foreach (k; (*path)[i + 1].sns)
+        foreach (zz; k.zns) {
+          one = true;
           if (zz && !check_assoc_priority(pn0, pn1, zz.pn))
             return 0;
         }
@@ -768,15 +755,11 @@ check_path_priorities_internal(VecZNode *path) {
         return check_assoc_priority(pn0, pn1, null);
     }
   } else { /* two levels from the stack beyond the path */
-    z = path.v[i];
-    for (k = 0; k < z.sns.n; k++)
-      for (j = 0; j < z.sns.v[k].zns.n; j++) {
-        zz = z.sns.v[k].zns.v[j];
+    foreach (k; (*path)[i].sns)
+      foreach (zz; k.zns) {
         if (zz)
-          for (kk = 0; kk < zz.sns.n; kk++)
-            for (jj = 0; jj < zz.sns.v[kk].zns.n; jj++) {
-              one = 1;
-              zzz = zz.sns.v[kk].zns.v[jj];
+          foreach (kk; zz.sns)
+            foreach (zzz; kk.zns) {
               if (zzz && !check_assoc_priority(pn0, zz.pn, zzz.pn))
                 return 0;
             }
@@ -1182,10 +1165,10 @@ add_PNode(Parser *p, int symbol, d_loc_t *start_loc, char *e, PNode *pn,
     if (!new_pn)
       return null;
     insert_PNode(p, new_pn);
-    goto Lreturn;
+    return old_pn;
   }
   if (!new_pn)
-    goto Lreturn;
+    return old_pn;
   p.compares++;
   switch (cmp_pnodes(p, new_pn, old_pn)) {
     case 0:
@@ -1203,7 +1186,6 @@ add_PNode(Parser *p, int symbol, d_loc_t *start_loc, char *e, PNode *pn,
       break;
     default:
   }
- Lreturn:
   return old_pn;
 }
 
@@ -1271,7 +1253,6 @@ set_add_znode_hash(VecZNode *v, ZNode *z) {
   v.v = cast(ZNode**)MALLOC(v.n * (void *).sizeof);
   if (vv.v) {
     set_union_znode(v, &vv);
-    FREE(vv.v);
   }
   set_add_znode(v, z);
 }
@@ -1529,7 +1510,6 @@ free_paths(VecVecZNode *paths) {
   vec_free(&path1);
   for (i = 1; i < paths.n; i++) {
     vec_free(paths.v[i]);
-    FREE(paths.v[i]);
   }
   vec_free(paths);
 }
@@ -1685,7 +1665,6 @@ cmp_stacks(Parser *p) {
             print_stack(p, b.snode, 0);
             logf("\n");}
         *bl = b.next;
-        FREE(b);
         b = *bl;
         break;
       }
@@ -1694,7 +1673,6 @@ cmp_stacks(Parser *p) {
             print_stack(p, a.snode, 0);
             logf("\n");}
         *al = a.next;
-        FREE(a);
         a = *al;
         goto Lbreak2;
       }
@@ -1916,9 +1894,6 @@ syntax_error_report_fn(D_Parser *ap) {
   else
     stderr.writefln("%s:%d: syntax error", fn, p.user.loc.line);
     /* fprintf(stderr, "%s:%d: syntax error\n", fn, p.user.loc.line); */
-  if (after)
-    FREE(after);
-  FREE(fn);
 }
 
 private void
@@ -2024,7 +1999,6 @@ error_recovery(Parser *p) {
     if (p.shifts_todo || p.reductions_todo)
       res = 0;
   }
-  FREE(q);
   return res;
 }
 
@@ -2271,7 +2245,6 @@ free_D_Parser(D_Parser *ap) {
     free_D_Scope(p.top_scope, 0);
   if (p.whitespace_parser)
     free_D_Parser(cast(D_Parser*)p.whitespace_parser);
-  FREE(ap);
 }
 
 void

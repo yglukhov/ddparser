@@ -506,7 +506,6 @@ set_add(void *av, void *t) {
     memset(v.v, 0, v.n * (void *).sizeof);
     if (vv.v) {
         set_union(av, &vv);
-        FREE(vv.v);
     }
     return set_add(v, t);
 }
@@ -546,7 +545,6 @@ set_add_fn(void *av, void *t, hash_fns_t *fns) {
   memset(v.v, 0, v.n * (void *).sizeof);
   if (vv.v) {
     set_union_fn(av, &vv, fns);
-    FREE(vv.v);
   }
   return set_add_fn(v, t, fns);
 }
@@ -588,7 +586,6 @@ set_to_vec(void *av) {
   for (i = 0; i < vv.n; i++)
     if (vv.v[i])
       vec_add_internal(v, vv.v[i]);
-  FREE(vv.v);
 }
 
 int
@@ -612,7 +609,7 @@ set_find(void *av, void *t) {
   return 0;
 }
 
-void d_free(void *x) { FREE(x); }
+void d_free(void *x) { }
 
 import std.format;
 import std.algorithm;
