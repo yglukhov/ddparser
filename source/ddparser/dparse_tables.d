@@ -4,6 +4,7 @@
 module ddparser.dparse_tables;
 
 import ddparser.dparse;
+import ddparser.parse;
 import std.conv;
 import core.stdc.string;
 

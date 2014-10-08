@@ -17,7 +17,7 @@ struct ShiftResult
 
 private void do_smth(State)(ref d_loc_t loc, ref d_loc_t last_loc,
                 ref int nresults, 
-                ref D_Shift** shift, const ref D_State parse_state, ShiftResult* results)
+                ref D_Shift** shift, const ref D_State parse_state, ShiftResult[] results)
 {
     /* all matches */
     auto st = cast(SB_!(State)*)parse_state.scanner_table;
@@ -56,7 +56,7 @@ private void do_smth(State)(ref d_loc_t loc, ref d_loc_t last_loc,
 }
 
 int
-scan_buffer(d_loc_t loc, const ref D_State parse_state, ShiftResult *results) {
+scan_buffer(d_loc_t loc, const ref D_State parse_state, ShiftResult[] results) {
     d_loc_t last_loc = loc;
     int nresults = 0;
     D_Shift **shift = null;
@@ -116,7 +116,8 @@ scan_buffer(d_loc_t loc, const ref D_State parse_state, ShiftResult *results) {
                 }
             nresults = nresults - i - 1;
             if (i != -1)
-                memmove(&results[0], &results[i + 1], nresults * results[0].sizeof);
+                for (int j = 0; j < nresults; ++j)
+                    results[j] = results[i + j + 1];
         }
     }
     return nresults;
