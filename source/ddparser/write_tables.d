@@ -216,13 +216,12 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
 
         /* build accepts differences */
         for (int j = 0; j < s.scanner.transitions.n; j++) {
-            VecAction *va = &s.scanner.transitions.v[j].accepts_diff;
             D_Shift* d_accepts_diff2[];
-            for (k = 0; k < va.n; k++) {
-                if (va.v[k].kind != ActionKind.ACTION_SHIFT_TRAILING)
-                    d_accepts_diff2 ~= allShifts[va.v[k].term.index];
+            foreach (k; s.scanner.transitions.v[j].accepts_diff) {
+                if (k.kind != ActionKind.ACTION_SHIFT_TRAILING)
+                    d_accepts_diff2 ~= allShifts[k.term.index];
                 else
-                    d_accepts_diff2 ~= allTShifts[va.v[k].term.index];
+                    d_accepts_diff2 ~= allTShifts[k.term.index];
             }
             //d_accepts_diff2 ~= null;
             tables_d_accepts_diff2[i, j] = d_accepts_diff2;
@@ -292,14 +291,14 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                 if (ss.v[j].accepts.n) {
                     string tmp = i.to!string() ~ "." ~ j.to!string();
                     for (k = 0; k < ss.v[j].accepts.n; k++) {
-                        Action *a = ss.v[j].accepts.v[k], aa;
+                        Action *a = ss.v[j].accepts.v[k];
                         if (ss.v[j].accepts.n == 1) {
                             if (a.temp_string)
                             {
                                 continue;
                             }
                             a.temp_string = tmp;
-                            aa = cast(Action*)set_add_fn(&shift_hash, a, &shift_fns);
+                            Action *aa = cast(Action*)set_add_fn(&shift_hash, a, &shift_fns);
                             if (aa != a)
                                 continue;
                         }
@@ -514,19 +513,10 @@ find_symbol(Grammar *g, char *s, char *e, int kind) {
 
 private void
 buildReductions(Grammar *g, ref BuildTables tables) {
-    int i, j, k, l, pmax;
-    Production *p, pdefault;
-    Rule *r, rdefault = null;
-
-    pdefault = lookup_production(g, "_");
-    if (pdefault) {
-        rdefault = pdefault.rules.v[0];
-    }
-    for (i = 0; i < g.productions.n; i++) {
-        p = g.productions.v[i];
-        for (j = p.rules.n - 1; j >= 0; j--) {
-            r = p.rules.v[j];
-            for (k = 0; k < j; k++)
+    foreach (p; g.productions) {
+        for (int j = p.rules.n - 1; j >= 0; j--) {
+            Rule *r = p.rules.v[j];
+            for (int k = 0; k < j; k++)
                 if (r.elems.n == p.rules.v[k].elems.n &&
                         r.speculative_code.code == p.rules.v[k].speculative_code.code &&
                         r.final_code.code == p.rules.v[k].final_code.code &&
@@ -538,24 +528,29 @@ buildReductions(Grammar *g, ref BuildTables tables) {
                 {
                     if (r.pass_code.n != p.rules.v[k].pass_code.n)
                         continue;
-                    for (l = 0; l < r.pass_code.n; l++) {
+
+                    bool cont = false;
+                    for (int l = 0; l < r.pass_code.n; l++) {
                         if (!r.pass_code.v[l] && !p.rules.v[k].pass_code.v[l])
                             continue;
-                        if (!r.pass_code.v[l] || !p.rules.v[k].pass_code.v[l])
-                            goto Lcontinue;
-                        if (r.pass_code.v[l].code != p.rules.v[k].pass_code.v[l].code)
-                            goto Lcontinue;
+                        if ((!r.pass_code.v[l] || !p.rules.v[k].pass_code.v[l]) ||
+                            (r.pass_code.v[l].code != p.rules.v[k].pass_code.v[l].code))
+                        {
+                            cont = true;
+                            break;
+                        }
                     }
-                    r.same_reduction = p.rules.v[k];
-                    break;
-Lcontinue:;
+
+                    if (!cont)
+                    {
+                        r.same_reduction = p.rules.v[k];
+                        break;
+                    }
                 }
         }
-        for (j = 0; j < p.rules.n; j++) {
-            r = p.rules.v[j];
+        foreach (r; p.rules) {
             if (r.same_reduction)
                 continue;
-            pmax = r.pass_code.n;
             D_Reduction* red = new D_Reduction();
             tables.reductions[r.index] = red;
             red.nelements = cast(ushort)r.elems.n;
@@ -563,7 +558,6 @@ Lcontinue:;
             if (!r.prod.internal && r.final_code.line == -1)
             {
                 red.final_code = r.final_code.f;
-
             }
             else if (!r.prod.internal && r.action_index >= 0) {
                 red.speculative_code = tables.spec_code;
@@ -578,7 +572,7 @@ Lcontinue:;
             red.op_priority = r.op_priority;
             red.rule_priority = r.rule_priority;
             red.action_index = r.prod.internal ? -1 : r.action_index;
-            red.npass_code = pmax;
+            red.npass_code = r.pass_code.n;
             red.pass_code = null;
         }
     }
@@ -604,12 +598,11 @@ extern(C) private int
 er_hint_cmp_fn(State *a, State *b, hash_fns_t *fns) {
   int i;
   VecHint *sa = &a.error_recovery_hints, sb = &b.error_recovery_hints;
-  Term *ta, tb;
   if (sa.n != sb.n)
     return 1;
   for (i = 0; i < sa.n; i++) {
-    ta = sa.v[i].rule.elems.v[sa.v[i].rule.elems.n - 1].e.term;
-    tb = sb.v[i].rule.elems.v[sb.v[i].rule.elems.n - 1].e.term;
+    Term *ta = sa.v[i].rule.elems.v[sa.v[i].rule.elems.n - 1].e.term;
+    Term *tb = sb.v[i].rule.elems.v[sb.v[i].rule.elems.n - 1].e.term;
     if (sa.v[i].depth != sb.v[i].depth ||
 	strcmp(ta.string_, tb.string_) ||
 	sa.v[i].rule.prod.index != sb.v[i].rule.prod.index)
@@ -633,33 +626,21 @@ er_hint_hash_fns = hash_fns_t(
 
 private void
 buildErrorData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
-    int i, j;
-    State *s;
-    Term *t;
-    State *h;
-    char *ss;
-
-    if (g.states.n) {
-        for (i = 0; i < g.states.n; i++) {
-            s = g.states.v[i];
-            if (s.error_recovery_hints.n) {
-                h = cast(State*)set_add_fn(er_hash, s, &er_hint_hash_fns);
-                if (h == s) {
-                    D_ErrorRecoveryHint d_error_recovery_hints[];
-                    for (j = 0; j < s.error_recovery_hints.n; j++) {
-                        t = s.error_recovery_hints.v[j].rule.elems.v[
-                            s.error_recovery_hints.v[j].rule.elems.n - 1].e.term;
-                        ss = escape_string(t.string_);
-                        D_ErrorRecoveryHint hint;
-                        hint.depth = cast(ushort)s.error_recovery_hints.v[j].depth;
-                        hint.symbol = cast(ushort)s.error_recovery_hints.v[j].rule.prod.index;
-                        hint.str = ss[0 .. strlen(ss)].idup;
-                        d_error_recovery_hints ~= hint;
-                        if (j != s.error_recovery_hints.n - 1)
-                            g.write_line += 1;
-                    }
-                    tables.d_error_recovery_hints1[i] = d_error_recovery_hints;
+    for (int i = 0; i < g.states.n; i++) {
+        State *s = g.states.v[i];
+        if (s.error_recovery_hints.n) {
+            State *h = cast(State*)set_add_fn(er_hash, s, &er_hint_hash_fns);
+            if (h == s) {
+                D_ErrorRecoveryHint d_error_recovery_hints[];
+                foreach (erh; s.error_recovery_hints) {
+                    Term *t = erh.rule.elems.v[erh.rule.elems.n - 1].e.term;
+                    D_ErrorRecoveryHint hint;
+                    hint.depth = cast(ushort)erh.depth;
+                    hint.symbol = cast(ushort)erh.rule.prod.index;
+                    hint.str = escape_string(t.string_[0 .. strlen(t.string_)]);
+                    d_error_recovery_hints ~= hint;
                 }
+                tables.d_error_recovery_hints1[i] = d_error_recovery_hints;
             }
         }
     }
@@ -719,7 +700,7 @@ buildStateData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
                 state.reduces_to = -1;
         }
     } else {
-            d_fail("no states\n");
+        d_fail("no states");
     }
 }
 
@@ -737,20 +718,20 @@ buildSymbolData(Grammar *g, ref BuildTables tables) {
     int i = 0;
     D_Symbol[] d_symbols = new D_Symbol[g.productions.length + g.terminals.length];
     foreach (p; g.productions) {
-        int state = -1, internal_index;
+        int state = -1;
         if (!p.internal && p.elem)
             state = p.state.index;
-        internal_index = p.internal ? (is_EBNF(p.internal) ? 2 : 1) : 0;
+        int internal_index = p.internal ? (is_EBNF(p.internal) ? 2 : 1) : 0;
         d_symbols[i].kind = d_internal_values[internal_index];
         d_symbols[i].name = p.name;
         d_symbols[i].start_symbol = state;
         ++i;
     }
     foreach (t; g.terminals) {
-        char *s = escape_string(t.string_); /* so it is a string */
-        const char *name = t.term_name.length ? t.term_name.toStringz() : s;
+        string name = t.term_name;
+        if (!name.length) name = escape_string(t.string_[0 .. strlen(t.string_)]);
         d_symbols[i].kind = d_symbol_values[t.kind];
-        d_symbols[i].name = name[0 .. strlen(name)].idup;
+        d_symbols[i].name = name;
         ++i;
     }
     tables.d_symbols = d_symbols;

@@ -1059,7 +1059,7 @@ merge_identical_terminals(Grammar *g) {
 
 void
 print_term(Term *t) {
-  char *s = t.string_ ? escape_string(t.string_) : null;
+  string s = t.string_ ? escape_string(t.string_[0 .. strlen(t.string_)]) : null;
   if (t.term_name)
     logf("term_name(\"%s\") ", t.term_name);
   else if (t.kind == TermKind.TERM_STRING) {
@@ -1075,8 +1075,6 @@ print_term(Term *t) {
     logf("token(\"%s\") ", s);
   else
     d_fail("unknown token kind");
-  if (s)
-    FREE(s);
 }
 
 void
@@ -1920,39 +1918,37 @@ build_grammar(Grammar *g) {
 
 private void
 print_term_escaped(Term *t, int double_escaped) {
-  char *s = null;
+  string s;
   if (t.term_name) {
     logf("%s ", t.term_name);
   } else if (t.kind == TermKind.TERM_STRING) {
-    s = t.string_ ? escape_string_single_quote(t.string_) : null;
+    s = t.string_ ? escape_string_single_quote(t.string_[0 .. strlen(t.string_)]) : null;
     if (!t.string_ || !*t.string_)
       logf("<EOF> ");
     else {
-      logf("'%s' ", double_escaped?escape_string_single_quote(s):s);
+      logf("'%s' ", double_escaped ? escape_string_single_quote(s) : s);
       if (t.ignore_case)
 	logf("/i ");
       if (t.term_priority)
 	writefln("%sterm %d ", double_escaped?"#":"$", t.term_priority);
     }
   } else if (t.kind == TermKind.TERM_REGEX) {
-    s = t.string_ ? escape_string(t.string_) : null;
+    s = t.string_ ? escape_string(t.string_[0 .. strlen(t.string_)]) : null;
     //char *s = t.string_; // ? escape_string(t.string_) : null;
-    immutable char *quote = double_escaped ? "\\\"".ptr : "\"".ptr;
-    logf("%s%s%s ", quote, double_escaped?escape_string(s):s, quote);
+    string quote = double_escaped ? "\\\"" : "\"";
+    logf("%s%s%s ", quote, double_escaped ? escape_string(s) : s, quote);
     if (t.ignore_case)
       logf("/i ");
     if (t.term_priority)
       writefln("%sterm %d ", double_escaped?"#":"$", t.term_priority);
   } else if (t.kind == TermKind.TERM_CODE) {
-    s = t.string_ ? escape_string(t.string_) : null;
+    s = t.string_ ? escape_string(t.string_[0 .. strlen(t.string_)]) : null;
     logf("code(\"%s\") ", s);
   } else if (t.kind == TermKind.TERM_TOKEN) {
-    s = t.string_ ? escape_string(t.string_) : null;
+    s = t.string_ ? escape_string(t.string_[0 .. strlen(t.string_)]) : null;
     logf("%s ", s);
   } else
     d_fail("unknown token kind");
-  if (s)
-    FREE(s);
 }
 
 /* print_elem changed to call print_term_escaped */

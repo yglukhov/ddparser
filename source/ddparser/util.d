@@ -427,16 +427,6 @@ vec_add_internal(void *v, void *elem) {
   av.vec_add_internal(elem);
 }
 
-char *escape_string(const(char) *s)
-{
-    return cast(char*)escape_string(s[0 .. strlen(s)], false).toStringz();
-}
-
-char *escape_string_single_quote(const(char) *s)
-{
-    return cast(char*)escape_string(s[0 .. strlen(s)], true).toStringz();
-}
-
 string escape_string(const(char)[] s, bool singleQuote = false)
 {
     auto result = appender!string();
