@@ -1517,11 +1517,8 @@ free_paths(VecVecZNode *paths) {
 private void
 reduce_one(Parser *p, Reduction *r) {
   SNode *sn = r.snode;
-  PNode *pn, last_pn;
-  ZNode *first_z;
-  int i, j, n = r.reduction.nelements;
-  VecVecZNode paths;
-  VecZNode *path;
+  PNode *pn;
+  int j, n = r.reduction.nelements;
 
   if (!r.znode) { /* epsilon reduction */
     pn = add_PNode(p, r.reduction.symbol, &sn.loc,
@@ -1530,10 +1527,10 @@ reduce_one(Parser *p, Reduction *r) {
       goto_PNode(p, &sn.loc, pn, sn);
   } else {
     debug(trace) logf("reduce %d %X %d\n", r.snode.stateIndex, sn, n);
+    VecVecZNode paths;
     vec_clear(&paths);
     build_paths(r.znode, &paths, n);
-    for (i = 0; i < paths.n; i++) {
-      path = paths.v[i];
+    foreach (path; paths) {
       if (r.new_snode) { /* prune paths by new right epsilon node */
         for (j = 0; j < path.v[r.new_depth].sns.n; j++)
           if (path.v[r.new_depth].sns.v[j] == r.new_snode)
@@ -1544,14 +1541,14 @@ reduce_one(Parser *p, Reduction *r) {
       if (check_path_priorities(path))
         continue;
       p.reductions++;
-      last_pn = path.v[0].pn;
-      first_z = path.v[n - 1];
+      PNode *last_pn = path.v[0].pn;
+      ZNode *first_z = path.v[n - 1];
       pn = add_PNode(p, r.reduction.symbol,
                      &first_z.pn.parse_node.start_loc,
                      sn.loc.s, last_pn, r.reduction, path, null);
       if (pn)
-        for (j = 0; j < first_z.sns.n; j++)
-          goto_PNode(p, &sn.loc, pn, first_z.sns.v[j]);
+        foreach (j; first_z.sns)
+          goto_PNode(p, &sn.loc, pn, j);
     }
     free_paths(&paths);
   }
@@ -1560,13 +1557,13 @@ reduce_one(Parser *p, Reduction *r) {
 }
 
 private int
-VecSNode_equal(VecSNode *vsn1, VecSNode *vsn2) {
-  int i, j;
+VecSNode_equal(const ref VecSNode vsn1, const ref VecSNode vsn2) @nogc @safe nothrow pure {
   if (vsn1.n != vsn2.n)
     return 0;
-  for (i = 0; i < vsn1.n; i++) {
+  for (int i = 0; i < vsn1.n; i++) {
+    int j;
     for (j = 0; j < vsn2.n; j++) {
-      if (vsn1.v[i] == vsn2.v[j])
+      if (vsn1[i] == vsn2[j])
         break;
     }
     if (j >= vsn2.n)
@@ -1576,7 +1573,7 @@ VecSNode_equal(VecSNode *vsn1, VecSNode *vsn2) {
 }
 
 private ZNode *
-binary_op_ZNode(SNode *sn) {
+binary_op_ZNode(SNode *sn) @nogc @safe nothrow pure {
   ZNode *z;
   if (sn.zns.n != 1)
     return null;
@@ -1655,7 +1652,7 @@ cmp_stacks(Parser *p) {
       bz = binary_op_ZNode(b.snode);
       if (!bz)
         continue;
-      if (!VecSNode_equal(&az.sns, &bz.sns))
+      if (!VecSNode_equal(az.sns, bz.sns))
         continue;
       if ((p.t.states[a.snode.stateIndex].reduces_to != b.snode.stateIndex) &&
           (p.t.states[b.snode.stateIndex].reduces_to != a.snode.stateIndex))

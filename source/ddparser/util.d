@@ -72,7 +72,7 @@ struct Vec(T)
         vec_add_internal(_i);
     }
 
-    ref T opIndex(size_t index)
+    ref inout(T) opIndex(size_t index) inout @trusted
     {
         assert(index < n);
         return v[index];

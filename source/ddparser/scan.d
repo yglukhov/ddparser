@@ -16,13 +16,16 @@ struct ShiftResult
 }
 
 private void do_smth(State)(ref d_loc_t loc, ref d_loc_t last_loc,
-                ref char* s, ref int col, ref int line, ref int nresults, 
+                ref int nresults, 
                 ref D_Shift** shift, const ref D_State parse_state, ShiftResult* results)
 {
     /* all matches */
     auto st = cast(SB_!(State)*)parse_state.scanner_table;
     auto tst = cast(SB_trans!(State)*)parse_state.transition_table;
     State state, last, prev;
+
+    char *s = loc.s;
+    int col = loc.col, line = loc.line;
 
     while (true)
     {
@@ -55,20 +58,18 @@ private void do_smth(State)(ref d_loc_t loc, ref d_loc_t last_loc,
 int
 scan_buffer(d_loc_t loc, const ref D_State parse_state, ShiftResult *results) {
     d_loc_t last_loc = loc;
-    char *s = loc.s;
-    int col = loc.col, line = loc.line;
-    int nresults = 0, i = 0, j;
+    int nresults = 0;
     D_Shift **shift = null;
 
     switch (parse_state.scanner_size) {
         case 1:
-            do_smth!ubyte(loc, last_loc, s, col, line, nresults, shift, parse_state, results);
+            do_smth!ubyte(loc, last_loc, nresults, shift, parse_state, results);
             break;
         case 2:
-            do_smth!ushort(loc, last_loc, s, col, line, nresults, shift, parse_state, results);
+            do_smth!ushort(loc, last_loc, nresults, shift, parse_state, results);
             break;
         case 4:
-            do_smth!uint(loc, last_loc, s, col, line, nresults, shift, parse_state, results);
+            do_smth!uint(loc, last_loc, nresults, shift, parse_state, results);
             break;
         default:
     }
@@ -79,22 +80,25 @@ scan_buffer(d_loc_t loc, const ref D_State parse_state, ShiftResult *results) {
         }
     }
     if (nresults) {
-        int longest = 0;
+        bool longest = false;
         char *end = results[nresults-1].loc.s;
         if (parse_state.scan_kind == D_SCAN_LONGEST)
-            longest = 1;
+            longest = true;
+
+        int i = 0;
         if (parse_state.scan_kind == D_SCAN_MIXED) {
             for (i = nresults - 1; i >= 0; i--) {
                 if (results[i].loc.s < end)
                     break;
                 if (results[i].shift.shift_kind == D_SCAN_LONGEST)
-                    longest = 1;
+                    longest = true;
             }
         }
+
         if (longest) {
             /* keep only 'longest' */
             i = 0;
-            for (j = 0; j < nresults; j++) {
+            for (int j = 0; j < nresults; j++) {
                 if (results[j].loc.s == end || results[j].shift.shift_kind == D_SCAN_TRAILING) {
                     if (i != j)
                         results[i] = results[j];
@@ -104,7 +108,7 @@ scan_buffer(d_loc_t loc, const ref D_State parse_state, ShiftResult *results) {
             nresults = i;
         } else if (parse_state.scan_kind == D_SCAN_MIXED) {
             /* only keep non-longest */
-            for (j = i; j >= 0; j--)
+            for (int j = i; j >= 0; j--)
                 if (results[j].shift.shift_kind != D_SCAN_LONGEST) {
                     if (i != j)
                         results[i] = results[j];

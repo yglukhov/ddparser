@@ -141,6 +141,8 @@ alias ASSOC_BINARY_LEFT = AssocKind.ASSOC_BINARY_LEFT;
 alias ASSOC_BINARY_RIGHT = AssocKind.ASSOC_BINARY_RIGHT;
 alias ASSOC_NO = AssocKind.ASSOC_NO;
 
+@nogc @safe nothrow pure
+{
 bool IS_RIGHT_ASSOC(AssocKind _x) { return cast(bool)(_x & ASSOC_RIGHT); }
 bool IS_LEFT_ASSOC(AssocKind _x) { return cast(bool)(_x & ASSOC_LEFT); }
 bool IS_NARY_ASSOC(AssocKind _x) { return cast(bool)(_x & ASSOC_NARY); }
@@ -152,6 +154,7 @@ bool IS_BINARY_NARY_ASSOC(AssocKind _x) { return IS_NARY_ASSOC(_x) || IS_BINARY_
 /* not valid for NARY */
 bool IS_EXPECT_RIGHT_ASSOC(AssocKind _x) { return _x && _x != ASSOC_UNARY_LEFT; }
 bool IS_EXPECT_LEFT_ASSOC(AssocKind _x) { return _x && _x != ASSOC_UNARY_RIGHT; }
+}
 
 struct Rule {
   uint			index;
