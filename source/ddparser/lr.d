@@ -31,9 +31,7 @@ itemcmp(const void *ai, const void *aj) {
 
 private State *
 new_state() {
-  State *s = new State();
-  memset(s, 0, (State).sizeof);
-  return s;
+  return new State();
 }
 
 private void

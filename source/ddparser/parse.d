@@ -87,7 +87,7 @@ struct Parser {
   int			dont_use_greediness_for_disambiguation;
   int 			commit_actions_interval; /* 0 is immediate */
   int 			error_recovery;
-  int			partial_parses;
+  bool			partial_parses;
   /* parse results */
   int 			syntax_errors; // do not move or change without fixing copy_user_configurables()
 
@@ -189,7 +189,7 @@ void LATEST(ref PNode * _pn)
 {
  while (_pn.latest != _pn.latest.latest) {
     PNode *t = _pn.latest.latest;
-    (_pn).latest = t; 
+    _pn.latest = t; 
   }
  _pn = _pn.latest;
 }
@@ -1300,7 +1300,7 @@ private int GOTO_STATE(Parser* _p, PNode* _pn, SNode* _ps)
 
 private SNode *
 goto_PNode(Parser *p, d_loc_t *loc, PNode *pn, SNode *ps) {
-  int i, j;
+  int i;
 
   if (!IS_BIT_SET(p.t.states[ps.stateIndex].goto_valid, pn.parse_node.symbol))
     return null;
@@ -1520,16 +1520,6 @@ build_paths(ZNode *z, VecVecZNode *paths, int nchildren_to_go) {
 }
 
 private void
-free_paths(VecVecZNode *paths) {
-  int i;
-  vec_free(&path1);
-  for (i = 1; i < paths.n; i++) {
-    vec_free(paths.v[i]);
-  }
-  vec_free(paths);
-}
-
-private void
 reduce_one(Parser *p, Reduction *r) {
   SNode *sn = r.snode;
   PNode *pn;
@@ -1565,7 +1555,6 @@ reduce_one(Parser *p, Reduction *r) {
         foreach (j; first_z.sns)
           goto_PNode(p, &sn.loc, pn, j);
     }
-    free_paths(&paths);
   }
   r.next = p.free_reductions;
   p.free_reductions = r;
@@ -1610,23 +1599,21 @@ binary_op_ZNode(SNode *sn) @nogc @safe nothrow pure {
 debug(trace) private const char *spaces = "                                                                                                  ";
 debug(trace) private void
 print_stack(Parser *p, SNode *s, int indent) {
-  int i,j;
-
   logf("%d", s.stateIndex);
   indent += 2;
-  for (i = 0; i < s.zns.n; i++) {
-    if (!s.zns.v[i])
+  foreach (i; s.zns) {
+    if (!i)
       continue;
     if (s.zns.n > 1)
       logf("\n%s[", &spaces[99-indent]);
-    logf("(%s:", p.t.symbols[s.zns.v[i].pn.parse_node.symbol].name);
-    print_paren(p, s.zns.v[i].pn);
+    logf("(%s:", p.t.symbols[i.pn.parse_node.symbol].name);
+    print_paren(p, i.pn);
     logf(")");
-    for (j = 0; j < s.zns.v[i].sns.n; j++) {
-      if (s.zns.v[i].sns.n > 1)
+    foreach (j; i.sns) {
+      if (i.sns.n > 1)
         logf("\n%s[", &spaces[98-indent]);
-      print_stack(p, s.zns.v[i].sns.v[j], indent);
-      if (s.zns.v[i].sns.n > 1)
+      print_stack(p, j, indent);
+      if (i.sns.n > 1)
         logf("]");
     }
     if (s.zns.n > 1)
@@ -2127,18 +2114,13 @@ exhaustive_parse(Parser *p, int state) {
   }
 }
 
-/* doesn't include nl */
-immutable bool _wspace[256] = [
-  0, 0, 0, 0, 0, 0, 0, 0,
-  0, 1, 0, 1, 1, 1, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0,
-  1, 0, 0, 0, 0, 0, 0, 0 /* zero padded */
-];
-
-bool wspace(char _x)
+private bool wspace(char _x) // doesn't include nl
 {
-    return _wspace[cast(ubyte)_x];
+    switch (_x)
+    {
+        case '\t', '\v', '\f', '\r', ' ': return true;
+        default: return false;
+    }
 }
 
 void
@@ -2281,7 +2263,7 @@ initialize_whitespace_parser(Parser *p) {
     p.whitespace_parser = new_subparser(p);
     p.whitespace_parser.initial_white_space_fn = &null_white_space;
     p.whitespace_parser.error_recovery = 0;
-    p.whitespace_parser.partial_parses = 1;
+    p.whitespace_parser.partial_parses = true;
     p.whitespace_parser.free_node_fn = p.free_node_fn;
   }
 }
@@ -2321,9 +2303,7 @@ handle_top_level_ambiguities(Parser *p, SNode *sn) {
 }
 
 D_ParseNode *
-dparse(D_Parser *ap, char *buf, int buf_len) {
-    int r;
-    Parser *p = cast(Parser *)ap;
+dparse(D_Parser *p, char *buf, int buf_len) {
     PNode *pn;
     D_ParseNode *res = null;
 
@@ -2341,7 +2321,7 @@ dparse(D_Parser *ap, char *buf, int buf_len) {
         p.top_scope = new_D_Scope(null);
         p.top_scope.kind = D_SCOPE_SEQUENTIAL;
     }
-    r = exhaustive_parse(p, p.start_state);
+    int r = exhaustive_parse(p, p.start_state);
     if (!r) {
         SNode *sn = p.accept;
         if (sn.zns.n != 1)

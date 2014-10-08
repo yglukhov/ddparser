@@ -670,7 +670,7 @@ new_utf8_char(Grammar *g, char *s, char *e, Rule *r) {
   } else {
     d_fail("UTF32 Unicode value U+%8X too large for valid UTF-8 encoding (cf. Unicode Spec 4.0, section 3.9)", utf32_code);
   }
-  Elem *x = new_term_string(g, utf8_code.ptr, utf8_code.ptr + len, r);
+  Elem *x = new_term_string(g, utf8_code[0 .. len].idup, r);
   x.e.term.kind = TermKind.TERM_STRING;
   return x;
 }
@@ -1103,13 +1103,13 @@ EnumStr[] assoc_strings = [
   { ASSOC_NO, "$noassoc" }
 ];
 
-private const(char) *
+private string
 assoc_str(uint e) {
     foreach(i; assoc_strings)
     {
-        if (i.e == e) return i.s.ptr;
+        if (i.e == e) return i.s;
     }
-    return assoc_strings[0].s.ptr;
+    return assoc_strings[0].s;
 }
 
 void
@@ -1190,7 +1190,7 @@ print_item(Item *i) {
 }
 
 private void
-print_conflict(const char *kind, int *conflict) {
+print_conflict(string kind, int *conflict) {
   if (!*conflict) {
     logf("  CONFLICT (before precedence and associativity)\n");
     *conflict = 1;
@@ -1231,9 +1231,9 @@ print_state(State *s) {
     logf("\n");
   }
   if (s.reduce_actions.n > 1)
-    print_conflict("reduce/reduce".ptr, &conflict);
+    print_conflict("reduce/reduce", &conflict);
   if (s.reduce_actions.n && s.shift_actions.n)
-    print_conflict("shift/reduce".ptr, &conflict);
+    print_conflict("shift/reduce", &conflict);
   logf("\n");
 }
 
@@ -1683,35 +1683,6 @@ free_D_Grammar(Grammar *g) {
     FREE(g.default_white_space);
   FREE(g);
 }
-/*
-int
-parse_grammar(Grammar *g, char *pathname, char *sarg) {
-  D_Parser *p;
-  int res = 0;
-  char *s = sarg;
-  
-  vec_add(&g.all_pathnames, dup_str(pathname, null));
-  if (!s) 
-  {
-      s = sbuf_read(pathname);
-      if (!s)
-          return -1;
-  }
-  if (!g.productions.n)
-    initialize_productions(g);
-  p = new_D_Parser(&parser_tables_dparser_gram, (D_ParseNode_User).sizeof);
-  p.initial_globals = g;
-  p.loc.pathname = pathname;
-  if (dparse(p, s, cast(int)strlen(s))) {
-    if (g.productions.n > 1)
-      finish_productions(g);
-  } else
-    res = -1;
-  if (!sarg)
-    FREE(s);
-  free_D_Parser(p);
-  return res;
-}*/
 
 private int
 scanner_declaration(Declaration *d) {
@@ -1745,10 +1716,7 @@ set_declaration_group(Production *p, Production *root, Declaration *d) {
 
 private void
 propogate_declarations(Grammar *g) {
-  int i, j, k;
   Production *p, start = g.productions.v[0];
-  Rule *r;
-  Elem *e;
 
   /* global defaults */ 	 
    if (g.tokenizer) 	 
@@ -1756,8 +1724,8 @@ propogate_declarations(Grammar *g) {
    if (g.longest_match) 	 
      new_declaration(g, new_elem_nterm(g.productions.v[0], null), DeclarationKind.DECLARE_LONGEST_MATCH);
   /* resolve declarations */
-   for (i = 0; i < g.declarations.n; i++) {
-       e = g.declarations.v[i].elem;
+   foreach (d; g.declarations) {
+       Elem *e = d.elem;
        if (e.kind == ElemKind.ELEM_UNRESOLVED) {
            if (e.e.unresolved.length == 0)
                p = g.productions.v[0];
@@ -1773,25 +1741,22 @@ propogate_declarations(Grammar *g) {
        }
    }
   /* build declaration groups (covering a production subtrees) */
-  for (i = 0; i < g.declarations.n; i++) {
-    if (scanner_declaration(g.declarations.v[i])) {
-      p = g.declarations.v[i].elem.e.nterm;
+  foreach (d; g.declarations) {
+    if (scanner_declaration(d)) {
+      p = d.elem.e.nterm;
       if (p == start) {
-	for (j = 0; j < g.productions.n; j++) {
-	  g.productions.v[j].declaration_group[g.declarations.v[i].kind] = start;
-	  g.productions.v[j].last_declaration[g.declarations.v[i].kind] = g.declarations.v[i];
+	foreach (p; g.productions) {
+	  p.declaration_group[d.kind] = start;
+	  p.last_declaration[d.kind] = d;
 	}
       } else
-	set_declaration_group(p, p, g.declarations.v[i]);
+	set_declaration_group(p, p, d);
     }
   }
   /* set terminal scan_kind */
-  for (i = 0; i < g.productions.n; i++) {
-    p = g.productions.v[i];
-    for (j = 0; j < p.rules.n; j++) {
-      r = p.rules.v[j];
-      for (k = 0; k < r.elems.n; k++) {
-	e = r.elems.v[k];
+  foreach (p; g.productions) {
+    foreach (r; p.rules) {
+      foreach (e; r.elems) {
 	if (e.kind == ElemKind.ELEM_TERM) {
 	  if (!p.declaration_group[DeclarationKind.DECLARE_LONGEST_MATCH] &&
 	      !p.declaration_group[DeclarationKind.DECLARE_ALL_MATCHES])
@@ -1817,23 +1782,22 @@ propogate_declarations(Grammar *g) {
 
 private void
 merge_shift_actions(State *to, State *from) {
-  int i, j;
-  for (i = 0; i < from.shift_actions.n; i++) {
-    for (j = 0; j < to.shift_actions.n; j++)
-      if (from.shift_actions.v[i].term == to.shift_actions.v[j].term)
-	goto Lnext;
-    vec_add(&to.shift_actions, from.shift_actions.v[i]);
-  Lnext:;
-  }
+    int i, j;
+    for (i = 0; i < from.shift_actions.n; i++) {
+        for (j = 0; j < to.shift_actions.n; j++)
+            if (from.shift_actions.v[i].term == to.shift_actions.v[j].term)
+                goto Lnext;
+        vec_add(&to.shift_actions, from.shift_actions.v[i]);
+Lnext:;
+    }
 }
 
 private void
 compute_declaration_states(Grammar *g, Production *p, Declaration *d) {
-  State *s, base_s = null;
-  int j, k, scanner = scanner_declaration(d);
+  State *base_s = null;
+  int scanner = scanner_declaration(d);
 
-  for (j = 0; j < g.states.n; j++) {
-    s = g.states.v[j];
+  foreach (s; g.states) {
     if (d.kind == DeclarationKind.DECLARE_TOKENIZE) {
       if (!base_s)
 	base_s = s;
@@ -1843,9 +1807,9 @@ compute_declaration_states(Grammar *g, Production *p, Declaration *d) {
       }
     }
     if (scanner) {
-      for (k = 0; k < s.items.n; k++)
-	if (s.items.v[k].kind == ElemKind.ELEM_TERM)
-	  switch (s.items.v[k].e.term.scan_kind) {
+      foreach (k; s.items)
+	if (k.kind == ElemKind.ELEM_TERM)
+	  switch (k.e.term.scan_kind) {
 	    case D_SCAN_LONGEST:
 	      if (s.scan_kind == D_SCAN_RESERVED || 
 		  s.scan_kind == D_SCAN_LONGEST)
@@ -1996,11 +1960,11 @@ print_production(Production *p) {
       print_element_escaped(r.elems.v[k], variant);
 
     if (r.op_assoc)
-      writefln(" %s%s ", assoc[variant], assoc_str(r.op_assoc)+1);
+      writefln(" %s%s ", assoc[variant], assoc_str(r.op_assoc)[1 .. $]);
     if (r.op_priority)
       writefln("%d ", r.op_priority);
     if (r.rule_assoc)
-      writefln(" %s%s ", assoc[variant], assoc_str(r.rule_assoc)+1);
+      writefln(" %s%s ", assoc[variant], assoc_str(r.rule_assoc)[1 .. $]);
     if (r.rule_priority)
       writefln("%d ", r.rule_priority);
 
