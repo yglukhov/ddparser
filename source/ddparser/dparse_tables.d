@@ -103,7 +103,7 @@ struct D_State {
     D_Reduction*[]  reductions;
     D_RightEpsilonHint[] right_epsilon_hints;
     D_ErrorRecoveryHint[] error_recovery_hints;
-    int				shifts;
+    bool				shifts;
     D_ScanCode			scanner_code;
     void*				scanner_table;
     ubyte			scanner_size;

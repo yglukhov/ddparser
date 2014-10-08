@@ -72,6 +72,11 @@ struct Vec(T)
         vec_add_internal(_i);
     }
 
+    @property inout(T)[] array() inout
+    {
+        return v[0 .. n];
+    }
+
     ref inout(T) opIndex(size_t index) inout @trusted
     {
         assert(index < n);

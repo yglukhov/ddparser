@@ -16,11 +16,12 @@ import std.bitmanip;
 import std.system;
 import std.array;
 import std.string;
+import std.algorithm;
 
 
 private struct ScannerBlock { 
   int state_index; 
-  int scanner_index; 
+  uint scanner_index; 
   int block_index; 
   ScanState **chars; 
   ScanStateTransition **transitions; 
@@ -146,13 +147,13 @@ shift_fns = hash_fns_t(
 
 private void
 buildScannerData(Grammar *g, ref BuildTables tables) {
-    ScannerBlock *vsblock, xv, yv;
+    ScannerBlock *xv, yv;
     VecScannerBlock scanner_block_hash[4];
     VecScannerBlock *pscanner_block_hash;
     VecScannerBlock trans_scanner_block_hash[4];
     VecScannerBlock *ptrans_scanner_block_hash;
     VecAction shift_hash;
-    int i, j, k, x, xx;
+    int i, k, x, xx;
     VecScanState *ss;
 
     D_Shift*[] allShifts = new D_Shift*[g.terminals.n];
@@ -190,7 +191,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
     int nvsblocks = 0;
     foreach (i; g.states)
         nvsblocks += i.scanner.states.n * g.scanner_blocks;
-    vsblock = cast(ScannerBlock *)MALLOC((nvsblocks ? nvsblocks : 1) * (ScannerBlock).sizeof);
+    ScannerBlock[] vsblock = new ScannerBlock[nvsblocks ? nvsblocks : 1];
     for (i = 0; i < 4; i++) {
         vec_clear(&scanner_block_hash[i]);
         vec_clear(&trans_scanner_block_hash[i]);
@@ -214,7 +215,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
         ss = &s.scanner.states;
 
         /* build accepts differences */
-        for (j = 0; j < s.scanner.transitions.n; j++) {
+        for (int j = 0; j < s.scanner.transitions.n; j++) {
             VecAction *va = &s.scanner.transitions.v[j].accepts_diff;
             D_Shift* d_accepts_diff2[];
             for (k = 0; k < va.n; k++) {
@@ -228,7 +229,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
         }
         if (s.scanner.transitions.n) {
             D_Shift*[] d_accepts_diff1[];
-            for (j = 0; j < s.scanner.transitions.n; j++) {
+            for (int j = 0; j < s.scanner.transitions.n; j++) {
                 d_accepts_diff1 ~= tables_d_accepts_diff2[i,j];
             }
             tables.d_accepts_diff1[i] = d_accepts_diff1;
@@ -236,7 +237,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
         /* build scanner_block_hash */
         pscanner_block_hash = &scanner_block_hash[scanner_size(s)-1]; 
         ptrans_scanner_block_hash = &trans_scanner_block_hash[scanner_size(s)-1]; 
-        for (j = 0; j < ss.n; j++) {
+        for (int j = 0; j < ss.n; j++) {
             if (!s.same_shifts) {
                 for (k = 0; k < g.scanner_blocks; k++) {
                     vsblock[ivsblock].state_index = s.index;
@@ -330,14 +331,13 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
         if (ss.n && !s.same_shifts) {
             /* output scanner state transition tables */
             /* assume SB_uint8, 16, and 32 have same member offsets */
-            assert((SB_uint8).sizeof == (SB_uint16).sizeof && (SB_uint16).sizeof == (SB_uint32).sizeof);
-            SB_uint32[] d_scanner = [];
+            static assert((SB_uint8).sizeof == (SB_uint16).sizeof && (SB_uint16).sizeof == (SB_uint32).sizeof);
+            SB_uint32[] d_scanner = new SB_uint32[ss.length];
             pscanner_block_hash = &scanner_block_hash[scanner_size(s)-1]; 
-            for (j = 0; j < ss.n; j++) {
-                SB_uint32 sb;
+            foreach (j, ref sb; d_scanner) {
                 if (ss.v[j].accepts.n) {
-                    Action* a = ss.v[j].accepts.v[0];
                     if (ss.v[j].accepts.n == 1) {
+                        Action* a = ss.v[j].accepts.v[0];
                         a = cast(Action*)set_add_fn(&shift_hash, a, &shift_fns);
                         sb.shift = tables_d_shift2.storage[a.temp_string].ptr;
                     } else
@@ -346,7 +346,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                 for (k = 0; k < g.scanner_blocks; k++) {
                     ScannerBlock vs;
                     vs.state_index = s.index;
-                    vs.scanner_index = j;
+                    vs.scanner_index = cast(uint)j;
                     vs.block_index = k;
                     vs.chars = &ss.v[j].chars[k * g.scanner_block_size];
                     vs.transitions = 
@@ -356,21 +356,19 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                     assert(yv != xv);
                     sb.scanner_block[k] = cast(uint*)tables.d_scanner3[yv.state_index, yv.scanner_index, yv.block_index].ptr;
                 }
-
-                d_scanner ~= sb;
             }
+
             tables.d_scanner1[i] = d_scanner;
             if (s.scan_kind != D_SCAN_LONGEST || s.trailing_context) {
-                SB_trans_uint32 d_transition[];
+                SB_trans_uint32 d_transition[] = new SB_trans_uint32[ss.length];
                 /* output scanner accepts diffs tables */
                 ptrans_scanner_block_hash = 
                     &trans_scanner_block_hash[scanner_size(s)-1]; 
-                for (j = 0; j < ss.n; j++) {
-                    SB_trans_uint32 trans;
+                foreach (j, ref trans; d_transition) {
                     for (k = 0; k < g.scanner_blocks; k++) {
                         ScannerBlock vs;
                         vs.state_index = s.index;
-                        vs.scanner_index = j;
+                        vs.scanner_index = cast(uint)j;
                         vs.block_index = k;
                         vs.chars = &ss.v[j].chars[k * g.scanner_block_size];
                         vs.transitions = 
@@ -382,7 +380,6 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                         trans.scanner_block[k] = cast(uint*)tables.d_accepts_diff3[ yv.state_index, yv.scanner_index,
                                     yv.block_index].ptr;
                     }
-                    d_transition ~= trans;
                 }
                 tables.d_transition1[i] = d_transition;
             }
@@ -397,12 +394,9 @@ private Rule* original_reduction(Rule* r)
 
 private void
 buildGotoData(Grammar *g, ref BuildTables tables) {
-    Vec!(intptr_t) vgoto;
-    int i, j;
-
     int nvalid_bytes = ((g.productions.n + g.terminals.n) + 7) / 8;
-    vec_clear(&vgoto);
-    for (i = 0; i < g.states.n; i++) {
+    ushort[] vgoto;
+    for (int i = 0; i < g.states.n; i++) {
         State *s = g.states.v[i];
         if (s.gotos.n) {
             /* check for goto on token */
@@ -418,7 +412,7 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
             /* find lowest goto, set valid bits */
             int lowest_sym = elem_symbol(g, s.gotos.v[0].elem);
             SET_BIT(d_goto_valid, lowest_sym);
-            for (j = 1; j < s.gotos.n; j++) {
+            for (int j = 1; j < s.gotos.n; j++) {
                 int sym = elem_symbol(g, s.gotos.v[j].elem);
                 SET_BIT(d_goto_valid, sym);
                 if (sym < lowest_sym)
@@ -428,28 +422,29 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
             bool again = true;
             while (again) {
                 again = false;
-                for (j = 0; j < s.gotos.n; j++) {
+                for (int j = 0; j < s.gotos.n; j++) {
                     int x = elem_symbol(g, s.gotos.v[j].elem);
                     x -= lowest_sym;
-                    while (vgoto.n <= x) {
-                        int qq = 0;
-                        vec_add(&vgoto, 0);
-                        for (qq = 0; qq < vgoto.n; qq++)
-                            if (vgoto.v[qq] == 239847234)
-                                printf("wow...\n");
-                    }
-                    if (vgoto.v[x]) {
+                    if (vgoto.length <= x) 
+                        vgoto.length = x + 1;
+
+                    if (vgoto[x]) {
                         again = true;
                         /* undo the damage */
                         for (--j;j >= 0;j--) {
                             x = elem_symbol(g, s.gotos.v[j].elem);
                             x -= lowest_sym;
-                            vgoto.v[x] = 0;
+                            vgoto[x] = 0;
                         }
                         lowest_sym--;
                         break;
-                    } else
-                        vgoto.v[x] = s.gotos.v[j].state.index + 1;
+                    }
+                    else
+                    {
+                        if (s.gotos.v[j].state.index + 1 > ushort.max)
+                            d_fail("goto table overflow");
+                        vgoto[x] = cast(ushort)(s.gotos.v[j].state.index + 1);
+                    }
                 }
             }
             s.goto_table_offset = lowest_sym;
@@ -460,33 +455,24 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
         /* reduce_actions */
         if (s.reduce_actions.n) {
             D_Reduction* d_reductions1[];
-            for (j = 0; j < s.reduce_actions.n; j++)
+            for (int j = 0; j < s.reduce_actions.n; j++)
                 d_reductions1 ~= tables.reductions[original_reduction(s.reduce_actions.v[j].rule).index];
             tables.d_reductions1[i] = d_reductions1;
         }
         /* modified_reduce_actions */
         if (s.right_epsilon_hints.n) {
-            D_RightEpsilonHint[] d_right_epsilon_hints;
-            for (j = 0; j < s.right_epsilon_hints.n; j++) {
-                D_RightEpsilonHint hint;
-                hint.depth = cast(ushort)s.right_epsilon_hints.v[j].depth;
-                hint.preceeding_state = cast(ushort)s.right_epsilon_hints.v[j].state.index;
-                hint.reduction = tables.reductions[original_reduction(s.right_epsilon_hints.v[j].rule).index];
-                d_right_epsilon_hints ~= hint;
-            }
-            tables.d_right_epsilon_hints1[i] = d_right_epsilon_hints;
+            tables.d_right_epsilon_hints1[i] =
+                s.right_epsilon_hints.array
+                .map!(x =>
+                    D_RightEpsilonHint(cast(ushort)x.depth,
+                                       cast(ushort)x.state.index,
+                                       tables.reductions[original_reduction(x.rule).index]))()
+                .array();
         }
     }
     /* gotos */
-    if (vgoto.n) {
-        ushort d_gotos[];
-        g.write_line += 1;
-        for (j = 0; j < vgoto.n; j++) {
-            if (vgoto.v[j] < 0 || vgoto.v[j] > 65535)
-                d_fail("goto table overflow");
-            d_gotos ~= cast(ushort)vgoto.v[j];
-        }
-        tables.d_gotos = d_gotos;
+    if (vgoto.length) {
+        tables.d_gotos = vgoto;
     } else {
         tables.d_gotos ~= 0;
     }
@@ -681,12 +667,11 @@ buildErrorData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
 
 private void
 buildStateData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
-    D_State[] d_states;
-    if (g.states.n) {
-        for (int i = 0; i < g.states.n; i++) {
-            State *s = g.states.v[i];
+    if (g.states.length) {
+        tables.d_states = new D_State[g.states.length];
+        foreach (i, ref state; tables.d_states) {
+            State *s = g.states[i];
             State *shifts = s.same_shifts ? s.same_shifts : s;
-            D_State state;
 
             if (s.gotos.n)
                 state.goto_valid = tables.d_goto_valid[i];
@@ -709,8 +694,7 @@ buildStateData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
                 assert(state.error_recovery_hints.length == s.error_recovery_hints.n);
             }
 
-            if (s.shift_actions.n || s.scanner_code || (g.scanner.code && s.goto_on_token))
-                state.shifts = 1;
+            state.shifts = s.shift_actions.n || s.scanner_code || (g.scanner.code && s.goto_on_token);
 
             if (s.scanner.states.n) {
                 state.scanner_table = tables.d_scanner1[shifts.index].ptr;
@@ -733,11 +717,7 @@ buildStateData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
                 state.reduces_to = s.reduces_to.index;
             else
                 state.reduces_to = -1;
-
-            d_states ~= state;
         }
-
-        tables.d_states = d_states;
     } else {
             d_fail("no states\n");
     }
@@ -754,27 +734,24 @@ private int d_symbol_values[] = [
 
 private void
 buildSymbolData(Grammar *g, ref BuildTables tables) {
-    int i;
-    D_Symbol d_symbols[];
-    for (i = 0; i < g.productions.n; i++) {
+    int i = 0;
+    D_Symbol[] d_symbols = new D_Symbol[g.productions.length + g.terminals.length];
+    foreach (p; g.productions) {
         int state = -1, internal_index;
-        if (!g.productions.v[i].internal && g.productions.v[i].elem)
-            state = g.productions.v[i].state.index;
-        internal_index = g.productions.v[i].internal ? (is_EBNF(g.productions.v[i].internal) ? 2 : 1) : 0;
-        D_Symbol sym;
-        sym.kind = d_internal_values[internal_index];
-        sym.name = g.productions.v[i].name;
-        sym.start_symbol = state;
-        d_symbols ~= sym;
+        if (!p.internal && p.elem)
+            state = p.state.index;
+        internal_index = p.internal ? (is_EBNF(p.internal) ? 2 : 1) : 0;
+        d_symbols[i].kind = d_internal_values[internal_index];
+        d_symbols[i].name = p.name;
+        d_symbols[i].start_symbol = state;
+        ++i;
     }
-    for (i = 0; i < g.terminals.n; i++) {
-        char *s = escape_string(g.terminals.v[i].string_); /* so it is a string */
-        const char *name = g.terminals.v[i].term_name.length ? g.terminals.v[i].term_name.toStringz() : s;
-        int symbol_index = g.terminals.v[i].kind;
-        D_Symbol sym;
-        sym.kind = d_symbol_values[symbol_index];
-        sym.name = name[0 .. strlen(name)].idup;
-        d_symbols ~= sym;
+    foreach (t; g.terminals) {
+        char *s = escape_string(t.string_); /* so it is a string */
+        const char *name = t.term_name.length ? t.term_name.toStringz() : s;
+        d_symbols[i].kind = d_symbol_values[t.kind];
+        d_symbols[i].name = name[0 .. strlen(name)].idup;
+        ++i;
     }
     tables.d_symbols = d_symbols;
 }
@@ -831,7 +808,7 @@ struct TableMap(T, int dimention = 1)
 {
     T[string] storage;
 
-    private string keyWithArgs(int i, int j, int k, int l) pure
+    private string keyWithArgs(size_t i, size_t j, size_t k, size_t l) pure
     {
         assert((dimention == 1 && j == 0 && k == 0 && l == 0)
                 || (dimention == 2 && k == 0 && l == 0)
@@ -847,14 +824,14 @@ struct TableMap(T, int dimention = 1)
         }
     }
 
-    ref T opIndex(int i, int j = 0, int k = 0, int l = 0)
+    ref T opIndex(size_t i, size_t j = 0, size_t k = 0, size_t l = 0)
     {
         string key = keyWithArgs(i,j,k,l);
         assert(key in storage);
         return storage[key];
     }
 
-    void opIndexAssign(T val, int i, int j = 0, int k = 0, int l = 0)
+    void opIndexAssign(T val, size_t i, size_t j = 0, size_t k = 0, size_t l = 0)
     {
         string key = keyWithArgs(i,j,k,l);
         assert(key !in storage);
@@ -870,11 +847,11 @@ struct BuildTables
     D_Symbol d_symbols[];
 
     D_Reduction*[uint] reductions;
-    TableMap!(SB_uint32[], 1) d_scanner1;
-    TableMap!(SB_trans_uint32[], 1) d_transition1;
+    SB_uint32[][uint] d_scanner1;
+    SB_trans_uint32[][uint] d_transition1;
     TableMap!(ubyte[], 1) d_goto_valid;
     TableMap!(D_Reduction*[], 1) d_reductions1;
-    TableMap!(D_RightEpsilonHint[], 1) d_right_epsilon_hints1;
+    D_RightEpsilonHint[][size_t] d_right_epsilon_hints1;
     TableMap!(D_ErrorRecoveryHint[], 1) d_error_recovery_hints1;
     ushort d_gotos[];
 
