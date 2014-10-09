@@ -502,9 +502,9 @@ unescape_term_string(Term *t) {
   char *ss;
   int length, base = 0;
 
-  //char[] res = t.string_[0 .. strlen(t.string_)].dup;
+  char* res = cast(char*)t.string_[0 .. strlen(t.string_)].dup.toStringz();
 
-  for (ss = s = t.string_; *s; s++) {
+  for (ss = s = res; *s; s++) {
     if (*s == '\\') {
       switch (s[1]) {
 	case '\\':
@@ -592,7 +592,11 @@ unescape_term_string(Term *t) {
     ss++;
   next:;
   }
+  *s = 0;
   *ss = 0;
+  //res.length = ss - res.ptr;
+  //writeln("aft: ", t.string_[0 .. strlen(t.string_)]);
+  t.string_ = cast(char*)res[0 .. strlen(res)].toStringz();
   t.string_len = cast(int)strlen(t.string_);
   if (!t.string_len)
     d_fail("empty string after unescape '%s'", t.string_);
