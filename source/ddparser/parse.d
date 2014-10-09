@@ -1997,7 +1997,7 @@ error_recovery(Parser *p) {
 
 bool PASS_CODE_FOUND(D_Pass* _p, PNode* _pn)
 {
-    return (_pn.reduction && _pn.reduction.npass_code > _p.index &&
+    return (_pn.reduction && _pn.reduction.pass_code.length > _p.index &&
                                   _pn.reduction.pass_code[_p.index]);
 }
 

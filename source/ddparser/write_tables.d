@@ -566,7 +566,6 @@ buildReductions(Grammar *g, ref BuildTables tables) {
             red.op_priority = r.op_priority;
             red.rule_priority = r.rule_priority;
             red.action_index = r.prod.internal ? -1 : r.action_index;
-            red.npass_code = r.pass_code.n;
             red.pass_code = null;
         }
     }
