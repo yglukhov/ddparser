@@ -52,8 +52,7 @@ struct LexState {
 
 private NFAState *
 new_NFAState(LexState *ls) {
-  NFAState *n = cast(NFAState*)MALLOC((NFAState).sizeof);
-  memset(n, 0, (NFAState).sizeof);
+  NFAState *n = new NFAState();
   n.index = ls.nfa_index++;
   vec_add(&ls.allnfas, n);
   return n;
@@ -61,9 +60,7 @@ new_NFAState(LexState *ls) {
 
 private DFAState *
 new_DFAState() {
-  DFAState *n = cast(DFAState*)MALLOC((DFAState).sizeof);
-  memset(n, 0, (DFAState).sizeof);
-  return n;
+  return new DFAState();
 }
 
 private void
@@ -112,60 +109,52 @@ nfacmp(const void *ai, const void *aj) {
 
 private void
 nfa_closure(DFAState *x) {
-    int i, j, k;
-    NFAState *s;
+    int j, k;
 
     foreach (i; x.states)
-        for (j = 0; j < i.epsilon.n; j++) {
-            for (k = 0; k < x.states.n; k++)
-                if (i.epsilon.v[j] == x.states.v[k])
+        foreach (j; i.epsilon) {
+            foreach (k; x.states)
+                if (j == k)
                     goto Lbreak;
-            s = i;
-            vec_add(&x.states, s.epsilon.v[j]);
+            vec_add(&x.states, j);
 Lbreak:;
         }
     qsort(x.states.v, x.states.n, (x.states.v[0]).sizeof, &nfacmp);
 }
 
-private int
+private bool
 eq_dfa_state(DFAState *x, DFAState *y) {
-  int i;
-
   if (x.states.n != y.states.n)
-    return 0;
-  for (i = 0; i < x.states.n; i++)
+    return false;
+  for (int i = 0; i < x.states.n; i++)
     if (x.states.v[i] != y.states.v[i])
-      return 0;
-  return 1;
+      return false;
+  return true;
 }
 
 private void
-dfa_to_scanner(VecDFAState *alldfas, VecScanState *scanner) {
-  int i, j, k, highest, p;
-
-  vec_clear(scanner);
-  for (i = 0; i < alldfas.n; i++) {
-    alldfas.v[i].scan = new_ScanState();
-    alldfas.v[i].scan.index = i;
-    vec_add(scanner, alldfas.v[i].scan);
+dfa_to_scanner(ref VecDFAState alldfas, ref VecScanState scanner) {
+  vec_clear(&scanner);
+  for (int i = 0; i < alldfas.n; i++) {
+    alldfas[i].scan = new_ScanState();
+    alldfas[i].scan.index = i;
+    vec_add(&scanner, alldfas[i].scan);
   }
-  for (i = 0; i < alldfas.n; i++) {
-    for (j = 0; j < 256; j++)
-      if (alldfas.v[i].chars[j])
-	alldfas.v[i].scan.chars[j] = alldfas.v[i].chars[j].scan;
-    highest = int.min;
-    for (j = 0; j < alldfas.v[i].states.n; j++)
-      for (k = 0; k < alldfas.v[i].states.v[j].accepts.n; k++) {
-	p = alldfas.v[i].states.v[j].accepts.v[k].term.term_priority;
+  foreach (i; alldfas) {
+    for (int j = 0; j < 256; j++)
+      if (i.chars[j])
+	i.scan.chars[j] = i.chars[j].scan;
+    int highest = int.min;
+    foreach (j; i.states)
+      foreach (k; j.accepts) {
+	int p = k.term.term_priority;
 	if (highest < p)
 	  highest = p;
       }
-    for (j = 0; j < alldfas.v[i].states.n; j++)
-      for (k = 0; k < alldfas.v[i].states.v[j].accepts.n; k++) {
-	p = alldfas.v[i].states.v[j].accepts.v[k].term.term_priority;
-	if (p == highest)
-	  vec_add(&alldfas.v[i].scan.accepts,
-		  alldfas.v[i].states.v[j].accepts.v[k]);
+    foreach (j; i.states)
+      foreach (k; j.accepts) {
+	if (k.term.term_priority == highest)
+	  vec_add(&i.scan.accepts, k);
       }
   }
 }
@@ -174,30 +163,27 @@ private void
 nfa_to_scanner(NFAState *n, Scanner *s) {
   DFAState *x = new_DFAState(), y;
   VecDFAState alldfas;
-  int i, i_states, i_char;
-  VecScanState *scanner = &s.states;
-  
-  memset(&alldfas, 0, (alldfas).sizeof);
+
   vec_add(&x.states, n);
   nfa_closure(x);
   vec_add(&alldfas, x);
   foreach (x; alldfas) {
-      for (i_char = 0; i_char < 256; i_char++) {
+      for (int i_char = 0; i_char < 256; i_char++) {
           y = null;
-          for (i_states = 0; i_states < x.states.n; i_states++) {
-              for (i = 0; i < x.states.v[i_states].chars[i_char].n; i++) {
+          foreach (i_state; x.states) {
+              foreach (i; i_state.chars[i_char]) {
                   if (!y)
                       y = new_DFAState();
-                  set_add(&y.states, x.states.v[i_states].chars[i_char].v[i]);
+                  set_add(&y.states, i);
               }
           }
           if (y) {
               set_to_vec(&y.states);
               nfa_closure(y);
-              for (i = 0; i < alldfas.n; i++)
-                  if (eq_dfa_state(y, alldfas.v[i])) {
+              foreach (i; alldfas)
+                  if (eq_dfa_state(y, i)) {
                       free_DFAState(y);
-                      y = alldfas.v[i];
+                      y = i;
                       goto Lnext;
                   }
               vec_add(&alldfas, y);
@@ -206,7 +192,7 @@ Lnext:
           }
       }
   }
-  dfa_to_scanner(&alldfas, scanner);
+  dfa_to_scanner(alldfas, s.states);
   free_VecDFAState(&alldfas);
 }
 
@@ -447,8 +433,7 @@ static this()
 
 private void
 build_transitions(LexState *ls, Scanner *s) {
-  int i, j;
-  ScanState *ss;
+  int j;
   ScanStateTransition *trans = null, x;
   VecScanState *states = &s.states;
 
@@ -460,12 +445,10 @@ build_transitions(LexState *ls, Scanner *s) {
   {
   trans_hash_fns.data[0] = cast(void*)1;
   }
-  for (i = 0; i < states.n; i++) {
-    ss = states.v[i];
+  foreach (ss; *states) {
     for (j = 0; j < 256; j++) {
       if (!trans) {
-	trans = cast(ScanStateTransition*)MALLOC((*trans).sizeof);
-	memset(trans, 0, (*trans).sizeof);
+    trans = new ScanStateTransition();
       }
       if (ss.chars[j]) {
 	action_diff(&trans.live_diff, &ss.live, &ss.chars[j].live);
@@ -483,9 +466,8 @@ build_transitions(LexState *ls, Scanner *s) {
   }
   if (trans)
     FREE(trans);
-  j = 0;
   set_to_vec(&s.transitions);
-  for (i = 0; i < s.transitions.n; i++)
+  for (int i = 0; i < s.transitions.n; i++)
     s.transitions.v[i].index = i;
   ls.transitions += s.transitions.n;
 }
@@ -499,15 +481,12 @@ compute_transitions(LexState *ls, Scanner *s) {
 private void
 build_state_scanner(Grammar *g, LexState *ls, State *s) {
   NFAState *n, nn, nnn;
-  Action *a;
-  uint8 *c, reg; 
-  int j;
+  uint8 *c; 
 
   bool one = false;
   n = new_NFAState(ls);
   /* first strings since they can be trivially combined as a tree */
-  for (j = 0; j < s.shift_actions.n; j++) {
-    a = s.shift_actions.v[j];
+  foreach (a; s.shift_actions) {
     if (a.kind == ActionKind.ACTION_ACCEPT) {
       one = true;
       if (!n.chars[0].n) 
@@ -528,11 +507,12 @@ build_state_scanner(Grammar *g, LexState *ls, State *s) {
 	}
       } else { /* use new states */
 	for (c = cast(uint8*)a.term.string_; *c; c++) {
+      nnn = new_NFAState(ls);
 	  if (isalpha(*c)) {
-	    vec_add(&nn.chars[toupper(*c)], (nnn = new_NFAState(ls)));
+	    vec_add(&nn.chars[toupper(*c)], nnn);
 	    vec_add(&nn.chars[tolower(*c)], nnn);
 	  } else
-	    vec_add(&nn.chars[*c], (nnn = new_NFAState(ls)));
+	    vec_add(&nn.chars[*c], nnn);
 	  nn = nnn;
 	}
       }
@@ -540,15 +520,14 @@ build_state_scanner(Grammar *g, LexState *ls, State *s) {
     }
   }
   /* now regexes */
-  for (j = 0; j < s.shift_actions.n; j++) {
-    a = s.shift_actions.v[j];
+  foreach (a; s.shift_actions) {
     if (a.kind == ActionKind.ACTION_SHIFT && a.term.kind == TermKind.TERM_REGEX) {
-      Action *trailing_context = cast(Action *)MALLOC((Action).sizeof);
-      memcpy(trailing_context, a, (Action).sizeof);
+      Action *trailing_context = new Action();
+      *trailing_context = *a;
       trailing_context.kind = ActionKind.ACTION_SHIFT_TRAILING;
       trailing_context.index = g.action_count++;
       one = true;
-      reg = cast(uint8*)a.term.string_;
+      uint8* reg = cast(uint8*)a.term.string_;
       vec_add(&n.epsilon, (nnn = new_NFAState(ls)));
       nn = new_NFAState(ls);
       ls.ignore_case = a.term.ignore_case;
@@ -576,16 +555,15 @@ new_LexState() {
 
 void 
 build_scanners(Grammar *g) {
-  int i, j, k;
-  State *s;
+  int k;
   LexState *ls = new_LexState();
 
   /* detect identical scanners */
-  for (i = 0; i < g.states.n; i++) {
-    s = g.states.v[i];
+  for (int i = 0; i < g.states.n; i++) {
+    State *s = g.states.v[i];
     if (s.same_shifts)
       continue;
-    for (j = 0; j < i; j++) {
+    for (int j = 0; j < i; j++) {
       if (g.states.v[j].same_shifts)
 	continue;
       if (g.states.v[j].shift_actions.n != s.shift_actions.n)
@@ -603,8 +581,7 @@ build_scanners(Grammar *g) {
     }
   }
   /* build scanners */
-  for (i = 0; i < g.states.n; i++) {
-    s = g.states.v[i];
+  foreach (s; g.states) {
     if (s.shift_actions.n) {
       if (s.same_shifts)
 	s.scanner = s.same_shifts.scanner;
@@ -614,6 +591,5 @@ build_scanners(Grammar *g) {
   }
   if (d_verbose_level)
     printf("%d scanners %d transitions\n", ls.scanners, ls.transitions);
-  FREE(ls);
 }
 
