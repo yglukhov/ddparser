@@ -72,7 +72,7 @@ struct D_Shift {
 
 struct SB_(T)
 {
-    D_Shift** shift;
+    D_Shift*[] shift;
     T* scanner_block[SCANNER_BLOCKS];
 }
 

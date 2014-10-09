@@ -310,14 +310,8 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                         }
                         if (a.kind != ActionKind.ACTION_SHIFT_TRAILING) {
                             tables_d_shift2[i,j] ~= allShifts[a.term.index];
-                            if (k == ss.v[j].accepts.n - 1) {
-                                tables_d_shift2[i,j] ~= null;
-                            }
                         } else {
                             tables_d_shift2[i,j] ~= allTShifts[a.term.index];
-                            if (k == ss.v[j].accepts.n - 1) {
-                                tables_d_shift2[i,j] ~= null;
-                            }
                         }
                     }
                 }
@@ -339,9 +333,9 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                     if (ss.v[j].accepts.n == 1) {
                         Action* a = ss.v[j].accepts.v[0];
                         a = cast(Action*)set_add_fn(&shift_hash, a, &shift_fns);
-                        sb.shift = tables_d_shift2.storage[a.temp_string].ptr;
+                        sb.shift = tables_d_shift2.storage[a.temp_string];
                     } else
-                        sb.shift = tables_d_shift2[i, j].ptr;
+                        sb.shift = tables_d_shift2[i, j];
                 }
                 for (k = 0; k < g.scanner_blocks; k++) {
                     ScannerBlock vs;

@@ -17,7 +17,7 @@ struct ShiftResult
 
 private void do_smth(State)(ref d_loc_t loc, ref d_loc_t last_loc,
                 ref int nresults, 
-                ref D_Shift** shift, const ref D_State parse_state, ShiftResult[] results)
+                ref D_Shift*[] shift, const ref D_State parse_state, ShiftResult[] results)
 {
     /* all matches */
     auto st = cast(SB_!(State)*)parse_state.scanner_table;
@@ -59,7 +59,7 @@ int
 scan_buffer(d_loc_t loc, const ref D_State parse_state, ShiftResult[] results) {
     d_loc_t last_loc = loc;
     int nresults = 0;
-    D_Shift **shift = null;
+    D_Shift *[]shift;
 
     switch (parse_state.scanner_size) {
         case 1:
@@ -74,9 +74,9 @@ scan_buffer(d_loc_t loc, const ref D_State parse_state, ShiftResult[] results) {
         default:
     }
     if (shift) {
-        for (; *shift; shift++) {
+        foreach(s; shift) {
             results[nresults].loc = last_loc;
-            results[nresults++].shift = *shift;
+            results[nresults++].shift = s;
         }
     }
     if (nresults) {
