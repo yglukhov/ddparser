@@ -1881,12 +1881,12 @@ private void
 syntax_error_report_fn(D_Parser *ap) {
   Parser *p = cast(Parser *)ap;
   char *fn = d_dup_pathname_str(p.loc.pathname);
-  char *after = null;
+  const(char)[] after;
   ZNode *z = p.snode_hash.last_all ? p.snode_hash.last_all.zns.v[0] : null;
   while (z && z.pn.parse_node.start_loc.s == z.pn.parse_node.end)
     z = (z.sns.v && z.sns.v[0].zns.v) ? z.sns.v[0].zns.v[0] : null;
   if (z && z.pn.parse_node.start_loc.s != z.pn.parse_node.end)
-    after = dup_str(z.pn.parse_node.start_loc.s, z.pn.parse_node.end);
+    after = z.pn.parse_node.start_loc.s[0 .. z.pn.parse_node.end - z.pn.parse_node.start_loc.s];
   if (after)
     stderr.writefln("%s:%d: syntax error after '%s'", fn, p.loc.line, after);
     /* fprintf(stderr, "%s:%d: syntax error after '%s'\n", fn, p.loc.line, after); */
