@@ -1892,7 +1892,6 @@ syntax_error_report_fn(D_Parser *p) {
   else
     stderr.writefln("%s:%d: syntax error", fn, p.loc.line);
     /* fprintf(stderr, "%s:%d: syntax error\n", fn, p.loc.line); */
-  assert(false);
 }
 
 private void
