@@ -346,7 +346,6 @@ private:
         g.scanner_blocks = 4;
         g.scanner_block_size = 0;
         g.write_line_directives = 1;
-        g.write_header = -1;
         g.token_type = 0;
 
         // TODO: Can't handle syntax error here =(

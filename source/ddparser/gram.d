@@ -349,7 +349,6 @@ struct Grammar {
   int			scanner_blocks;
   int			scanner_block_size;
   int			write_line_directives;
-  int			write_header;
   int			token_type;
   char			write_extension[256];
   /* temporary variables for grammar construction */
@@ -385,7 +384,6 @@ struct Grammar {
       s.map(scanner_blocks, "scanner_blocks");
       s.map(scanner_block_size, "scanner_block_size");
       s.map(write_line_directives, "write_line_directives");
-      s.map(write_header, "write_header");
       s.map(token_type, "token_type");
   }
 }
@@ -402,8 +400,6 @@ ref auto last_elem(Rule* _r)
   Copyright 2002-2004 John Plevyak, All Rights Reserved
 */
 
-
-/* extern (C) __gshared extern D_ParserTables parser_tables_dparser_gram; */
 
 immutable string action_types[] = [ "ACCEPT", "SHIFT", "REDUCE" ];
 
@@ -944,23 +940,21 @@ Lnot_nullable:;
 */
 private void
 resolve_grammar(Grammar *g) {
-  int i, j, k;
   Production *p, pp;
   Rule *r;
   Elem *e;
   Term *last_term, t;
   
   g.rule_index = 0;
-  for (i = 0; i < g.productions.n; i++) {
+  for (int i = 0; i < g.productions.n; i++) {
     p = g.productions.v[i];
     if (p != lookup_production(g, p.name))
       d_fail("duplicate production '%s'", p.name);
     p.index = i;
-    for (j = 0; j < p.rules.n; j++) {
-      r = p.rules.v[j];
+    foreach (r; p.rules) {
       r.index = g.rule_index++;
       last_term = null;
-      for (k = 0; k < r.elems.n; k++) {
+      for (int k = 0; k < r.elems.n; k++) {
 	e = r.elems.v[k];
 	e.index = k;
 	if (e.kind == ElemKind.ELEM_UNRESOLVED) {
@@ -993,29 +987,21 @@ resolve_grammar(Grammar *g) {
       }
     }
   }
-  for (i = 0; i < g.terminals.n; i++)
+  for (int i = 0; i < g.terminals.n; i++)
     g.terminals.v[i].index = i;
   compute_nullable(g);
 }
 
 private void
 merge_identical_terminals(Grammar *g) {
-  int i, j, k;
-  Production *p;
-  Rule *r;
-  Elem *e;
-
-  for (i = 0; i < g.productions.n; i++) {
-    p = g.productions.v[i];
-    for (j = 0; j < p.rules.n; j++) {
-      r = p.rules.v[j];
-      for (k = 0; k < r.elems.n; k++) {
-	e = r.elems.v[k];
-	if (e.kind == ElemKind.ELEM_TERM)
-	  e.e.term = unique_term(g, e.e.term);
-      }
+    foreach (p; g.productions) {
+        foreach (r; p.rules) {
+            foreach (e; r.elems) {
+                if (e.kind == ElemKind.ELEM_TERM)
+                    e.e.term = unique_term(g, e.e.term);
+            }
+        }
     }
-  }
 }
 
 void
@@ -1206,23 +1192,22 @@ print_states(Grammar *g) {
     print_state(g.states.v[i]);
 }
 
-int
+private bool
 state_for_declaration(Grammar *g, int iproduction) {
-  int i;
-  for (i = 0; i < g.declarations.n; i++)
-    if (g.declarations.v[i].kind == DeclarationKind.DECLARE_STATE_FOR &&
-	g.declarations.v[i].elem.e.nterm.index == iproduction)
-      return 1;
-  return 0;
+  foreach (d; g.declarations)
+    if (d.kind == DeclarationKind.DECLARE_STATE_FOR &&
+	d.elem.e.nterm.index == iproduction)
+      return true;
+  return false;
 }
 
 private void
 make_elems_for_productions(Grammar *g) {
   int i, j, k, l;
   Rule *rr;
-  Production *pp, ppp;
+  Production *ppp;
 
-  pp = g.productions.v[0];
+  Production *pp = g.productions.v[0];
   for (i = 0; i < g.productions.n; i++)
     if (!g.productions.v[i].internal) {
       if (g.states_for_all_nterms || 
@@ -1258,26 +1243,26 @@ make_elems_for_productions(Grammar *g) {
 
 private void
 convert_regex_production_one(Grammar *g, Production *p) {
-  int j, k, l;
+  int k, l;
   Production *pp;
   Rule *r, rr;
   Elem *e;
   Term *t;
-  int circular = 0;
   char *buf = null, b, s;
   int buf_len = 0;
 
   if (p.regex_term) /* already done */
     return;
+
+  bool circular = false;
+
   if (p.in_regex)
     d_fail("circular regex production '%s'", p.name);
   p.in_regex = 1;
-  for (j = 0; j < p.rules.n; j++) {
-    r = p.rules.v[j];
+  foreach (r; p.rules) {
     if (r.final_code.code || (r.speculative_code.code && p.rules.n > 1))
       d_fail("final and/or multi-rule code not permitted in regex productions '%s'", p.name);
-    for (k = 0; k < r.elems.n; k++) {
-      e = r.elems.v[k];
+    foreach (e; r.elems) {
       if (e.kind == ElemKind.ELEM_NTERM) {
 	if (!e.e.nterm.regex)
 	  d_fail("regex production '%s' cannot invoke non-regex production '%s'",
@@ -1290,7 +1275,7 @@ convert_regex_production_one(Grammar *g, Production *p) {
 	  convert_regex_production_one(g, pp);
 	  buf_len += pp.regex_term.string_len + 5;
 	} else {
-	  circular = 1;
+	  circular = true;
 	  buf_len += 5;
 	}
       } else { /* e.kind == ElemKind.ELEM_TERM */
@@ -1344,12 +1329,11 @@ convert_regex_production_one(Grammar *g, Production *p) {
   } else { /* handle the base case, p = (r | r'), r = (e e') */
     if (p.rules.n > 1)
       *b++ = '(';
-    for (j = 0; j < p.rules.n; j++) {
+    for (int j = 0; j < p.rules.n; j++) {
       r = p.rules.v[j];
       if (r.elems.n > 1)
 	*b++ = '(';
-      for (k = 0; k < r.elems.n; k++) {
-	e = r.elems.v[k];
+      foreach (e; r.elems) {
 	t = e.kind == ElemKind.ELEM_TERM ? e.e.term : e.e.nterm.regex_term;
 	if (t.kind == TermKind.TERM_STRING)
 	  s = escape_string_for_regex(t.string_);

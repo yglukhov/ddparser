@@ -59,7 +59,6 @@ Grammar* createEmptyGrammar()
   g.scanner_blocks = 4;
   g.scanner_block_size = 0;
   g.write_line_directives = 1;
-  g.write_header = -1;
   g.token_type = 0;
     return g;
 }
@@ -2253,7 +2252,6 @@ void testGramJson()
   g.scanner_blocks = 4;
   g.scanner_block_size = 0;
   g.write_line_directives = 1;
-  g.write_header = -1;
   g.token_type = 0;
 
   if (parse_grammar(g, "d/grammar.g", null) < 0)
