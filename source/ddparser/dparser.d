@@ -334,7 +334,7 @@ private:
 
     static D_Grammar* grammarWithString(string grammarString)
     {
-        D_Grammar *g = new_D_Grammar(cast(char*)"grammar".ptr);
+        D_Grammar *g = new_D_Grammar();
 
         g.set_op_priority_from_rule = 0;
         g.right_recursive_BNF = 0;
@@ -350,7 +350,7 @@ private:
         g.token_type = 0;
 
         // TODO: Can't handle syntax error here =(
-        if (parse_grammar(g, cast(char*)"-".ptr, cast(char*)grammarString.toStringz()) < 0) return null;
+        if (parse_grammar(g, null, cast(char*)grammarString.toStringz()) < 0) return null;
 
         if (g.productions.n < 2) throw new Exception("Too few productions");
 

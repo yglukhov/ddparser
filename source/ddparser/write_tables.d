@@ -206,7 +206,8 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
 
     TableMap!(D_Shift*[], 2) tables_d_accepts_diff2;
     TableMap!(D_Shift *[], 2) tables_d_shift2;
-
+    TableMap!(ubyte[], 3) tables_d_accepts_diff3;
+    TableMap!(ubyte[], 3) tables_d_scanner3;
 
     for (i = 0; i < g.states.n; i++) {
         State *s = g.states.v[i];
@@ -264,7 +265,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                             else
                                 d_scanner3.append!(uint, endian)(val);
                         }
-                        tables.d_scanner3[i,j,k] = d_scanner3.data;
+                        tables_d_scanner3[i,j,k] = d_scanner3.data;
                     }
                     if (s.scan_kind != D_SCAN_LONGEST || s.trailing_context) {
                         /* output accept_diff scanner blocks */
@@ -283,7 +284,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                                 else
                                     d_accepts_diff3.append!(uint, endian)(val);
                             }
-                            tables.d_accepts_diff3[i,j,k] = d_accepts_diff3.data;
+                            tables_d_accepts_diff3[i,j,k] = d_accepts_diff3.data;
                         }
                     }
                 }
@@ -353,7 +354,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                     xv = &vs;
                     yv = cast(ScannerBlock*)set_add_fn(pscanner_block_hash, xv, &scanner_block_fns);
                     assert(yv != xv);
-                    sb.scanner_block[k] = cast(uint*)tables.d_scanner3[yv.state_index, yv.scanner_index, yv.block_index].ptr;
+                    sb.scanner_block[k] = cast(uint*)tables_d_scanner3[yv.state_index, yv.scanner_index, yv.block_index].ptr;
                 }
             }
 
@@ -376,7 +377,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                         yv = cast(ScannerBlock*)set_add_fn(ptrans_scanner_block_hash, xv, 
                                 &trans_scanner_block_fns);
                         assert(yv != xv);
-                        trans.scanner_block[k] = cast(uint*)tables.d_accepts_diff3[ yv.state_index, yv.scanner_index,
+                        trans.scanner_block[k] = cast(uint*)tables_d_accepts_diff3[ yv.state_index, yv.scanner_index,
                                     yv.block_index].ptr;
                     }
                 }
@@ -453,10 +454,9 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
             s.goto_table_offset = -int.max;
         /* reduce_actions */
         if (s.reduce_actions.n) {
-            D_Reduction* d_reductions1[];
-            for (int j = 0; j < s.reduce_actions.n; j++)
-                d_reductions1 ~= tables.reductions[original_reduction(s.reduce_actions.v[j].rule).index];
-            tables.d_reductions1[i] = d_reductions1;
+            tables.d_reductions1[i] = s.reduce_actions.array
+                .map!(x => tables.reductions[original_reduction(x.rule).index])
+                .array();
         }
         /* modified_reduce_actions */
         if (s.right_epsilon_hints.n) {
@@ -476,7 +476,7 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
         tables.d_gotos ~= 0;
     }
 }
-
+/+
 private int find_symbol(Grammar *g, const(char)[] s, int kind) {
     s = s.stripLeft();
         if (kind == D_SYMBOL_NTERM) {
@@ -510,7 +510,7 @@ find_symbol(Grammar *g, char *s, char *e, int kind) {
     }
     return -1;
 }
-
++/
 private void
 buildReductions(Grammar *g, ref BuildTables tables) {
     foreach (p; g.productions) {
@@ -822,18 +822,16 @@ struct TableMap(T, int dimention = 1)
 
 struct BuildTables
 {
-    TableMap!(D_Shift*[][], 1) d_accepts_diff1;
-    TableMap!(ubyte[], 3) d_scanner3;
-    TableMap!(ubyte[], 3) d_accepts_diff3;
+    D_Shift*[][][uint] d_accepts_diff1;
     D_Symbol d_symbols[];
 
     D_Reduction*[uint] reductions;
     SB_uint32[][uint] d_scanner1;
     SB_trans_uint32[][uint] d_transition1;
-    TableMap!(ubyte[], 1) d_goto_valid;
-    TableMap!(D_Reduction*[], 1) d_reductions1;
+    ubyte[][size_t] d_goto_valid;
+    D_Reduction*[][size_t] d_reductions1;
     D_RightEpsilonHint[][size_t] d_right_epsilon_hints1;
-    TableMap!(D_ErrorRecoveryHint[], 1) d_error_recovery_hints1;
+    D_ErrorRecoveryHint[][size_t] d_error_recovery_hints1;
     ushort d_gotos[];
 
     D_State[] d_states;

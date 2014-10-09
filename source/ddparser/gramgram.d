@@ -46,7 +46,7 @@ char* dup_code(char* s, char* e)
 
 Grammar* createEmptyGrammar()
 {
- Grammar *g = new_D_Grammar("-".ptr);
+ Grammar *g = new_D_Grammar();
   /* grammar construction options */
   g.set_op_priority_from_rule = 0;
   g.right_recursive_BNF = 0;
@@ -147,7 +147,7 @@ g.r = new_rule(g, g.p);
  g.r.final_code.f = (new_ps, children, n_children, pn_offset, parser)
  {
      mixin(commonValues);
-  char *grammar_pathname = dup_str(n1.start_loc.s+1, n1.end-1);
+  string grammar_pathname = n1.start_loc.s[1 .. n1.end - n1.start_loc.s - 1].idup;
   if (parse_grammar(g, grammar_pathname, null) < 0)
     d_fail("unable to parse grammar '%s'", grammar_pathname);
   //FREE(grammar_pathname);    
@@ -284,12 +284,12 @@ star_EBNF(g);
      mixin(commonValues);
 
       if (!d_get_number_of_children(n2))
-     	add_declaration(g, n2.start_loc.s, n2.end,  u1.kind, n2.start_loc.line);
+     	add_declaration(g, n2.start_loc.s[0 .. n2.end - n2.start_loc.s].idup,  u1.kind, n2.start_loc.line);
       else {
 	int i, n = d_get_number_of_children(n2);
 	for (i = 0; i < n; i++) {
 	  D_ParseNode *pn = d_get_child(n2, i);
-	  add_declaration(g, pn.start_loc.s, pn.end,  u1.kind, pn.start_loc.line);
+	  add_declaration(g, pn.start_loc.s[0 .. pn.end - pn.start_loc.s].idup,  u1.kind, pn.start_loc.line);
       
 	}
       } 
@@ -653,7 +653,7 @@ g.r = new_rule(g, g.p);
 {
      mixin(commonValues);
 
- new_token(g, n0.start_loc.s, n0.end); 
+ new_token(g, n0.start_loc.s[0 .. n0.end - n0.start_loc.s].idup); 
   return 0;
 };
 
@@ -782,7 +782,7 @@ g.e = new_elem_nterm(g.p, var0x10fc9f300); g.p = var0x10fc9f500; g.r = var0x10fc
 {
      mixin(commonValues);
 
- g.p = new_production(g, dup_str(n0.start_loc.s, n0.end)); 
+ g.p = new_production(g, n0.start_loc.s[0 .. n0.end - n0.start_loc.s].idup);
   return 0;
 };
 
@@ -997,7 +997,7 @@ g.r = new_rule(g, g.p);
 {
      mixin(commonValues);
 
- g.e = new_string(g, n0.start_loc.s, n0.end, g.r); 
+ g.e = new_string(g, n0.start_loc.s[0 .. n0.end - n0.start_loc.s].idup, g.r); 
   return 0;
 };
 
@@ -1016,7 +1016,7 @@ g.r = new_rule(g, g.p);
 {
      mixin(commonValues);
 
- g.e = new_string(g, n0.start_loc.s, n0.end, g.r); 
+ g.e = new_string(g, n0.start_loc.s[0 .. n0.end - n0.start_loc.s].idup, g.r); 
   return 0;
 };
 
@@ -1054,7 +1054,7 @@ g.r = new_rule(g, g.p);
 {
      mixin(commonValues);
 
- g.e = new_ident(n0.start_loc.s, n0.end, g.r); 
+ g.e = new_ident(n0.start_loc.s[0 .. n0.end - n0.start_loc.s].idup, g.r); 
   return 0;
 };
 
@@ -1090,7 +1090,7 @@ plus_EBNF(g);
 {
      mixin(commonValues);
 
- g.e = new_code(g, n1.start_loc.s, n1.end, g.r); 
+ g.e = new_code(g, n1.start_loc.s[0 .. n1.end - n1.start_loc.s].idup, g.r); 
   return 0;
 };
 
@@ -2221,10 +2221,9 @@ bool parseGrammar(Grammar* g, string str)
 }
 
 int
-parse_grammar(Grammar *g, char *pathname, char *sarg) {
+parse_grammar(Grammar *g, string pathname, char *sarg) {
     char *s = sarg;
 
-    vec_add(&g.all_pathnames, dup_str(pathname, null));
     if (!s) 
     {
         s = sbuf_read(pathname);
@@ -2241,7 +2240,7 @@ void testGramJson()
       Grammar *g;
 
 
-  g = new_D_Grammar("-".ptr);
+  g = new_D_Grammar();
   /* grammar construction options */
   g.set_op_priority_from_rule = 0;
   g.right_recursive_BNF = 0;
@@ -2257,7 +2256,7 @@ void testGramJson()
   g.write_header = -1;
   g.token_type = 0;
 
-  if (parse_grammar(g, cast(char*)"d/grammar.g".ptr, null) < 0)
+  if (parse_grammar(g, "d/grammar.g", null) < 0)
     assert(false);
 
     auto s = new Serializer();

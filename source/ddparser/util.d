@@ -390,16 +390,16 @@ strhashl(const(char)*s, int l) {
 }
 
 int
-buf_read(const char *pathname, char **buf, int *len) {
+buf_read(string pathname, char **buf, int *len) {
     byte[] outbuf;
-    foreach(chunk; File(pathname[0 .. strlen(pathname)].idup).byChunk(4096)) outbuf ~= chunk;
+    foreach(chunk; File(pathname).byChunk(4096)) outbuf ~= chunk;
     *buf = cast(char*)outbuf.ptr;
     *len = cast(int)outbuf.length;
     return *len;
 }
 
 char *
-sbuf_read(const char *pathname) {
+sbuf_read(string pathname) {
   char *buf;
   int len;
 

@@ -270,7 +270,6 @@ struct Production {
     State			*state;	/* state for independent parsing of this productions*/
     Elem		*elem;	/* base elem for the item set of the above state */
     Term		*regex_term;	/* regex production terminal */
-    char			*regex_term_name;
     Production	*next;
 
     void serialize(Serializer s)
@@ -288,7 +287,6 @@ struct Production {
         s.map(state, "state");
         s.map(elem, "elem");
         s.map(regex_term, "regex_term");
-        s.mapCString(regex_term_name, "regex_term_name");
         s.map(next, "next");
     }
 }
@@ -328,7 +326,6 @@ struct Elem {
 }
 
 struct Grammar {
-  char			*pathname;
   Vec!(Production *)	productions;
   Vec!(Term *)		terminals;
   Vec!(State *)		states;
@@ -338,8 +335,7 @@ struct Grammar {
   /* int			ncode; */
   Vec!(Declaration *)	declarations;
   Vec!(D_Pass *)		passes;
-  Vec!(char *)		all_pathnames;
-  char			*default_white_space;
+  string			default_white_space;
   /* grammar construction options */
   int			set_op_priority_from_rule;
   int			right_recursive_BNF;
@@ -355,7 +351,6 @@ struct Grammar {
   int			write_line_directives;
   int			write_header;
   int			token_type;
-  int			write_cpp;
   char			write_extension[256];
   /* temporary variables for grammar construction */
   Production *	p;
@@ -365,12 +360,9 @@ struct Grammar {
   int			action_count;
   int			pass_index;
   int			rule_index;
-  int			write_line;
-  char			*write_pathname;
 
   void serialize(Serializer s)
   {
-      s.mapCString(pathname, "pathname");
       /* s.mapCArray(code, "code", ncode); */
       s.map(scanner, "scanner");
       s.map(productions, "productions");
@@ -379,8 +371,7 @@ struct Grammar {
       s.map(actions, "actions");
       s.map(declarations, "declarations");
       s.map(passes, "passes");
-      s.map(all_pathnames, "all_pathnames");
-      s.mapCString(default_white_space, "default_white_space");
+      //s.mapCString(default_white_space, "default_white_space");
 
 
       s.map(set_op_priority_from_rule, "set_op_priority_from_rule");
@@ -396,7 +387,6 @@ struct Grammar {
       s.map(write_line_directives, "write_line_directives");
       s.map(write_header, "write_header");
       s.map(token_type, "token_type");
-      s.map(write_cpp, "write_cpp");
   }
 }
 
@@ -424,28 +414,19 @@ Production* new_production(Grammar *g, string name) {
     return p;
   }
   p = new Production();
-  memset(p, 0, (Production).sizeof);
   vec_add(&g.productions, p);
   p.name = name;
   return p;
 }
 
-Production *
-new_production(Grammar *g, char *name) {
-    return new_production(g, name[0 .. strlen(name)].idup);
-}
-
 private Elem *
 new_elem() {
-  Elem *e = new Elem();
-  memset(e, 0, (Elem).sizeof);
-  return e;
+  return new Elem();
 }
 
 Rule *
 new_rule(Grammar *g, Production *p) {
   Rule *r = new Rule();
-  memset(r, 0, (Rule).sizeof);
   r.prod = p;
   r.end = new_elem();
   r.end.kind = ElemKind.ELEM_END;
@@ -484,18 +465,10 @@ private Elem *
 new_term_string(Grammar *g, string s, Rule *r)
 {
   Term *t = new_term();
-  Elem *elem;
-
   t.string_ = cast(char*)s.toStringz();
   t.string_len = cast(int)s.length;
   vec_add(&g.terminals, t);
-  elem = new_elem_term(t, r);
-  return elem;
-}
-
-private Elem *
-new_term_string(Grammar *g, char *s, char *e, Rule *r) { 
-    return new_term_string(g, s[0 .. e - s].idup, r);
+  return new_elem_term(t, r);
 }
 
 char *
@@ -632,11 +605,6 @@ Elem * new_string(Grammar *g, string s, Rule *r)
 }
 
 Elem *
-new_string(Grammar *g, char *s, char *e, Rule *r) {
-    return new_string(g, s[0 .. e - s].idup, r);
-}
-
-Elem *
 new_utf8_char(Grammar *g, char *s, char *e, Rule *r) {
   char utf8_code[4];
   ulong utf32_code, base, len = 0;
@@ -688,25 +656,18 @@ new_ident(string s, Rule *r)
 
 }
 
-Elem *
-new_ident(char *s, char *e, Rule *r) {
-    return new_ident(s[0 .. e - s].idup, r);
-}
-
 void
-new_token(Grammar *g, char *s, char *e) {
+new_token(Grammar *g, string s) {
   Term *t = new_term();
-  t.string_ = cast(char*)MALLOC(e - s + 1);
-  memcpy(t.string_, s, e - s);
-  t.string_[e - s] = 0;
-  t.string_len = cast(int)(e - s);
+  t.string_ = cast(char*)s.toStringz();
+  t.string_len = cast(int)s.length;
   vec_add(&g.terminals, t);
   t.kind = TermKind.TERM_TOKEN;
 }
 
 Elem *
-new_code(Grammar *g, char *s, char *e, Rule *r) {
-  Elem *x = new_term_string(g, s, e, r);
+new_code(Grammar *g, string s, Rule *r) {
+  Elem *x = new_term_string(g, s, r);
   x.e.term.kind = TermKind.TERM_CODE;
   return x;
 }
@@ -731,8 +692,8 @@ new_declaration(Grammar *g, Elem *e, uint kind) {
 }
 
 void
-add_declaration(Grammar *g, char *start, char *end, uint kind, uint line) {
-  if (start == end) {
+add_declaration(Grammar *g, string s, uint kind, uint line) {
+  if (s.length == 0) {
     switch (kind) {
       case DeclarationKind.DECLARE_SET_OP_PRIORITY: g.set_op_priority_from_rule = 1; return;
       case DeclarationKind.DECLARE_STATES_FOR_ALL_NTERMS: g.states_for_all_nterms = 1; return;
@@ -744,12 +705,12 @@ add_declaration(Grammar *g, char *start, char *end, uint kind, uint line) {
     }
   }
   switch (kind) {
-    case DeclarationKind.DECLARE_WHITESPACE: g.default_white_space = dup_str(start, end); return;
+    case DeclarationKind.DECLARE_WHITESPACE: g.default_white_space = s; return;
     case DeclarationKind.DECLARE_SET_OP_PRIORITY: 
       d_fail("declare does not expect argument, line %d", line);
       break;
     default: 
-      new_declaration(g, new_ident(start, end, null), kind);
+      new_declaration(g, new_ident(s, null), kind);
       break;
   }
 }
@@ -1567,11 +1528,8 @@ build_eq(Grammar *g) {
 }
 
 Grammar *
-new_D_Grammar(const char *pathname) {
-  Grammar *g = cast(Grammar *)MALLOC((Grammar).sizeof);
-  memset(g, 0, (Grammar).sizeof);
-  g.pathname = dup_str(pathname, pathname + strlen(pathname));
-  return g;
+new_D_Grammar() {
+  return new Grammar();
 }
 
 private void
@@ -1676,11 +1634,6 @@ free_D_Grammar(Grammar *g) {
     FREE(g.passes.v[i]);
   }
   vec_free(&g.passes);
-  for (i = 0; i < g.all_pathnames.n; i++)
-    FREE(g.all_pathnames.v[i]);
-  FREE(g.pathname);
-  if (g.default_white_space)
-    FREE(g.default_white_space);
   FREE(g);
 }
 
@@ -1989,10 +1942,10 @@ print_production(Production *p) {
 }
 
 private void
-print_productions(Grammar *g, char *pathname) {
+print_productions(Grammar *g) {
   uint i;
   if (!g.productions.n) {
-    logf("/*\n  There were no productions in the grammar %s\n*/\n", pathname);  
+    logf("/*\n  There were no productions in the grammar\n*/\n");  
     return;
   }
   for (i = 1; i < g.productions.n; i++)
@@ -2061,11 +2014,11 @@ print_declarations(Grammar *g) {
 }
 
 void
-print_rdebug_grammar(Grammar *g, char *pathname) {
+print_rdebug_grammar(Grammar *g) {
   logf("/*\n  Generated by Make DParser\n");  
   logf("  Available at http://dparser.sf.net\n*/\n\n");
   
   print_declarations(g);
-  print_productions(g, pathname);
+  print_productions(g);
 }
 
