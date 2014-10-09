@@ -101,45 +101,36 @@ enum D_SCAN_DEFAULT	=D_SCAN_ALL;
 
 struct D_State {
     ubyte[]			goto_valid;
-    int				goto_table_offset;
     D_Reduction*[]  reductions;
     D_RightEpsilonHint[] right_epsilon_hints;
     D_ErrorRecoveryHint[] error_recovery_hints;
-    bool				shifts;
-    D_ScanCode			scanner_code;
     SB_uint32[]		scanner_table;
-    ubyte			scanner_size;
-    ubyte			accept;
-    ubyte			scan_kind;
     SB_trans_uint32[]	transition_table;
     D_Shift*[][]     accepts_diff;
+    D_ScanCode			scanner_code;
     int				reduces_to;
+    int				goto_table_offset;
+    bool			shifts;
+    ubyte			scanner_size;
+    bool			accept;
+    ubyte			scan_kind;
 }
 
-enum D_SymbolKind : uint
+enum D_SymbolKind
 {
-D_SYMBOL_NTERM		=1,
-D_SYMBOL_INTERNAL	=2,
-D_SYMBOL_EBNF		=3,
-D_SYMBOL_STRING		=4,
-D_SYMBOL_REGEX		=5,
-D_SYMBOL_CODE		=6,
-D_SYMBOL_TOKEN		=7,
+    D_SYMBOL_NTERM = 1,
+    D_SYMBOL_INTERNAL,
+    D_SYMBOL_EBNF,
+    D_SYMBOL_STRING,
+    D_SYMBOL_REGEX,
+    D_SYMBOL_CODE,
+    D_SYMBOL_TOKEN
 }
 
-enum D_SHIFTS_CODE		=(cast(D_Shift**)-1);
-
-enum D_SYMBOL_NTERM		=1;
-enum D_SYMBOL_INTERNAL	=2;
-enum D_SYMBOL_EBNF		=3;
-enum D_SYMBOL_STRING		=4;
-enum D_SYMBOL_REGEX		=5;
-enum D_SYMBOL_CODE		=6;
-enum D_SYMBOL_TOKEN		=7;
 struct D_Symbol {
-  uint		kind;
   string name;
   int			start_symbol;
+  D_SymbolKind		kind;
 }
 
 enum D_PASS_PRE_ORDER	=0x0001;

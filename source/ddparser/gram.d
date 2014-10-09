@@ -100,14 +100,13 @@ struct State {
   VecHint	error_recovery_hints;
   Scanner	scanner;
   mixin(bitfields!(
-       uint, "accept", 1,
+       bool, "accept", 1,
        uint, "scanner_code", 1,
        uint, "goto_on_token", 1,
        uint, "scan_kind", 3,
        uint, "trailing_context", 1,
        uint, "", 25
        ));
-  uint8		*goto_valid;
   int		goto_table_offset;
   State	*same_shifts;
   State  *reduces_to;
@@ -1604,7 +1603,6 @@ free_D_Grammar(Grammar *g) {
 	}
       vec_free(&s.scanner.transitions);
     }
-    FREE(s.goto_valid);
     FREE(s);
   }
   vec_free(&g.states);

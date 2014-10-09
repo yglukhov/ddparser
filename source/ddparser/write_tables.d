@@ -675,7 +675,7 @@ buildStateData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
             }
 
             state.scanner_size = cast(ubyte)scanner_size(s);
-            state.accept = s.accept ? 1 : 0;
+            state.accept = s.accept;
             state.scan_kind = cast(ubyte)s.scan_kind;
 
             if ((shifts.scan_kind != D_SCAN_LONGEST || shifts.trailing_context)
@@ -702,9 +702,8 @@ bool is_EBNF(uint _x)
     return _x == InternalKind.INTERNAL_CONDITIONAL || _x == InternalKind.INTERNAL_STAR || _x == InternalKind.INTERNAL_PLUS;
 }
 
-private int d_internal_values[] = [D_SYMBOL_NTERM, D_SYMBOL_EBNF, D_SYMBOL_INTERNAL];
-private int d_symbol_values[] = [ 
-  D_SYMBOL_STRING, D_SYMBOL_REGEX, D_SYMBOL_CODE, D_SYMBOL_TOKEN ];
+private D_SymbolKind d_symbol_values[] = [ 
+  D_SymbolKind.D_SYMBOL_STRING, D_SymbolKind.D_SYMBOL_REGEX, D_SymbolKind.D_SYMBOL_CODE, D_SymbolKind.D_SYMBOL_TOKEN ];
 
 private void
 buildSymbolData(Grammar *g, ref BuildTables tables) {
@@ -714,8 +713,7 @@ buildSymbolData(Grammar *g, ref BuildTables tables) {
         int state = -1;
         if (!p.internal && p.elem)
             state = p.state.index;
-        int internal_index = p.internal ? (is_EBNF(p.internal) ? 2 : 1) : 0;
-        d_symbols[i].kind = d_internal_values[internal_index];
+        d_symbols[i].kind = p.internal ? (is_EBNF(p.internal) ? D_SymbolKind.D_SYMBOL_INTERNAL : D_SymbolKind.D_SYMBOL_EBNF) : D_SymbolKind.D_SYMBOL_NTERM;
         d_symbols[i].name = p.name;
         d_symbols[i].start_symbol = state;
         ++i;

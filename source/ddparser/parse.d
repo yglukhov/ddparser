@@ -1786,13 +1786,13 @@ fixup_internal_symbol(Parser *p, PNode *pn, int ichild) {
 
 bool is_symbol_internal_or_EBNF(Parser* _p, PNode* _pn)
 {
-    return ((_p).t.symbols[(_pn).parse_node.symbol].kind == D_SYMBOL_INTERNAL ||
- (_p).t.symbols[(_pn).parse_node.symbol].kind == D_SYMBOL_EBNF);
+    return (_p.t.symbols[_pn.parse_node.symbol].kind == D_SymbolKind.D_SYMBOL_INTERNAL ||
+ _p.t.symbols[_pn.parse_node.symbol].kind == D_SymbolKind.D_SYMBOL_EBNF);
 }
 
 bool is_symbol_internal(Parser* _p, PNode* _pn)
 {
-    return _p.t.symbols[_pn.parse_node.symbol].kind == D_SYMBOL_INTERNAL;
+    return _p.t.symbols[_pn.parse_node.symbol].kind == D_SymbolKind.D_SYMBOL_INTERNAL;
 }
 
 bool is_unreduced_epsilon_PNode(PNode* _pn)
