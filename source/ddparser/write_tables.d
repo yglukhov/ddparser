@@ -580,7 +580,7 @@ er_hint_hash_fn(State *a, hash_fns_t *fns) {
   for (i = 0; i < sa.n; i++) {
     ta = sa.v[i].rule.elems.v[sa.v[i].rule.elems.n - 1].e.term;
     hash += (sa.v[i].depth + 1) * 13;
-    hash += strhashl(ta.string_, ta.string_len);
+    hash += strhashl(ta.string_[0 .. ta.string_len]);
     if (sa.v[i].rule)
       hash += sa.v[i].rule.prod.index * 10007;
   }

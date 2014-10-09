@@ -17,8 +17,7 @@ struct D_SymHash {
 alias D_UserSym = uint;
 
 struct D_Sym {
-  char		 *name;
-  int		 len;
+  string name;
   uint	 hash;
   D_Scope *scope_;
   D_Sym	 *update_of;
@@ -120,8 +119,7 @@ symhash_add(D_SymHash *sh, D_Sym *s) {
 
 private D_SymHash * 
 new_D_SymHash() {
-  D_SymHash *sh = cast(D_SymHash*)MALLOC((D_SymHash).sizeof);
-  memset(sh, 0, (D_SymHash).sizeof);
+  D_SymHash *sh = new D_SymHash();
   sh.grow = INITIAL_SYMHASH_SIZE * 2 + 1;
   sh.syms.n = INITIAL_SYMHASH_SIZE;
   sh.syms.v = cast(D_Sym**)MALLOC(sh.syms.n * (void *).sizeof);
@@ -144,8 +142,7 @@ free_D_SymHash(D_SymHash *sh) {
 
 D_Scope *
 new_D_Scope(D_Scope *parent) {
-  D_Scope *st = cast(D_Scope*)MALLOC((D_Scope).sizeof);
-  memset(st, 0, (D_Scope).sizeof);
+  D_Scope *st = new D_Scope();
   if (parent) {
     st.depth = parent.depth + 1;
     st.kind = parent.kind;
@@ -194,8 +191,7 @@ equiv_D_Scope(D_Scope *current) {
 
 D_Scope *
 enter_D_Scope(D_Scope *current, D_Scope *scope_) {
-  D_Scope *st = cast(D_Scope*)MALLOC((D_Scope).sizeof), parent = scope_.up;
-  memset(st, 0, (D_Scope).sizeof);
+  D_Scope *st = new D_Scope(), parent = scope_.up;
   st.depth = scope_.depth;
   st.up = parent;
   st.kind = scope_.kind;
@@ -215,8 +211,7 @@ global_D_Scope(D_Scope *current) {
 
 D_Scope *
 scope_D_Scope(D_Scope *current, D_Scope *scope_) {
-  D_Scope *st = cast(D_Scope*)MALLOC((D_Scope).sizeof), parent = current.up;
-  memset(st, 0, (D_Scope).sizeof);
+  D_Scope *st = new D_Scope(), parent = current.up;
   st.depth = current.depth;
   st.up = parent;
   st.kind = current.kind;
@@ -288,13 +283,11 @@ commit_D_Scope(D_Scope *st) {
 }
 
 D_Sym *
-new_D_Sym(D_Scope *st, char *name, char *end, int sizeof_D_Sym) {
-  auto len = end ? end - name : name ? strlen(name) : 0;
+new_D_Sym(D_Scope *st, string name, int sizeof_D_Sym) {
   D_Sym *s = cast(D_Sym*)MALLOC(sizeof_D_Sym);
   memset(s, 0, sizeof_D_Sym);
   s.name = name;
-  s.len = cast(int)len;
-  s.hash = strhashl(name, cast(int)len);
+  s.hash = strhashl(name);
   s.scope_ = st;
   if (st) {
     if (st.hash) {
@@ -328,7 +321,7 @@ current_D_Sym(D_Scope *st, D_Sym *sym) {
 }
 
 private D_Sym *
-find_D_Sym_in_Scope_internal(D_Scope *st, char *name, int len, uint h) {
+find_D_Sym_in_Scope_internal(D_Scope *st, string name, uint h) {
     D_Sym *ll;
     for (;st ; st = st.search) {
         if (st.hash) 
@@ -336,13 +329,13 @@ find_D_Sym_in_Scope_internal(D_Scope *st, char *name, int len, uint h) {
         else
             ll = st.ll;
         while (ll) {
-            if (ll.hash == h && ll.len == len && !strncmp(ll.name, name, len))
+            if (ll.hash == h && ll.name == name)
                 return ll;
             ll = ll.next;
         }
         if (st.dynamic)
         {
-            ll = find_D_Sym_in_Scope_internal(st.dynamic, name, len, h);
+            ll = find_D_Sym_in_Scope_internal(st.dynamic, name, h);
             if (ll)
                 return ll;
         }
@@ -353,7 +346,7 @@ find_D_Sym_in_Scope_internal(D_Scope *st, char *name, int len, uint h) {
 }
 
 private D_Sym *
-find_D_Sym_internal(D_Scope *cur, char *name, int len, uint h) {
+find_D_Sym_internal(D_Scope *cur, string name, uint h) {
     D_Sym *ll;
     if (!cur)
         return null;
@@ -362,52 +355,48 @@ find_D_Sym_internal(D_Scope *cur, char *name, int len, uint h) {
     else
         ll = cur.ll;
     while (ll) {
-        if (ll.hash == h && ll.len == len && !strncmp(ll.name, name, len))
+        if (ll.hash == h && ll.name == name)
             break;
         ll = ll.next;
     }
     if (!ll) { 
         if (cur.dynamic)
         {
-            ll = find_D_Sym_in_Scope_internal(cur.dynamic, name, len, h);
+            ll = find_D_Sym_in_Scope_internal(cur.dynamic, name, h);
             if (ll)
                 return ll;
         }
         if (cur.search)
-            return find_D_Sym_internal(cur.search, name, len, h);
+            return find_D_Sym_internal(cur.search, name, h);
         return ll;
     }
     return ll;
 }
 
 D_Sym *
-find_D_Sym(D_Scope *st, char *name, char *end) {
-  int len = cast(int)(end ? end - name : strlen(name));
-  uint h = strhashl(name, len);
-  D_Sym *s = find_D_Sym_internal(st, name, len, h);
+find_D_Sym(D_Scope *st, string name) {
+  uint h = strhashl(name);
+  D_Sym *s = find_D_Sym_internal(st, name, h);
   if (s)
     return current_D_Sym(st, s);
   return null;
 }
 
 D_Sym *
-find_global_D_Sym(D_Scope *st, char *name, char *end) {
-  D_Sym *s;
-  int len = cast(int)(end ? end - name : strlen(name));
-  uint h = strhashl(name, len);
+find_global_D_Sym(D_Scope *st, string name) {
+  uint h = strhashl(name);
   D_Scope *cur = st;
   while (cur.up) cur = cur.search;
-  s = find_D_Sym_internal(cur, name, len, h);
+  D_Sym *s = find_D_Sym_internal(cur, name, h);
   if (s)
     return current_D_Sym(st, s);
   return null;
 }
 
 D_Sym *
-find_D_Sym_in_Scope(D_Scope *st, D_Scope *cur, char *name, char *end) {
-  int len = cast(int)(end ? end - name : strlen(name));
-  uint h = strhashl(name, len);
-  D_Sym *s = find_D_Sym_in_Scope_internal(cur, name, len, h);
+find_D_Sym_in_Scope(D_Scope *st, D_Scope *cur, string name) {
+  uint h = strhashl(name);
+  D_Sym *s = find_D_Sym_in_Scope_internal(cur, name, h);
   if (s)
     return current_D_Sym(st, s);
   return null;
@@ -446,10 +435,8 @@ next_D_Sym_in_Scope(D_Scope **scope_, D_Sym **sym) {
 
 D_Sym *
 update_additional_D_Sym(D_Scope *st, D_Sym *sym, int sizeof_D_Sym) {
-  D_Sym *s;
-
   sym = current_D_Sym(st, sym);
-  s = cast(D_Sym*)MALLOC(sizeof_D_Sym);
+  D_Sym *s = cast(D_Sym*)MALLOC(sizeof_D_Sym);
   memcpy(s, sym, (D_Sym).sizeof);
   if (sym.update_of) sym = sym.update_of;
   s.update_of = sym;
@@ -466,12 +453,7 @@ update_D_Sym(D_Sym *sym, D_Scope **pst, int sizeof_D_Sym) {
 
 void
 print_sym(D_Sym *s) {
-  char *c = cast(char*)MALLOC(s.len + 1);
-  if (s.len)
-    memcpy(c, s.name, s.len);
-  c[s.len] = 0;
-  printf("%s, ", c);
-  FREE(c);
+  logf("%s, ", s.name);
 }
 
 void

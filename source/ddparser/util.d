@@ -373,7 +373,6 @@ dup_str(const char *s, const char *e) {
 uint strhashl(const(char)[] s)
 {
     uint h = 0, g;
-
     foreach(char c; s)
     {
         h = (h << 4) + cast(ubyte)c;
@@ -381,12 +380,6 @@ uint strhashl(const(char)[] s)
             h = (h ^ (g >> 24)) ^ g;
     }
     return h;
-
-}
-
-uint
-strhashl(const(char)*s, int l) {
-    return strhashl(s[0 .. l]);
 }
 
 int
