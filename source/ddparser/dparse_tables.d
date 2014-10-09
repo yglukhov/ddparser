@@ -79,6 +79,8 @@ alias SB_uint8 = SB_!ubyte;
 alias SB_uint16 = SB_!ushort;
 alias SB_uint32 = SB_!uint;
 
+static assert(SB_uint8.sizeof == SB_uint16.sizeof && SB_uint16.sizeof == SB_uint32.sizeof);
+
 struct SB_trans(T)
 {
     T* scanner_block[SCANNER_BLOCKS];
@@ -88,6 +90,7 @@ alias SB_trans_uint8 = SB_trans!ubyte;
 alias SB_trans_uint16 = SB_trans!ushort;
 alias SB_trans_uint32 = SB_trans!uint;
 
+static assert(SB_trans_uint8.sizeof == SB_trans_uint16.sizeof && SB_trans_uint16.sizeof == SB_trans_uint32.sizeof);
 
 enum D_SCAN_ALL=	0;
 enum D_SCAN_LONGEST	=1;
@@ -104,11 +107,11 @@ struct D_State {
     D_ErrorRecoveryHint[] error_recovery_hints;
     bool				shifts;
     D_ScanCode			scanner_code;
-    void*				scanner_table;
+    SB_uint32[]		scanner_table;
     ubyte			scanner_size;
     ubyte			accept;
     ubyte			scan_kind;
-    void*			transition_table;
+    SB_trans_uint32[]	transition_table;
     D_Shift*[][]     accepts_diff;
     int				reduces_to;
 }

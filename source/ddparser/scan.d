@@ -20,8 +20,8 @@ private void do_smth(State)(ref d_loc_t loc, ref d_loc_t last_loc,
                 ref D_Shift*[] shift, const ref D_State parse_state, ShiftResult[] results)
 {
     /* all matches */
-    auto st = cast(SB_!(State)*)parse_state.scanner_table;
-    auto tst = cast(SB_trans!(State)*)parse_state.transition_table;
+    auto st = cast(SB_!(State)[])parse_state.scanner_table;
+    auto tst = cast(SB_trans!(State)[])parse_state.transition_table;
     State state, last, prev;
 
     char *s = loc.s;

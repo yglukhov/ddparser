@@ -671,7 +671,7 @@ buildStateData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
             state.shifts = s.shift_actions.n || s.scanner_code || (g.scanner.code && s.goto_on_token);
 
             if (s.scanner.states.n) {
-                state.scanner_table = tables.d_scanner1[shifts.index].ptr;
+                state.scanner_table = tables.d_scanner1[shifts.index];
             }
 
             state.scanner_size = cast(ubyte)scanner_size(s);
@@ -680,7 +680,7 @@ buildStateData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
 
             if ((shifts.scan_kind != D_SCAN_LONGEST || shifts.trailing_context)
                     && shifts.scanner.states.n) {
-                state.transition_table = tables.d_transition1[shifts.index].ptr;
+                state.transition_table = tables.d_transition1[shifts.index];
             }
 
             if ((shifts.scan_kind != D_SCAN_LONGEST || shifts.trailing_context)

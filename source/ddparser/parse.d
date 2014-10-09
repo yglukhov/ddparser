@@ -1878,9 +1878,9 @@ find_substr(const (char) *str, const(char)[] s) {
 }
 
 private void
-syntax_error_report_fn(D_Parser *ap) {
-  Parser *p = cast(Parser *)ap;
-  char *fn = d_dup_pathname_str(p.loc.pathname);
+syntax_error_report_fn(D_Parser *p) {
+  char *_fn = d_dup_pathname_str(p.loc.pathname);
+  const(char)[] fn = _fn[0 .. strlen(_fn)];
   const(char)[] after;
   ZNode *z = p.snode_hash.last_all ? p.snode_hash.last_all.zns.v[0] : null;
   while (z && z.pn.parse_node.start_loc.s == z.pn.parse_node.end)

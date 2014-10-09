@@ -115,12 +115,12 @@ nfa_closure(DFAState *x) {
     int i, j, k;
     NFAState *s;
 
-    for (i = 0; i < x.states.n; i++)
-        for (j = 0; j < x.states.v[i].epsilon.n; j++) {
+    foreach (i; x.states)
+        for (j = 0; j < i.epsilon.n; j++) {
             for (k = 0; k < x.states.n; k++)
-                if (x.states.v[i].epsilon.v[j] == x.states.v[k])
+                if (i.epsilon.v[j] == x.states.v[k])
                     goto Lbreak;
-            s = x.states.v[i];
+            s = i;
             vec_add(&x.states, s.epsilon.v[j]);
 Lbreak:;
         }
@@ -174,38 +174,37 @@ private void
 nfa_to_scanner(NFAState *n, Scanner *s) {
   DFAState *x = new_DFAState(), y;
   VecDFAState alldfas;
-  int i, i_alldfas, i_states, i_char;
+  int i, i_states, i_char;
   VecScanState *scanner = &s.states;
   
   memset(&alldfas, 0, (alldfas).sizeof);
   vec_add(&x.states, n);
   nfa_closure(x);
   vec_add(&alldfas, x);
-  for (i_alldfas = 0; i_alldfas < alldfas.n; i_alldfas++) {
-    x = alldfas.v[i_alldfas];
-    for (i_char = 0; i_char < 256; i_char++) {
-      y = null;
-      for (i_states = 0; i_states < x.states.n; i_states++) {
-	for (i = 0; i < x.states.v[i_states].chars[i_char].n; i++) {
-	  if (!y)
-	    y = new_DFAState();
-	  set_add(&y.states, x.states.v[i_states].chars[i_char].v[i]);
-	}
+  foreach (x; alldfas) {
+      for (i_char = 0; i_char < 256; i_char++) {
+          y = null;
+          for (i_states = 0; i_states < x.states.n; i_states++) {
+              for (i = 0; i < x.states.v[i_states].chars[i_char].n; i++) {
+                  if (!y)
+                      y = new_DFAState();
+                  set_add(&y.states, x.states.v[i_states].chars[i_char].v[i]);
+              }
+          }
+          if (y) {
+              set_to_vec(&y.states);
+              nfa_closure(y);
+              for (i = 0; i < alldfas.n; i++)
+                  if (eq_dfa_state(y, alldfas.v[i])) {
+                      free_DFAState(y);
+                      y = alldfas.v[i];
+                      goto Lnext;
+                  }
+              vec_add(&alldfas, y);
+Lnext:
+              x.chars[i_char] = y;
+          }
       }
-      if (y) {
-	set_to_vec(&y.states);
-	nfa_closure(y);
-	for (i = 0; i < alldfas.n; i++)
-	  if (eq_dfa_state(y, alldfas.v[i])) {
-            free_DFAState(y);
-	    y = alldfas.v[i];
-	    goto Lnext;
-	  }
-	vec_add(&alldfas, y);
-      Lnext:
-	x.chars[i_char] = y;
-      }
-    }
   }
   dfa_to_scanner(&alldfas, scanner);
   free_VecDFAState(&alldfas);
