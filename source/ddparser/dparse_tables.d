@@ -158,8 +158,7 @@ struct D_ParserTables {
     uint		whitespace_state;
     D_Symbol[]  symbols;
     D_WhiteSpaceFn	default_white_space;
-    uint		npasses;
-    D_Pass		*passes;
+    D_Pass[]    passes;
     uint		save_parse_tree;
 }
 

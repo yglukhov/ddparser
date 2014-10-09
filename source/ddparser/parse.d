@@ -2035,7 +2035,7 @@ d_pass(D_Parser *ap, D_ParseNode *apn, int pass_number) {
   Parser *p = cast(Parser*)ap;
   D_Pass *pp;
 
-  if (pass_number >= p.t.npasses)
+  if (pass_number >= p.t.passes.length)
     d_fail("bad pass number: %d\n", pass_number);
   pp = &p.t.passes[pass_number];
   if (pp.kind & D_PASS_MANUAL)
