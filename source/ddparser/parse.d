@@ -650,7 +650,7 @@ reduce_actions(Parser *p, PNode *pn, D_Reduction *r) {
   if (r.speculative_code)
     return r.speculative_code(
       pn, cast(void**)&pn.children.v[0], cast(int)pn.children.n,
-      cast(int)&(cast(PNode*)null).parse_node, cast(D_Parser*)p);
+      cast(int)&(cast(PNode*)null).parse_node, p);
   return 0;
 }
 
@@ -1032,7 +1032,7 @@ resolve_amb_greedy(D_Parser *dp, int n, D_ParseNode **v) {
   int i, result, selected_node = 0;
 
   for(i=1; i<n; i++) {
-     result = cmp_greediness(cast(Parser*)dp, D_ParseNode_to_PNode(v[i]),D_ParseNode_to_PNode( v[selected_node]) );
+     result = cmp_greediness(dp, D_ParseNode_to_PNode(v[i]),D_ParseNode_to_PNode( v[selected_node]) );
      if ( result < 0 ||
          (result == 0 && D_ParseNode_to_PNode(v[i]).height < D_ParseNode_to_PNode(v[selected_node]).height) )
         selected_node = i;
@@ -1103,7 +1103,7 @@ make_PNode(Parser *p, uint hash, int symbol, d_loc_t *start_loc, char *e, PNode 
       new_pn.reduction = &dummy;
       if (sh.speculative_code(
         new_pn, cast(void**)&new_pn.children.v[0], new_pn.children.n,
-        cast(int)&(cast(PNode*)(null)).parse_node, cast(D_Parser*)p))
+        cast(int)&(cast(PNode*)(null)).parse_node, p))
       {
         free_PNode(p, new_pn);
         return null;
@@ -1346,9 +1346,9 @@ goto_PNode(Parser *p, d_loc_t *loc, PNode *pn, SNode *ps) {
 
 void
 parse_whitespace(D_Parser *ap, d_loc_t *loc, void **p_globals) {
-  Parser *pp = (cast(Parser*)ap).whitespace_parser;
+  Parser *pp = ap.whitespace_parser;
   pp.start = loc.s;
-  if (!exhaustive_parse(pp, (cast(Parser *)ap).t.whitespace_state)) {
+  if (!exhaustive_parse(pp, ap.t.whitespace_state)) {
     if (pp.accept) {
       int old_col = loc.col, old_line = loc.line;
       *loc = pp.accept.loc;
@@ -1454,7 +1454,7 @@ shift_all(Parser *p, const char *pos) {
                 skip_loc = r.loc;
                 skip_fn = new_pn.parse_node.white_space;
                 new_pn.parse_node.white_space(
-                        cast(D_Parser*)p, &skip_loc, cast(void**)&new_pn.parse_node.globals);
+                        p, &skip_loc, cast(void**)&new_pn.parse_node.globals);
                 skip_loc.ws = r.loc.s;
                 new_pn.ws_before = loc.ws;
                 new_pn.ws_after = skip_loc.s;
@@ -1695,12 +1695,11 @@ free_ParseTreeBelow(Parser *p, PNode *pn) {
 
 void
 free_D_ParseTreeBelow(D_Parser *p, D_ParseNode *dpn) {
-  free_ParseTreeBelow(cast(Parser*)p, DPN_TO_PN(dpn));
+  free_ParseTreeBelow(p, DPN_TO_PN(dpn));
 }
 
 D_ParseNode *
-ambiguity_count_fn(D_Parser *pp, int n, D_ParseNode **v) {
-  Parser *p = cast(Parser*)pp;
+ambiguity_count_fn(D_Parser *p, int n, D_ParseNode **v) {
   p.ambiguities += n - 1;
   return v[0];
 }
@@ -1710,7 +1709,7 @@ ambiguity_abort_fn(D_Parser *pp, int n, D_ParseNode **v) {
   int i;
   if (d_verbose_level) {
     for (i = 0; i < n; i++) {
-      print_paren(cast(Parser *) pp, D_ParseNode_to_PNode(v[i]));
+      print_paren(pp, D_ParseNode_to_PNode(v[i]));
       logf("\n");
     }
   }
@@ -1833,7 +1832,7 @@ commit_tree(Parser *p, PNode *pn) {
   if (pn.reduction && pn.reduction.final_code)
     pn.reduction.final_code(
       pn, cast(void**)&pn.children.v[0], pn.children.n,
-      cast(int)&(cast(PNode*)(null)).parse_node, cast(D_Parser*)p);
+      cast(int)&(cast(PNode*)(null)).parse_node, p);
   if (pn.evaluated) {
     if (!p.save_parse_tree && !internal)
       free_ParseTreeBelow(p, pn);
@@ -1916,7 +1915,7 @@ error_recovery(Parser *p) {
   if (p.loc.line > p.last_syntax_error_line) {
     p.last_syntax_error_line = p.loc.line;
     p.syntax_errors++;
-    p.syntax_error_fn(cast(D_Parser*)p);
+    p.syntax_error_fn(p);
   }
   for (sn = p.snode_hash.last_all; sn; sn = sn.all_next) {
     if (tail < ERROR_RECOVERY_QUEUE_SIZE - 1)
@@ -1963,7 +1962,7 @@ error_recovery(Parser *p) {
         break;
       }
     best_pn.parse_node.white_space(
-      cast(D_Parser*)p, &best_loc, cast(void**)&best_pn.parse_node.globals);
+      p, &best_loc, cast(void**)&best_pn.parse_node.globals);
     PNode *new_pn = add_PNode(p, 0, &p.loc, best_loc.s, best_pn, null, null, null);
     SNode *new_sn = new_SNode(p, best_sn.stateIndex, &best_loc, new_pn.initial_scope, new_pn.initial_globals);
     new_sn.last_pn = new_pn;
@@ -2006,7 +2005,7 @@ pass_call(Parser *p, D_Pass *pp, PNode *pn) {
   if (PASS_CODE_FOUND(pp, pn))
     pn.reduction.pass_code[pp.index](
       pn, cast(void**)&pn.children.v[0], pn.children.n,
-      cast(int)&(cast(PNode*)(null)).parse_node, cast(D_Parser*)p);
+      cast(int)&(cast(PNode*)(null)).parse_node, p);
 }
 
 private void
@@ -2030,9 +2029,8 @@ pass_postorder(Parser *p, D_Pass *pp, PNode *pn) {
 }
 
 void
-d_pass(D_Parser *ap, D_ParseNode *apn, int pass_number) {
+d_pass(D_Parser *p, D_ParseNode *apn, int pass_number) {
   PNode *pn = D_ParseNode_to_PNode(apn);
-  Parser *p = cast(Parser*)ap;
   D_Pass *pp;
 
   if (pass_number >= p.t.passes.length)
@@ -2055,7 +2053,7 @@ exhaustive_parse(Parser *p, int state) {
 
   pos = p.loc.ws = p.loc.s = p.start;
   loc = p.loc;
-  p.initial_white_space_fn(cast(D_Parser*)p, &loc, &p.initial_globals);
+  p.initial_white_space_fn(p, &loc, &p.initial_globals);
   /* initial state */
   SNode *sn = add_SNode(p, state, &loc, p.top_scope, p.initial_globals);
   tpn.parse_node.white_space = p.initial_white_space_fn;
@@ -2222,22 +2220,21 @@ new_D_Parser(D_ParserTables *t, int sizeof_ParseNode_User) {
     p.initial_white_space_fn = &parse_whitespace;
   else
     p.initial_white_space_fn = &white_space;
-  return cast(D_Parser*)p;
+  return p;
 }
 
 void
-free_D_Parser(D_Parser *ap) {
-  Parser *p = cast(Parser *)ap;
+free_D_Parser(D_Parser *p) {
   if (p.top_scope && !p.initial_scope)
     free_D_Scope(p.top_scope, 0);
   if (p.whitespace_parser)
-    free_D_Parser(cast(D_Parser*)p.whitespace_parser);
+    free_D_Parser(p.whitespace_parser);
 }
 
 void
 free_D_ParseNode(D_Parser * p, D_ParseNode *dpn) {
   if (dpn != NO_DPN) {
-    free_parser_working_data(cast(Parser*)p);
+    free_parser_working_data(p);
   }
 }
 
@@ -2250,7 +2247,7 @@ copy_user_configurables(Parser *pp, Parser *p) {
 
 Parser *
 new_subparser(Parser *p) {
-  Parser * pp = cast(Parser *)new_D_Parser(p.t, p.sizeof_user_parse_node);
+  Parser * pp = new_D_Parser(p.t, p.sizeof_user_parse_node);
   copy_user_configurables(pp, p);
   pp.end = p.end;
   alloc_parser_working_data(pp);
@@ -2271,7 +2268,7 @@ initialize_whitespace_parser(Parser *p) {
 private void
 free_whitespace_parser(Parser *p) {
   if (p.whitespace_parser) {
-    free_D_Parser(cast(D_Parser*)p.whitespace_parser);
+    free_D_Parser(p.whitespace_parser);
     p.whitespace_parser = null;
   }
 }
