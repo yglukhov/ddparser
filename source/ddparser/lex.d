@@ -357,31 +357,25 @@ action_intersect(VecAction *a, VecAction *b, VecAction *c) {
 
 private void
 compute_liveness(Scanner *scanner) {
-  int i, j, changed = 1;
-  ScanState *ss, sss;
-  VecScanState *states = &scanner.states;
-
   /* basis */
-  for (i = 0; i < states.n; i++) {
-    ss = states.v[i];
+  foreach (ss; scanner.states) {
     set_union(&ss.live, &ss.accepts);
   }
+  bool changed = true;
   while (changed) {
-    changed = 0;
-    for (i = 0; i < states.n; i++) {
-      ss = states.v[i];
-      for (j = 0; j < 256; j++) {
-            sss = ss.chars[j];
+    changed = false;
+    foreach (ss; scanner.states) {
+      for (int j = 0; j < 256; j++) {
+          ScanState* sss = ss.chars[j];
           if (sss) {
               if (ss != sss)
                   if (set_union(&ss.live, &sss.live))
-                      changed = 1;
+                      changed = true;
           }
       }
     }
   }
-  for (i = 0; i < states.n; i++) {
-    ss = states.v[i];
+  foreach (ss; scanner.states) {
     set_to_vec(&ss.live);
     sort_VecAction(&ss.live);
   }
@@ -390,13 +384,12 @@ compute_liveness(Scanner *scanner) {
 extern(C) private uint32
 trans_hash_fn(ScanStateTransition *a, hash_fns_t *fns) {
   uint h = 0;
-  int i;
 
   if (!fns.data[0])
-    for (i = 0; i < a.live_diff.n; i++)
-      h += 3 * a.live_diff.v[i].index;
-  for (i = 0; i < a.accepts_diff.n; i++)
-    h += 3 * a.accepts_diff.v[i].index;
+    foreach (i; a.live_diff)
+      h += 3 * i.index;
+  foreach (i; a.accepts_diff)
+    h += 3 * i.index;
   return h;
 }
 
