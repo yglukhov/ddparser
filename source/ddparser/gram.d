@@ -21,6 +21,8 @@ import std.conv;
 import ddparser.serialize;
 import std.string;
 import std.ascii;
+import std.algorithm;
+import std.array;
 
 enum EOF_SENTINAL = "\377";
 enum NO_PROD			=0xFFFFFFFF;
@@ -466,28 +468,31 @@ new_term_string(Grammar *g, string s, Rule *r)
   return new_elem_term(t, r);
 }
 
-char *
-escape_string_for_regex(const(char) *s) {
-  char *ss = cast(char*)MALLOC((strlen(s) + 1) * 2);
-  char *sss = ss;
-  for (; *s; s++) {
-    switch (*s) {
-      case '(':
-      case ')':
-      case '[':
-      case ']':
-      case '-':
-      case '^':
-      case '*':
-      case '?':
-      case '+':
-	*ss++ = '\\';
-    goto default;
-      default: *ss++ = *s; break;
+string escape_string_for_regex(const char[] s)
+{
+    auto result = appender!string();
+    result.reserve(s.length * 2);
+    foreach(c; s)
+    {
+        switch (c)
+        {
+            case '(':
+            case ')':
+            case '[':
+            case ']':
+            case '-':
+            case '^':
+            case '*':
+            case '?':
+            case '+':
+                result ~= '\\';
+                goto default;
+            default:
+                result ~= c;
+        }
     }
-  }
-  *ss = 0;
-  return sss;
+
+    return result.data;
 }
 
 private void
@@ -496,6 +501,8 @@ unescape_term_string(Term *t) {
   char *start = null;
   char *ss;
   int length, base = 0;
+
+  //char[] res = t.string_[0 .. strlen(t.string_)].dup;
 
   for (ss = s = t.string_; *s; s++) {
     if (*s == '\\') {
@@ -1247,7 +1254,8 @@ convert_regex_production_one(Grammar *g, Production *p) {
   Rule *r, rr;
   Elem *e;
   Term *t;
-  char *buf = null, b, s;
+  char *buf = null, b;
+  const(char)* s;
   int buf_len = 0;
 
   if (p.regex_term) /* already done */
@@ -1310,12 +1318,10 @@ convert_regex_production_one(Grammar *g, Production *p) {
       t = e.kind == ElemKind.ELEM_TERM ? e.e.term : e.e.nterm.regex_term;
       *b++ = '('; 
       if (t.kind == TermKind.TERM_STRING)
-	s = escape_string_for_regex(t.string_);
+	s = escape_string_for_regex(t.string_[0 .. strlen(t.string_)]).toStringz();
       else
 	s = t.string_;
       memcpy(b, s, strlen(s)); b += strlen(s);
-      if (t.kind == TermKind.TERM_STRING)
-	FREE(s);
       *b++ = ')'; 
       if (l == 2) 
 	*b++ = '*'; 
@@ -1335,12 +1341,10 @@ convert_regex_production_one(Grammar *g, Production *p) {
       foreach (e; r.elems) {
 	t = e.kind == ElemKind.ELEM_TERM ? e.e.term : e.e.nterm.regex_term;
 	if (t.kind == TermKind.TERM_STRING)
-	  s = escape_string_for_regex(t.string_);
+	  s = escape_string_for_regex(t.string_[0 .. strlen(t.string_)]).toStringz();
 	else
 	  s = t.string_;
 	memcpy(b, s, strlen(s)); b += strlen(s);
-        if (t.kind == TermKind.TERM_STRING)
-	  FREE(s);
       }
       if (r.elems.n > 1)
 	*b++ = ')';
