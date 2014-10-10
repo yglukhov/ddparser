@@ -550,12 +550,12 @@ free_parser_working_data(Parser *p) {
 }
 
 private int
-znode_depth(ZNode *z) {
+znode_depth(ZNode *z) @safe {
   int i, d = 0;
   if (!z)
     return int.max;
   for (i = 0; i < z.sns.n; i++)
-    d = d < z.sns.v[i].depth ? z.sns.v[i].depth : d;
+    d = d < z.sns[i].depth ? z.sns[i].depth : d;
   return d;
 }
 
