@@ -1484,7 +1484,7 @@ g.r = new_rule(g, g.p);
 {
      mixin(commonValues);
 
- g.r.op_assoc = ASSOC_UNARY_RIGHT; 
+ g.r.op_assoc = AssocKind.ASSOC_UNARY_RIGHT; 
   return 0;
 };
 
@@ -1504,7 +1504,7 @@ g.r = new_rule(g, g.p);
 {
      mixin(commonValues);
 
- g.r.op_assoc = ASSOC_UNARY_LEFT; 
+ g.r.op_assoc = AssocKind.ASSOC_UNARY_LEFT; 
   return 0;
 };
 
@@ -1524,7 +1524,7 @@ g.r = new_rule(g, g.p);
 {
      mixin(commonValues);
 
- g.r.op_assoc = ASSOC_BINARY_RIGHT; 
+ g.r.op_assoc = AssocKind.ASSOC_BINARY_RIGHT; 
   return 0;
 };
 
@@ -1544,7 +1544,7 @@ g.r = new_rule(g, g.p);
 {
      mixin(commonValues);
 
- g.r.op_assoc = ASSOC_BINARY_LEFT; 
+ g.r.op_assoc = AssocKind.ASSOC_BINARY_LEFT; 
   return 0;
 };
 
@@ -1564,7 +1564,7 @@ g.r = new_rule(g, g.p);
 {
      mixin(commonValues);
 
- g.r.rule_assoc = ASSOC_UNARY_RIGHT; 
+ g.r.rule_assoc = AssocKind.ASSOC_UNARY_RIGHT; 
   return 0;
 };
 
@@ -1584,7 +1584,7 @@ g.r = new_rule(g, g.p);
 {
      mixin(commonValues);
 
- g.r.rule_assoc = ASSOC_UNARY_LEFT; 
+ g.r.rule_assoc = AssocKind.ASSOC_UNARY_LEFT; 
   return 0;
 };
 
@@ -1604,7 +1604,7 @@ g.r = new_rule(g, g.p);
 {
      mixin(commonValues);
 
- g.r.rule_assoc = ASSOC_BINARY_RIGHT; 
+ g.r.rule_assoc = AssocKind.ASSOC_BINARY_RIGHT; 
   return 0;
 };
 
@@ -1624,7 +1624,7 @@ g.r = new_rule(g, g.p);
 {
      mixin(commonValues);
 
- g.r.rule_assoc = ASSOC_BINARY_LEFT; 
+ g.r.rule_assoc = AssocKind.ASSOC_BINARY_LEFT; 
   return 0;
 };
 
@@ -1644,7 +1644,7 @@ g.r = new_rule(g, g.p);
 {
      mixin(commonValues);
 
- g.r.rule_assoc = ASSOC_NARY_RIGHT; 
+ g.r.rule_assoc = AssocKind.ASSOC_NARY_RIGHT; 
   return 0;
 };
 
@@ -1664,7 +1664,7 @@ g.r = new_rule(g, g.p);
 {
      mixin(commonValues);
 
- g.r.rule_assoc = ASSOC_NARY_LEFT; 
+ g.r.rule_assoc = AssocKind.ASSOC_NARY_LEFT; 
   return 0;
 };
 

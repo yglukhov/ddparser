@@ -13,8 +13,6 @@ import ddparser.lex;
 import ddparser.dparse;
 import ddparser.parse;
 import core.stdc.string;
-import core.stdc.stdlib;
-import core.stdc.stdio;
 import std.stdio;
 import std.json;
 import std.conv;
@@ -82,7 +80,7 @@ struct Hint {
 }
 alias VecHint = Vec!(Hint*);
 
-alias VecScanStateTransition =  Vec!(ScanStateTransition*);
+alias VecScanStateTransition = Vec!(ScanStateTransition*);
 alias VecScanState = Vec!(ScanState *);
 
 struct Scanner {
@@ -133,15 +131,6 @@ enum AssocKind {
   ASSOC_NO		= 0x0020
 }
 
-alias ASSOC_NONE = AssocKind.ASSOC_NONE;
-alias ASSOC_NARY_LEFT = AssocKind.ASSOC_NARY_LEFT;
-alias ASSOC_NARY_RIGHT = AssocKind.ASSOC_NARY_RIGHT;
-alias ASSOC_UNARY_LEFT = AssocKind.ASSOC_UNARY_LEFT;
-alias ASSOC_UNARY_RIGHT = AssocKind.ASSOC_UNARY_RIGHT;
-alias ASSOC_BINARY_LEFT = AssocKind.ASSOC_BINARY_LEFT;
-alias ASSOC_BINARY_RIGHT = AssocKind.ASSOC_BINARY_RIGHT;
-alias ASSOC_NO = AssocKind.ASSOC_NO;
-
 @nogc @safe nothrow pure
 {
 bool IS_RIGHT_ASSOC(AssocKind _x) { return cast(bool)(_x & ASSOC_RIGHT); }
@@ -153,8 +142,8 @@ bool IS_UNARY_BINARY_ASSOC(AssocKind _x) { return IS_UNARY_ASSOC(_x) || IS_BINAR
 bool IS_BINARY_NARY_ASSOC(AssocKind _x) { return IS_NARY_ASSOC(_x) || IS_BINARY_ASSOC(_x); }
 
 /* not valid for NARY */
-bool IS_EXPECT_RIGHT_ASSOC(AssocKind _x) { return _x && _x != ASSOC_UNARY_LEFT; }
-bool IS_EXPECT_LEFT_ASSOC(AssocKind _x) { return _x && _x != ASSOC_UNARY_RIGHT; }
+bool IS_EXPECT_RIGHT_ASSOC(AssocKind _x) { return _x && _x != AssocKind.ASSOC_UNARY_LEFT; }
+bool IS_EXPECT_LEFT_ASSOC(AssocKind _x) { return _x && _x != AssocKind.ASSOC_UNARY_RIGHT; }
 }
 
 struct Rule {
@@ -434,9 +423,7 @@ new_rule(Grammar *g, Production *p) {
 
 private Term *
 new_term() {
-  Term *term = new Term();
-  memset(term, 0, (Term).sizeof);
-  return term;
+  return new Term();
 }
 
 private Elem *
@@ -500,7 +487,8 @@ unescape_term_string(Term *t) {
   char *s;
   char *start = null;
   char *ss;
-  int length, base = 0;
+  int length;
+  uint base = 0;
 
   char* res = cast(char*)t.string_[0 .. strlen(t.string_)].dup.toStringz();
 
@@ -571,10 +559,7 @@ unescape_term_string(Term *t) {
 	  /* fall through */
 	Lncont:
 	  if (length > 0) {
-	    char saved_c = start[length];
-	    start[length] = '\0';
-	    *ss = cast(ubyte) strtol(start, null, base);
-	    start[length] = saved_c;
+        *ss = start[0 .. length].to!ubyte(base);
 	    if (*s > 0)	     
 	      break;
 	    d_fail("encountered an escaped null while processing '%s'", t.string_);
@@ -831,7 +816,7 @@ plus_EBNF(Grammar *g) {
     last_elem(g.r) = new_elem_nterm(pp, g.r);
     if (g.r.rule_priority) {
       rr.rule_priority = g.r.rule_priority;
-      rr.rule_assoc = ASSOC_NARY_LEFT;
+      rr.rule_assoc = AssocKind.ASSOC_NARY_LEFT;
     }
   } else {
     vec_add(&rr.elems, dup_elem(elem, rr));
@@ -839,7 +824,7 @@ plus_EBNF(Grammar *g) {
     vec_add(&rr.elems, new_elem_nterm(pp, rr));
     if (g.r.rule_priority) {
       rr.rule_priority = g.r.rule_priority;
-      rr.rule_assoc = ASSOC_NARY_RIGHT;
+      rr.rule_assoc = AssocKind.ASSOC_NARY_RIGHT;
     }
   }
   vec_add(&pp.rules, rr);
@@ -1044,29 +1029,17 @@ print_elem(Elem *ee) {
     logf("%s ", ee.e.nterm.name);
 }
 
-struct EnumStr {
-  uint	e;
-  string	s;
-}
-
-EnumStr[] assoc_strings = [
-  { ASSOC_NONE, "$none" },
-  { ASSOC_NARY_LEFT, "$left" },
-  { ASSOC_NARY_RIGHT, "$right" },
-  { ASSOC_UNARY_LEFT, "$unary_left" },
-  { ASSOC_UNARY_RIGHT, "$unary_right" },
-  { ASSOC_BINARY_LEFT, "$binary_left" },
-  { ASSOC_BINARY_RIGHT, "$binary_right" },
-  { ASSOC_NO, "$noassoc" }
-];
-
 private string
-assoc_str(uint e) {
-    foreach(i; assoc_strings)
-    {
-        if (i.e == e) return i.s;
-    }
-    return assoc_strings[0].s;
+assoc_str(AssocKind e) {
+    return [
+        AssocKind.ASSOC_NONE : "none",
+        AssocKind.ASSOC_NARY_LEFT: "left" ,
+        AssocKind.ASSOC_NARY_RIGHT: "right" ,
+        AssocKind.ASSOC_UNARY_LEFT: "unary_left" ,
+        AssocKind.ASSOC_UNARY_RIGHT: "unary_right" ,
+        AssocKind.ASSOC_BINARY_LEFT: "binary_left" ,
+        AssocKind.ASSOC_BINARY_RIGHT: "binary_right" ,
+        AssocKind.ASSOC_NO: "noassoc"][e];
 }
 
 void
@@ -1105,11 +1078,11 @@ print_grammar(Grammar *g) {
       if (rr.op_priority)
 	logf("op %d ", rr.op_priority);
       if (rr.op_assoc)
-	logf("%s ", assoc_str(rr.op_assoc));
+	logf("$%s ", assoc_str(rr.op_assoc));
       if (rr.rule_priority)
 	logf("rule %d ", rr.rule_priority);
       if (rr.rule_assoc)
-	logf("%s ", assoc_str(rr.rule_assoc));
+	logf("$%s ", assoc_str(rr.rule_assoc));
       if (rr.speculative_code.code)
 	logf("%s ", rr.speculative_code.code);
       if (rr.final_code.code)
@@ -1408,10 +1381,9 @@ void
 build_eq(Grammar *g) {
   int i, j, k, changed = 1, x, xx;
   State *s, ss;
-  EqState *eq, e, ee;
+  EqState *e, ee;
 
-  eq = cast(EqState*)MALLOC((EqState).sizeof*g.states.n);
-  memset(eq, 0, (EqState).sizeof*g.states.n);
+  EqState[] eq = new EqState[g.states.length];
   while (changed) {
     changed = 0;
     for (i = 0; i < g.states.n; i++) {
@@ -1515,7 +1487,6 @@ build_eq(Grammar *g) {
       if (d_verbose_level)
 	logf("reduces_to %d %d\n", s.index, s.reduces_to.index);
   }
-  FREE(eq);
 }
 
 Grammar *
@@ -1903,11 +1874,11 @@ print_production(Production *p) {
       print_element_escaped(r.elems.v[k], variant);
 
     if (r.op_assoc)
-      writefln(" %s%s ", assoc[variant], assoc_str(r.op_assoc)[1 .. $]);
+      writefln(" %s%s ", assoc[variant], assoc_str(r.op_assoc));
     if (r.op_priority)
       writefln("%d ", r.op_priority);
     if (r.rule_assoc)
-      writefln(" %s%s ", assoc[variant], assoc_str(r.rule_assoc)[1 .. $]);
+      writefln(" %s%s ", assoc[variant], assoc_str(r.rule_assoc));
     if (r.rule_priority)
       writefln("%d ", r.rule_priority);
 

@@ -688,9 +688,9 @@ check_child(int ppri, AssocKind passoc, int cpri, AssocKind cassoc,
             int left, int right)
 {
   int p = IS_BINARY_NARY_ASSOC(passoc) ? (right ? 1 : 0) :
-          (passoc == ASSOC_UNARY_LEFT ? 2 : 3);
+          (passoc == AssocKind.ASSOC_UNARY_LEFT ? 2 : 3);
   int c = IS_BINARY_NARY_ASSOC(cassoc) ? 0 :
-          (cassoc == ASSOC_UNARY_LEFT ? 1 : 2);
+          (cassoc == AssocKind.ASSOC_UNARY_LEFT ? 1 : 2);
   int r =
     cpri > ppri ? 0 : (
       cpri < ppri ? 1 : ( 2 + (
@@ -1582,7 +1582,7 @@ binary_op_ZNode(SNode *sn) @nogc @safe nothrow pure {
   if (sn.zns.n != 1)
     return null;
   z = sn.zns.v[0];
-  if (z.pn.op_assoc == ASSOC_UNARY_RIGHT) {
+  if (z.pn.op_assoc == AssocKind.ASSOC_UNARY_RIGHT) {
     if (z.sns.n != 1)
       return null;
     sn = z.sns.v[0];
