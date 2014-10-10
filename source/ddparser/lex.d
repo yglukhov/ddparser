@@ -196,22 +196,28 @@ Lnext:
   free_VecDFAState(&alldfas);
 }
 
+T popFront(T)(ref T[] v)
+{
+    if (!v.length) return 0;
+    scope(exit) v = v[1 .. $];
+    return v[0];
+}
+
 /* build a NFA for the regular expression */
 private int
-build_regex_nfa(LexState *ls, const(uint8) **areg, NFAState *pp, NFAState *nn, Action *trailing) {
+build_regex_nfa(LexState *ls, ref const(uint8)[] areg, NFAState *pp, NFAState *nn, Action *trailing) {
   uint8 c;
-  const(uint8) *reg = *areg;
+  const(ubyte)[] reg = areg;
   NFAState *p = pp, s, x, n = nn;
   int i, has_trailing = 0;
   uint8 mark[256];
 
-  bool reversed = false;
-
   s = p;
-  while ((c = *reg++) != 0) {
+  while ((c = reg.popFront()) != 0) {
       switch(c) {
           case '(':
-              has_trailing = build_regex_nfa(ls, &reg, s, (x = new_NFAState(ls)), trailing) ||
+              x = new_NFAState(ls);
+              has_trailing = build_regex_nfa(ls, reg, s, x, trailing) ||
                   has_trailing;
               p = s;
               s = x;
@@ -223,30 +229,30 @@ build_regex_nfa(LexState *ls, const(uint8) **areg, NFAState *pp, NFAState *nn, A
               vec_add(&pp.epsilon, (s = new_NFAState(ls)));
               break;
           case '[':
-              reversed = false;
-              if (*reg == '^') {
-                  reg++;
+              bool reversed = false;
+              if (reg[0] == '^') {
+                  reg.popFront();
                   reversed = true;
               }
               memset(mark.ptr, 0, mark.sizeof);
               ubyte pc = ubyte.max;
-              while ((c = *reg++) != 0) {
+              while ((c = reg.popFront()) != 0) {
                   switch(c) {
                       case ']':
                           goto Lsetdone;
                       case '-':
-                          c = *reg++;
+                          c = reg.popFront();
                           if (!c)
                               goto Lerror;
                           if (c == '\\')
-                              c = *reg++;
+                              c = reg.popFront();
                           if (!c)
                               goto Lerror;
                           for (;pc <= c; pc++)
                               mark[pc] = 1;
                           break;
                       case '\\':
-                          c = *reg++;
+                          c = reg.popFront();
                           goto default;
                       default:
                           pc = c;
@@ -277,7 +283,7 @@ Lsetdone:
               has_trailing = 1;
               break;
           case '\\':
-              c = *reg++;
+              c = reg.popFront();
               if (!c)	
                   goto Lerror;
               goto default;
@@ -295,10 +301,10 @@ Lsetdone:
   }
  Lreturn:
   vec_add(&s.epsilon, n);
-  *areg = reg;
+  areg = reg;
   return has_trailing;
  Lerror:
-  d_fail("bad (part of) regex: %s\n", *areg);
+  d_fail("bad (part of) regex: %s\n", areg);
   return has_trailing;
 }
 
@@ -520,12 +526,12 @@ build_state_scanner(Grammar *g, LexState *ls, State *s) {
       trailing_context.kind = ActionKind.ACTION_SHIFT_TRAILING;
       trailing_context.index = g.action_count++;
       one = true;
-      const(uint8)* reg = cast(uint8*)a.term.string_;
+      const(uint8)[] reg = cast(uint8[])a.term.string_[0 .. strlen(a.term.string_)];
       nnn = new_NFAState(ls);
       vec_add(&n.epsilon, nnn);
       nn = new_NFAState(ls);
       ls.ignore_case = a.term.ignore_case;
-      if (build_regex_nfa(ls, &reg, nnn, nn, trailing_context)) {
+      if (build_regex_nfa(ls, reg, nnn, nn, trailing_context)) {
 	a.term.trailing_context = 1;
 	s.trailing_context = 1;
 	vec_add(&g.actions, trailing_context);
