@@ -1230,7 +1230,6 @@ convert_regex_production_one(Grammar *g, Production *p) {
   Production *pp;
   Rule *r, rr;
   Elem *e;
-  Term *t;
   char *buf = null, b;
   const(char)* s;
   int buf_len = 0;
@@ -1253,7 +1252,7 @@ convert_regex_production_one(Grammar *g, Production *p) {
 	       p.name, e.e.nterm.name);
 	pp = e.e.nterm;
 	for (l = 0; l < pp.rules.n; l++)
-	  if (pp.rules.v[l].speculative_code.code || pp.rules.v[l].final_code.code)
+	  if (pp.rules[l].speculative_code.code || pp.rules[l].final_code.code)
 	    d_fail("code not permitted in rule %d of regex productions '%s'", l, p.name);
 	if (p != pp) {
 	  convert_regex_production_one(g, pp);
@@ -1270,7 +1269,7 @@ convert_regex_production_one(Grammar *g, Production *p) {
     }
   }
   b = buf = cast(char*)MALLOC(buf_len + 1);
-  t = new_term();
+  Term *t = new_term();
   t.kind = TermKind.TERM_REGEX;
   t.string_ = buf;
   t.index = g.terminals.n;
@@ -1281,16 +1280,16 @@ convert_regex_production_one(Grammar *g, Production *p) {
   if (circular) { /* attempt to match to regex operators */
     if (p.rules.n != 2)
       Lfail: d_fail("unable to resolve circular regex production: '%s'", p.name);
-    l = p.rules.v[0].elems.n + p.rules.v[1].elems.n;
+    l = p.rules[0].elems.n + p.rules[1].elems.n;
     if (l == 2 || l == 3) {
-      if (p.rules.v[0].elems.n != 2 && p.rules.v[1].elems.n != 2)
+      if (p.rules[0].elems.n != 2 && p.rules[1].elems.n != 2)
 	goto Lfail;
-      r = p.rules.v[0].elems.n == 2 ? p.rules.v[0] : p.rules.v[1];
-      rr = p.rules.v[0] == r ? p.rules.v[1] : p.rules.v[0];
-      if (r.elems.v[0].e.nterm != p && r.elems.v[1].e.nterm != p)
+      r = p.rules[0].elems.n == 2 ? p.rules[0] : p.rules[1];
+      rr = p.rules[0] == r ? p.rules[1] : p.rules[0];
+      if (r.elems[0].e.nterm != p && r.elems[1].e.nterm != p)
 	goto Lfail;
-      e = r.elems.v[0].e.nterm == p ? r.elems.v[1] : r.elems.v[1];
-      if (rr.elems.n && e.e.term_or_nterm != rr.elems.v[0].e.term_or_nterm)
+      e = r.elems[0].e.nterm == p ? r.elems[1] : r.elems[1];
+      if (rr.elems.n && e.e.term_or_nterm != rr.elems[0].e.term_or_nterm)
 	goto Lfail;
       t = e.kind == ElemKind.ELEM_TERM ? e.e.term : e.e.nterm.regex_term;
       *b++ = '('; 
@@ -1312,7 +1311,7 @@ convert_regex_production_one(Grammar *g, Production *p) {
     if (p.rules.n > 1)
       *b++ = '(';
     for (int j = 0; j < p.rules.n; j++) {
-      r = p.rules.v[j];
+      r = p.rules[j];
       if (r.elems.n > 1)
 	*b++ = '(';
       foreach (e; r.elems) {
