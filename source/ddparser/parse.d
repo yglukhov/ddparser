@@ -1494,13 +1494,13 @@ build_paths_internal(ZNode *z, VecVecZNode *paths, int parent,
   if (n_to_go <= 1)
     return;
   for (k = 0; k < z.sns.n; k++)
-    for (j = 0, l = 0; j < z.sns.v[k].zns.n; j++) {
-      if (z.sns.v[k].zns.v[j]) {
+    for (j = 0, l = 0; j < z.sns[k].zns.n; j++) {
+      if (z.sns[k].zns[j]) {
         if (k + l) {
           vec_add(paths, new_VecZNode(paths, n - (n_to_go - 1), parent));
           parent = paths.n - 1;
         }
-        build_paths_internal(z.sns.v[k].zns.v[j], paths, parent,
+        build_paths_internal(z.sns[k].zns[j], paths, parent,
                              n, n_to_go - 1);
         l++;
       }
@@ -1573,18 +1573,18 @@ VecSNode_equal(const ref VecSNode vsn1, const ref VecSNode vsn2) @safe nothrow p
 }
 
 private ZNode *
-binary_op_ZNode(SNode *sn) @nogc @safe nothrow pure {
+binary_op_ZNode(SNode *sn) @safe nothrow pure {
   ZNode *z;
   if (sn.zns.n != 1)
     return null;
-  z = sn.zns.v[0];
+  z = sn.zns[0];
   if (z.pn.op_assoc == AssocKind.ASSOC_UNARY_RIGHT) {
     if (z.sns.n != 1)
       return null;
-    sn = z.sns.v[0];
+    sn = z.sns[0];
     if (sn.zns.n != 1)
       return null;
-    z = sn.zns.v[0];
+    z = sn.zns[0];
   }
   if (!IS_BINARY_ASSOC(z.pn.op_assoc))
     return null;
@@ -1720,7 +1720,7 @@ final_actionless(PNode *pn) {
   if (pn.reduction && pn.reduction.final_code)
     return 0;
   for (i = 0; i < pn.children.n; i++)
-    if (!final_actionless(pn.children.v[i]))
+    if (!final_actionless(pn.children[i]))
       return 0;
   return 1;
 }
@@ -1741,13 +1741,13 @@ resolve_ambiguities(Parser *p, PNode *pn) {
       if (efa && is_epsilon_PNode(amb) && final_actionless(amb))
         continue;
     for (i = 0; i < pns.n; i++)
-      if (pns.v[i] == &amb.parse_node)
+      if (pns[i] == &amb.parse_node)
         found = 1;
     if (!found)
       vec_add(&pns, &amb.parse_node);
   }
   if (pns.n == 1) {
-    res = pns.v[0];
+    res = pns[0];
     goto Ldone;
   }
   res = p.ambiguity_fn(cast(D_Parser *)p, pns.n, pns.v);
@@ -1758,24 +1758,24 @@ resolve_ambiguities(Parser *p, PNode *pn) {
 
 private void
 fixup_internal_symbol(Parser *p, PNode *pn, int ichild) {
-  PNode *child = pn.children.v[ichild];
+  PNode *child = pn.children[ichild];
   int j, n, pnn;
   n = child.children.n, pnn = pn.children.n;
   if (pn == child)
     d_fail("circular parse: unable to fixup internal symbol");
   if (n == 0) {
     for (j = ichild; j < pnn - 1; j++)
-      pn.children.v[j] = pn.children.v[j + 1];
+      pn.children[j] = pn.children[j + 1];
     pn.children.n--;
   } else if (n == 1) {
-    pn.children.v[ichild] = child.children.v[0];
+    pn.children[ichild] = child.children[0];
   } else {
     for (j = 0; j < n - 1; j++) /* expand children vector */
       vec_add(&pn.children, null);
     for (j = pnn - 1; j >= ichild + 1; j--) /* move to new places */
-      pn.children.v[j - 1 + n] = pn.children.v[j];
+      pn.children[j - 1 + n] = pn.children[j];
     for (j = 0; j < n; j++) {
-      pn.children.v[ichild + j] = child.children.v[j];
+      pn.children[ichild + j] = child.children[j];
     }
   }
 }
