@@ -47,7 +47,7 @@ maybe_add_state(Grammar *g, State *s) {
         if (s.hash == i.hash && s.items.n == i.items.n) {
             bool cont = false;
             for (int j = 0; j < s.items.n; j++)
-                if (s.items.v[j] != i.items.v[j])
+                if (s.items[j] != i.items[j])
                 {
                     cont = true;
                     break;
@@ -69,16 +69,16 @@ next_elem(Item *i) {
   if (i.index + 1 >= i.rule.elems.n)
     return i.rule.end;
   else
-    return i.rule.elems.v[i.index + 1];
+    return i.rule.elems[i.index + 1];
 }
 
 private State *
 build_closure(Grammar *g, State *s) {
-  foreach (i; s.items) {
-    if (i.kind == ElemKind.ELEM_NTERM) {
-      foreach (r; i.e.nterm.rules)
+  for (int i = 0; i < s.items.length; i++) { // s.items may change during iteration
+    if (s.items[i].kind == ElemKind.ELEM_NTERM) {
+      foreach (r; s.items[i].e.nterm.rules)
 	insert_item(s, r.elems.v ? 
-		    r.elems.v[0] : r.end);
+		    r.elems[0] : r.end);
     }
   }
   qsort(s.items.v, s.items.n, (Item*).sizeof, &itemcmp);
@@ -91,7 +91,7 @@ build_closure(Grammar *g, State *s) {
 private Elem *
 clone_elem(Elem *e) {
   Elem *ee = new Elem();
-  memcpy(ee, e, (*ee).sizeof);
+  *ee = *e;
   return ee;
 }
 
@@ -122,16 +122,16 @@ build_state_for(Grammar *g, State *s, Elem *e) {
 private void
 build_new_states(Grammar *g) {
   Elem e;
-  foreach (s; g.states) {
+  for (int i = 0; i < g.states.length; i++) { // g.states may change during iteration
     foreach (t; g.terminals) {
       e.kind = ElemKind.ELEM_TERM;
       e.e.term = t;
-      build_state_for(g, s, &e);
+      build_state_for(g, g.states[i], &e);
     }
     foreach (p; g.productions) {
       e.kind = ElemKind.ELEM_NTERM;
       e.e.nterm = p;
-      build_state_for(g, s, &e);
+      build_state_for(g, g.states[i], &e);
     }
   }
 }
@@ -172,7 +172,7 @@ sort_Gotos(Grammar *g) {
 private void
 build_LR_sets(Grammar *g) {
   State *s = new_state();
-  insert_item(s, g.productions.v[0].rules.v[0].elems.v[0]);
+  insert_item(s, g.productions[0].rules[0].elems[0]);
   build_closure(g, s);
   build_states_for_each_production(g);
   build_new_states(g);
@@ -306,12 +306,12 @@ private void
 build_right_epsilon_hints(Grammar *g) {
   foreach (s; g.states) {
       foreach (e; s.items) {
-          Rule *r = e.rule;
           if (e.kind != ElemKind.ELEM_END) {
+              Rule *r = e.rule;
               bool next = false;
               for (int z = e.index; z < r.elems.n; z++) {
-                  if ((r.elems.v[z].kind != ElemKind.ELEM_NTERM ||
-                              !r.elems.v[z].e.nterm.nullable))
+                  if ((r.elems[z].kind != ElemKind.ELEM_NTERM ||
+                              !r.elems[z].e.nterm.nullable))
                   {
                       next = true;
                       break;
@@ -321,7 +321,7 @@ build_right_epsilon_hints(Grammar *g) {
               {
                   State *ss = s;
                   for (int z = e.index; z < r.elems.n; z++)
-                      ss = goto_State(ss, r.elems.v[z]);
+                      ss = goto_State(ss, r.elems[z]);
                   if (ss && r.elems.n)
                       vec_add(&s.right_epsilon_hints, 
                               new_Hint(r.elems.n - e.index - 1, ss, r));
@@ -341,15 +341,15 @@ build_error_recovery(Grammar *g) {
         foreach (i; s.items) {
             Rule *r = i.rule;
             if (r.elems.n > 1 &&
-                    r.elems.v[r.elems.n - 1].kind == ElemKind.ELEM_TERM &&
-                    r.elems.v[r.elems.n - 1].e.term.kind == TermKind.TERM_STRING)
+                    r.elems[r.elems.n - 1].kind == ElemKind.ELEM_TERM &&
+                    r.elems[r.elems.n - 1].e.term.kind == TermKind.TERM_STRING)
             {
                 int depth = i.index;
-                Elem *e = r.elems.v[r.elems.n - 1];
+                Elem *e = r.elems[r.elems.n - 1];
                 bool done = false;
                 foreach (erh; s.error_recovery_hints) {
                     Rule *rr = erh.rule;
-                    Elem *ee = rr.elems.v[rr.elems.n - 1];
+                    Elem *ee = rr.elems[rr.elems.n - 1];
                     if (e.e.term.string_len == ee.e.term.string_len &&
                             !strcmp(e.e.term.string_, ee.e.term.string_)) 
                     {

@@ -111,8 +111,8 @@ private void
 nfa_closure(DFAState *x) {
     int j, k;
 
-    foreach (i; x.states)
-        foreach (j; i.epsilon) {
+    for (int i = 0; i < x.states.length; ++i) // x.states may change
+        foreach (j; x.states[i].epsilon) {
             foreach (k; x.states)
                 if (j == k)
                     goto Lbreak;
@@ -167,10 +167,10 @@ nfa_to_scanner(NFAState *n, Scanner *s) {
   vec_add(&x.states, n);
   nfa_closure(x);
   vec_add(&alldfas, x);
-  foreach (x; alldfas) {
+  for (int i = 0; i < alldfas.length; i++) { // alldfas may change while iterating
       for (int i_char = 0; i_char < 256; i_char++) {
           y = null;
-          foreach (i_state; x.states) {
+          foreach (i_state; alldfas[i].states) {
               foreach (i; i_state.chars[i_char]) {
                   if (!y)
                       y = new_DFAState();
@@ -188,7 +188,7 @@ nfa_to_scanner(NFAState *n, Scanner *s) {
                   }
               vec_add(&alldfas, y);
 Lnext:
-              x.chars[i_char] = y;
+              alldfas[i].chars[i_char] = y;
           }
       }
   }
@@ -301,7 +301,7 @@ Lsetdone:
 }
 
 private void
-action_diff(VecAction *a, VecAction *b, VecAction *c) {
+action_diff(ref VecAction a, ref VecAction b, ref VecAction c) {
   int bb = 0, cc = 0;
   while (1) {
     if (bb >= b.n)
@@ -309,17 +309,17 @@ action_diff(VecAction *a, VecAction *b, VecAction *c) {
   Lagainc:
     if (cc >= c.n) {
       while (bb < b.n)
-	vec_add(a, b.v[bb++]);
+	vec_add(&a, b[bb++]);
       break;
     }
   Lagainb:
-    if (b.v[bb].index == c.v[cc].index) {
+    if (b[bb].index == c[cc].index) {
       bb++;
       cc++;
       continue;
     }
-    if (b.v[bb].index < c.v[cc].index) {
-      vec_add(a, b.v[bb++]);
+    if (b[bb].index < c[cc].index) {
+      vec_add(&a, b[bb++]);
       if (bb >= b.n)
 	break;
       goto Lagainb;
@@ -330,7 +330,7 @@ action_diff(VecAction *a, VecAction *b, VecAction *c) {
 }
 
 private void
-action_intersect(VecAction *a, VecAction *b, VecAction *c) {
+action_intersect(ref VecAction a, ref VecAction b, ref VecAction c) {
   int bb = 0, cc = 0;
   while (1) {
     if (bb >= b.n)
@@ -340,7 +340,7 @@ action_intersect(VecAction *a, VecAction *b, VecAction *c) {
       break;
   Lagainb:
     if (b.v[bb].index == c.v[cc].index) {
-      vec_add(a, b.v[bb++]);
+      vec_add(&a, b.v[bb++]);
       cc++;
       continue;
     }
@@ -444,9 +444,9 @@ build_transitions(LexState *ls, Scanner *s) {
     trans = new ScanStateTransition();
       }
       if (ss.chars[j]) {
-	action_diff(&trans.live_diff, &ss.live, &ss.chars[j].live);
-	action_intersect(&trans.accepts_diff, &ss.accepts, 
-			 &trans.live_diff);
+	action_diff(trans.live_diff, ss.live, ss.chars[j].live);
+	action_intersect(trans.accepts_diff, ss.accepts, 
+			 trans.live_diff);
       }
       if ((x = cast(ScanStateTransition*)set_add_fn(&s.transitions, trans, &trans_hash_fns)) == trans)
 	trans = null;
@@ -473,11 +473,10 @@ compute_transitions(LexState *ls, Scanner *s) {
 
 private void
 build_state_scanner(Grammar *g, LexState *ls, State *s) {
-  NFAState *n, nn, nnn;
-  uint8 *c; 
+  NFAState *nn, nnn;
 
   bool one = false;
-  n = new_NFAState(ls);
+  NFAState *n = new_NFAState(ls);
   /* first strings since they can be trivially combined as a tree */
   foreach (a; s.shift_actions) {
     if (a.kind == ActionKind.ACTION_ACCEPT) {
@@ -491,7 +490,7 @@ build_state_scanner(Grammar *g, LexState *ls, State *s) {
       one = true;
       nn = n;
       if (!a.term.ignore_case) {
-	for (c = cast(uint8*)a.term.string_; *c; c++) {
+	for (uint8* c = cast(uint8*)a.term.string_; *c; c++) {
 	  if (!nn.chars[*c].n) 
 	    vec_add(&nn.chars[*c], (nnn = new_NFAState(ls)));
 	  else
@@ -499,7 +498,7 @@ build_state_scanner(Grammar *g, LexState *ls, State *s) {
 	  nn = nnn;
 	}
       } else { /* use new states */
-	for (c = cast(uint8*)a.term.string_; *c; c++) {
+	for (uint8*c = cast(uint8*)a.term.string_; *c; c++) {
       nnn = new_NFAState(ls);
 	  if (isalpha(*c)) {
 	    vec_add(&nn.chars[toupper(*c)], nnn);
@@ -521,7 +520,8 @@ build_state_scanner(Grammar *g, LexState *ls, State *s) {
       trailing_context.index = g.action_count++;
       one = true;
       uint8* reg = cast(uint8*)a.term.string_;
-      vec_add(&n.epsilon, (nnn = new_NFAState(ls)));
+      nnn = new_NFAState(ls);
+      vec_add(&n.epsilon, nnn);
       nn = new_NFAState(ls);
       ls.ignore_case = a.term.ignore_case;
       if (build_regex_nfa(ls, &reg, nnn, nn, trailing_context)) {

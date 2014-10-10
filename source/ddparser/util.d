@@ -8,6 +8,7 @@ import std.ascii;
 import std.string;
 import std.stdio;
 import std.json;
+import std.traits;
 import ddparser.serialize;
 import core.vararg;
 
@@ -83,7 +84,7 @@ struct Vec(T)
         return v[index];
     }
 
-    void opOpAssign(string s)(T v) if (s == "~=")
+    void opOpAssign(string s: "~")(T v)
     {
         add(v);
     }
@@ -154,13 +155,19 @@ struct Vec(T)
 unittest
 {
     Vec!int v;
+    v ~= 5;
+    assert(v.length == 1);
+    v ~= 6;
+    assert(v.length == 2);
+    assert(v[0] == 5);
+    assert(v[1] == 6);
 }
 
 
 alias AbstractVec = Vec!(void*);
 
 
-void vec_add(T, U)(T _v, U _i)
+void vec_add(T, U)(T _v, U _i) if (isPointer!T)
 {
     _v.add(_i);
 }
@@ -201,7 +208,6 @@ struct Stack(_x)
         end += n * 2;
         *cur++ = elem;
     }
-
 }
 
 alias AbstractStack = Stack!(void*);
