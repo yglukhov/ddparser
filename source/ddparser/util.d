@@ -42,6 +42,7 @@ struct Vec(T)
     uint i;
     T *v;
     T e[INTEGRAL_VEC_SIZE];
+    uint isIterating;
 
     void clear()
     {
@@ -56,6 +57,7 @@ struct Vec(T)
 
     void add(T _i)
     {
+        assert(isIterating == 0);
         if (!v) {
             v = e.ptr;
             e[n] = _i;
@@ -91,28 +93,33 @@ struct Vec(T)
 
     int opApply(int delegate(ref T) operations)
     {
+        isIterating++;
         int res = 0;
         for(int i = 0; i < n; ++i)
         {
             res = operations(v[i]);
             if (res) break;
         }
+        isIterating--;
         return res;
     }
 
     int opApplyReverse(scope int delegate(ref T) operations)
     {
+        isIterating++;
         int res = 0;
         for(int i = n - 1; i >= 0; --i)
         {
             res = operations(v[i]);
             if (res) break;
         }
+        isIterating--;
         return res;
     }
 
 
     void vec_add_internal(T elem) {
+        assert(isIterating == 0);
         if (!n) {
             v = e.ptr;
         } else if (v == e.ptr) {

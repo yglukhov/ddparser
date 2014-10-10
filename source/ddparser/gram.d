@@ -911,16 +911,16 @@ compute_nullable(Grammar *g) {
     /* transitive closure */
     while (changed) {
         changed = false;
-        for (int i = 0; i < g.productions.n; i++) {
-            if (!g.productions.v[i].nullable)
-                for (int j = 0; j < g.productions.v[i].rules.n; j++) {
-                    for (int k = 0; k < g.productions.v[i].rules.v[j].elems.n; k++) {
-                        Elem *e = g.productions.v[i].rules.v[j].elems.v[k];
+        foreach (p; g.productions) {
+            if (!p.nullable)
+                for (int j = 0; j < p.rules.n; j++) {
+                    for (int k = 0; k < p.rules.v[j].elems.n; k++) {
+                        Elem *e = p.rules.v[j].elems.v[k];
                         if (e.kind != ElemKind.ELEM_NTERM || !e.e.nterm.nullable) 
                             goto Lnot_nullable;
                     }
                     changed = true;
-                    g.productions.v[i].nullable = g.productions.v[i].rules.v[j];
+                    p.nullable = p.rules.v[j];
                     break;
                 }
 Lnot_nullable:;
