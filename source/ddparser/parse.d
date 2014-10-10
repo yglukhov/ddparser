@@ -580,7 +580,7 @@ add_Reduction(Parser *p, ZNode *z, SNode *sn, D_Reduction *reduction) {
   {
     Reduction *r = p.free_reductions;
     if (!r)
-      r = cast(Reduction*)MALLOC((*r).sizeof);
+      r = new Reduction();
     else
       p.free_reductions = r.next;
     r.znode = z;
