@@ -209,7 +209,7 @@ print_paren(Parser *pp, PNode *p) {
       if (p.children.n > 1)
         logf("(");
       for (i = 0; i < p.children.n; i++)
-        print_paren(pp, p.children.v[i]);
+        print_paren(pp, p.children[i]);
       if (p.children.n > 1)
         logf(")");
     } else if (p.parse_node.start_loc.s != p.parse_node.end_skip) {
@@ -231,7 +231,7 @@ xprint_paren(Parser *pp, PNode *p) {
     if (p.children.n) {
       logf("(");
       for (i = 0; i < p.children.n; i++)
-        xprint_paren(pp, p.children.v[i]);
+        xprint_paren(pp, p.children[i]);
       logf(")");
     } else if (p.parse_node.start_loc.s != p.parse_node.end_skip) {
       logf(" ");
@@ -261,7 +261,7 @@ d_get_child(D_ParseNode *apn, int child) {
   PNode *pn = D_ParseNode_to_PNode(apn);
   if (child < 0 || child >= pn.children.n)
     return null;
-  return &pn.children.v[child].parse_node;
+  return &pn.children[child].parse_node;
 }
 
 int
@@ -280,7 +280,7 @@ d_find_in_tree(D_ParseNode *apn, int symbol) {
     return apn;
   for (i = 0; i < pn.children.n; i++)
   {
-    res = d_find_in_tree(&pn.children.v[i].parse_node, symbol);
+    res = d_find_in_tree(&pn.children[i].parse_node, symbol);
     if (res)
       return res;
   }
@@ -739,12 +739,12 @@ check_path_priorities_internal(ref VecZNode path) {
   if (path.length == 0) return 0;
 
   int i = 0;
-  PNode *pn0 = path.v[i].pn;
+  PNode *pn0 = path[i].pn;
   if (!pn0.op_assoc) { /* deal with top expression directly */
     i = 1;
     if (path.n < i + 1)
       return 0;
-    PNode *pn1 = path.v[i].pn;
+    PNode *pn1 = path[i].pn;
     if (!pn1.op_assoc)
       return 0;
     if (pn0.assoc) {
@@ -755,9 +755,9 @@ check_path_priorities_internal(ref VecZNode path) {
     pn0 = pn1;
   }
   if (path.n > i + 1) { /* entirely in the path */
-    PNode *pn1 = path.v[i + 1].pn;
+    PNode *pn1 = path[i + 1].pn;
     if (path.n > i + 2)
-      return check_assoc_priority(pn0, pn1, path.v[i + 2].pn);
+      return check_assoc_priority(pn0, pn1, path[i + 2].pn);
     else { /* one level from the stack beyond the path */
       foreach (k; path[i + 1].sns)
         foreach (zz; k.zns) {
@@ -1098,7 +1098,7 @@ make_PNode(Parser *p, uint hash, int symbol, d_loc_t *start_loc, char *e, PNode 
       dummy.action_index = sh.action_index;
       new_pn.reduction = &dummy;
       if (sh.speculative_code(
-        new_pn, cast(void**)&new_pn.children.v[0], new_pn.children.n,
+        new_pn, cast(void**)new_pn.children.v, new_pn.children.n,
         cast(int)&(cast(PNode*)(null)).parse_node, p))
       {
         free_PNode(p, new_pn);
@@ -1469,35 +1469,35 @@ shift_all(Parser *p, const char *pos) {
 private VecZNode path1; /* static first path for speed */
 
 private VecZNode *
-new_VecZNode(VecVecZNode *paths, int n, int parent) {
+new_VecZNode(ref VecVecZNode paths, int n, int parent) {
   int i;
   VecZNode *pv;
 
   if (!paths.n)
     pv = &path1;
   else
-    pv = cast(VecZNode*)MALLOC((*pv).sizeof);
+    pv = new VecZNode();
   vec_clear(pv);
   if (parent >= 0)
     for (i = 0; i < n; i++)
-      vec_add(pv,  paths.v[parent].v[i]);
+      vec_add(pv,  paths[parent].v[i]);
   return pv;
 }
 
 private void
-build_paths_internal(ZNode *z, VecVecZNode *paths, int parent,
+build_paths_internal(ZNode *z, ref VecVecZNode paths, int parent,
                      int n, int n_to_go)
 {
   int j, k, l;
 
-  vec_add(paths.v[parent], z);
+  vec_add(paths[parent], z);
   if (n_to_go <= 1)
     return;
   for (k = 0; k < z.sns.n; k++)
     for (j = 0, l = 0; j < z.sns[k].zns.n; j++) {
       if (z.sns[k].zns[j]) {
         if (k + l) {
-          vec_add(paths, new_VecZNode(paths, n - (n_to_go - 1), parent));
+          vec_add(&paths, new_VecZNode(paths, n - (n_to_go - 1), parent));
           parent = paths.n - 1;
         }
         build_paths_internal(z.sns[k].zns[j], paths, parent,
@@ -1508,10 +1508,10 @@ build_paths_internal(ZNode *z, VecVecZNode *paths, int parent,
 }
 
 private void
-build_paths(ZNode *z, VecVecZNode *paths, int nchildren_to_go) {
+build_paths(ZNode *z, ref VecVecZNode paths, int nchildren_to_go) {
   if (!nchildren_to_go)
     return;
-  vec_add(paths, new_VecZNode(paths, 0, -1));
+  vec_add(&paths, new_VecZNode(paths, 0, -1));
   build_paths_internal(z, paths, 0, nchildren_to_go, nchildren_to_go);
 }
 
@@ -1530,11 +1530,11 @@ reduce_one(Parser *p, Reduction *r) {
     debug(trace) logf("reduce %d %X %d\n", r.snode.stateIndex, sn, n);
     VecVecZNode paths;
     vec_clear(&paths);
-    build_paths(r.znode, &paths, n);
+    build_paths(r.znode, paths, n);
     foreach (path; paths) {
       if (r.new_snode) { /* prune paths by new right epsilon node */
         for (j = 0; j < path.v[r.new_depth].sns.n; j++)
-          if (path.v[r.new_depth].sns.v[j] == r.new_snode)
+          if (path.v[r.new_depth].sns[j] == r.new_snode)
             break;
         if (j >= path.v[r.new_depth].sns.n)
           continue;
@@ -2000,7 +2000,7 @@ private void
 pass_call(Parser *p, D_Pass *pp, PNode *pn) {
   if (PASS_CODE_FOUND(pp, pn))
     pn.reduction.pass_code[pp.index](
-      pn, cast(void**)&pn.children.v[0], pn.children.n,
+      pn, cast(void**)pn.children.v, pn.children.n,
       cast(int)&(cast(PNode*)(null)).parse_node, p);
 }
 
@@ -2297,7 +2297,7 @@ handle_top_level_ambiguities(Parser *p, SNode *sn) {
       }
     }
   }
-  sn.zns.v[0] = z;
+  sn.zns[0] = z;
   sn.zns.n = 1;
   sn.zns.i = 0;
   return pn;
@@ -2328,7 +2328,7 @@ dparse(D_Parser *p, char *buf, int buf_len) {
         if (sn.zns.n != 1)
             pn = handle_top_level_ambiguities(p, sn);
         else
-            pn = sn.zns.v[0].pn;
+            pn = sn.zns[0].pn;
         pn = commit_tree(p, pn);
 
         if (d_verbose_level) {

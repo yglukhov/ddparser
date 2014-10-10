@@ -453,7 +453,6 @@ private:
     {
         if (d.user)
         {
-            GC.removeRoot(cast(void*)d.user);
         }
     }
 
@@ -509,7 +508,6 @@ private:
                 term.identifier = symbolName;
                 term.value = value;
                 node.user = cast(void*)term;
-                GC.addRoot(cast(void*)term);
                 output ~= term;
             }
             else if (childSym.kind == D_SymbolKind.D_SYMBOL_INTERNAL || childSym.kind == D_SymbolKind.D_SYMBOL_EBNF)
@@ -569,7 +567,6 @@ private:
             throw e;
         }
         newNode.user = cast(void*)context.result;
-        if (context.result) GC.addRoot(cast(void*)context.result);
     }
 
     static string symbolNameForSymbol(const D_Symbol* s) @trusted nothrow pure
