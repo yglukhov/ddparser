@@ -1810,13 +1810,13 @@ commit_tree(Parser *p, PNode *pn) {
   internal = is_symbol_internal_or_EBNF(p, pn);
   fixup = !p.dont_fixup_internal_productions && internal;
   for (i = 0; i < pn.children.n; i++) {
-    PNode *tpn = commit_tree(p, pn.children.v[i]);
-    if (tpn != pn.children.v[i]){
-      pn.children.v[i] = tpn;
+    PNode *tpn = commit_tree(p, pn.children[i]);
+    if (tpn != pn.children[i]){
+      pn.children[i] = tpn;
     }
     if (fixup &&
-        (fixup_ebnf ? is_symbol_internal_or_EBNF(p, pn.children.v[i]) :
-         is_symbol_internal(p, pn.children.v[i])))
+        (fixup_ebnf ? is_symbol_internal_or_EBNF(p, pn.children[i]) :
+         is_symbol_internal(p, pn.children[i])))
     {
       fixup_internal_symbol(p, pn, i);
       i -= 1;
@@ -1827,7 +1827,7 @@ commit_tree(Parser *p, PNode *pn) {
     debug(trace) logf("commit %X (%s)\n", pn, p.t.symbols[pn.parse_node.symbol].name);
   if (pn.reduction && pn.reduction.final_code)
     pn.reduction.final_code(
-      pn, cast(void**)&pn.children.v[0], pn.children.n,
+      pn, cast(void**)pn.children.v, pn.children.n,
       cast(int)&(cast(PNode*)(null)).parse_node, p);
   if (pn.evaluated) {
     if (!p.save_parse_tree && !internal)
@@ -1842,16 +1842,16 @@ commit_stack(Parser *p, SNode *sn) {
 
   if (sn.zns.n != 1)
     return -1;
-  if (sn.zns.v[0].sns.n > 1)
+  if (sn.zns[0].sns.n > 1)
     return -2;
-  if (is_unreduced_epsilon_PNode(sn.zns.v[0].pn)) /* wait till reduced */
+  if (is_unreduced_epsilon_PNode(sn.zns[0].pn)) /* wait till reduced */
     return -3;
-  if (sn.zns.v[0].sns.n)
-    if ((res = commit_stack(p, sn.zns.v[0].sns.v[0])) < 0)
+  if (sn.zns[0].sns.n)
+    if ((res = commit_stack(p, sn.zns[0].sns[0])) < 0)
       return res;
-  PNode *tpn = commit_tree(p, sn.zns.v[0].pn);
-  if (tpn != sn.zns.v[0].pn){
-      sn.zns.v[0].pn = tpn;
+  PNode *tpn = commit_tree(p, sn.zns[0].pn);
+  if (tpn != sn.zns[0].pn){
+      sn.zns[0].pn = tpn;
   }
   return res;
 }
@@ -1877,9 +1877,9 @@ syntax_error_report_fn(D_Parser *p) {
   char *_fn = d_dup_pathname_str(p.loc.pathname);
   const(char)[] fn = _fn[0 .. strlen(_fn)];
   const(char)[] after;
-  ZNode *z = p.snode_hash.last_all ? p.snode_hash.last_all.zns.v[0] : null;
+  ZNode *z = p.snode_hash.last_all ? p.snode_hash.last_all.zns[0] : null;
   while (z && z.pn.parse_node.start_loc.s == z.pn.parse_node.end)
-    z = (z.sns.v && z.sns.v[0].zns.v) ? z.sns.v[0].zns.v[0] : null;
+    z = (z.sns.v && z.sns[0].zns.v) ? z.sns[0].zns[0] : null;
   if (z && z.pn.parse_node.start_loc.s != z.pn.parse_node.end)
     after = z.pn.parse_node.start_loc.s[0 .. z.pn.parse_node.end - z.pn.parse_node.start_loc.s];
   if (after)
@@ -2011,7 +2011,7 @@ pass_preorder(Parser *p, D_Pass *pp, PNode *pn) {
   if ((pp.kind & D_PASS_FOR_ALL) ||
       ((pp.kind & D_PASS_FOR_UNDEFINED) && !found))
     for (i = 0; i < pn.children.n; i++)
-      pass_preorder(p, pp, pn.children.v[i]);
+      pass_preorder(p, pp, pn.children[i]);
 }
 
 private void
