@@ -100,7 +100,7 @@ struct Vec(T)
         return res;
     }
 
-    int opApplyReverse(int delegate(ref T) operations)
+    int opApplyReverse(scope int delegate(ref T) operations)
     {
         int res = 0;
         for(int i = n - 1; i >= 0; --i)

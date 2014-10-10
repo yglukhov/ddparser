@@ -1229,9 +1229,7 @@ convert_regex_production_one(Grammar *g, Production *p) {
   int k, l;
   Production *pp;
   Rule *r, rr;
-  Elem *e;
-  char *buf = null, b;
-  const(char)* s;
+  const(char)[] s;
   int buf_len = 0;
 
   if (p.regex_term) /* already done */
@@ -1268,15 +1266,17 @@ convert_regex_production_one(Grammar *g, Production *p) {
       }
     }
   }
+  char *buf = null, b;
   b = buf = cast(char*)MALLOC(buf_len + 1);
   Term *t = new_term();
   t.kind = TermKind.TERM_REGEX;
-  t.string_ = buf;
+  //t.string_ = buf;
   t.index = g.terminals.n;
   t.regex_production = p;
   vec_add(&g.terminals, t);
   p.regex_term = t;
   p.regex_term.term_name = p.name;
+  Elem *e;
   if (circular) { /* attempt to match to regex operators */
     if (p.rules.n != 2)
       Lfail: d_fail("unable to resolve circular regex production: '%s'", p.name);
@@ -1294,16 +1294,17 @@ convert_regex_production_one(Grammar *g, Production *p) {
       t = e.kind == ElemKind.ELEM_TERM ? e.e.term : e.e.nterm.regex_term;
       *b++ = '('; 
       if (t.kind == TermKind.TERM_STRING)
-	s = escape_string_for_regex(t.string_[0 .. strlen(t.string_)]).toStringz();
+	s = escape_string_for_regex(t.string_[0 .. strlen(t.string_)]);
       else
-	s = t.string_;
-      memcpy(b, s, strlen(s)); b += strlen(s);
+	s = t.string_[0 .. strlen(t.string_)];
+      memcpy(b, s.ptr, s.length); b += s.length;
       *b++ = ')'; 
       if (l == 2) 
 	*b++ = '*'; 
       else
 	*b++ = '+'; 
       *b = 0;
+      p.regex_term.string_ = buf;
       p.regex_term.string_len = cast(uint)strlen(p.regex_term.string_);
     } else
       goto Lfail;
@@ -1317,10 +1318,10 @@ convert_regex_production_one(Grammar *g, Production *p) {
       foreach (e; r.elems) {
 	t = e.kind == ElemKind.ELEM_TERM ? e.e.term : e.e.nterm.regex_term;
 	if (t.kind == TermKind.TERM_STRING)
-	  s = escape_string_for_regex(t.string_[0 .. strlen(t.string_)]).toStringz();
+	  s = escape_string_for_regex(t.string_[0 .. strlen(t.string_)]);
 	else
-	  s = t.string_;
-	memcpy(b, s, strlen(s)); b += strlen(s);
+	  s = t.string_[0 .. strlen(t.string_)];
+	memcpy(b, s.ptr, s.length); b += s.length;
       }
       if (r.elems.n > 1)
 	*b++ = ')';
@@ -1330,8 +1331,10 @@ convert_regex_production_one(Grammar *g, Production *p) {
     if (p.rules.n > 1)
       *b++ = ')';
     *b = 0;
+      p.regex_term.string_ = buf;
     p.regex_term.string_len = cast(int)strlen(p.regex_term.string_);
   }
+  assert(b - buf <= buf_len);
   p.in_regex = 0;
 }
 
