@@ -560,7 +560,7 @@ znode_depth(ZNode *z) @safe {
 }
 
 private Reduction *
-add_Reduction(Parser *p, ZNode *z, SNode *sn, D_Reduction *reduction) {
+add_Reduction(Parser *p, ZNode *z, SNode *sn, D_Reduction *reduction) @safe {
   Reduction **l = &p.reductions_todo;
   int d = znode_depth(z), dd;
   for (Reduction* x = p.reductions_todo; x; l = &x.next, x = x.next) {
@@ -645,7 +645,7 @@ reduce_actions(Parser *p, PNode *pn, D_Reduction *r) {
   }
   if (r.speculative_code)
     return r.speculative_code(
-      pn, cast(void**)&pn.children.v[0], cast(int)pn.children.n,
+      pn, cast(void**)pn.children.v, cast(int)pn.children.n,
       cast(int)&(cast(PNode*)null).parse_node, p);
   return 0;
 }
@@ -733,7 +733,7 @@ check_assoc_priority(PNode *pn0, PNode *pn1, PNode *pn2) {
 /* check to see if a path is legal with respect to
    the associativity and priority of its operators */
 private int
-check_path_priorities_internal(VecZNode *path) {
+check_path_priorities_internal(ref VecZNode path) {
   bool one = false;
 
   if (path.length == 0) return 0;
@@ -759,7 +759,7 @@ check_path_priorities_internal(VecZNode *path) {
     if (path.n > i + 2)
       return check_assoc_priority(pn0, pn1, path.v[i + 2].pn);
     else { /* one level from the stack beyond the path */
-      foreach (k; (*path)[i + 1].sns)
+      foreach (k; path[i + 1].sns)
         foreach (zz; k.zns) {
           one = true;
           if (zz && !check_assoc_priority(pn0, pn1, zz.pn))
@@ -769,7 +769,7 @@ check_path_priorities_internal(VecZNode *path) {
         return check_assoc_priority(pn0, pn1, null);
     }
   } else { /* two levels from the stack beyond the path */
-    foreach (k; (*path)[i].sns)
+    foreach (k; path[i].sns)
       foreach (zz; k.zns) {
         if (zz)
           foreach (kk; zz.sns)
@@ -784,10 +784,10 @@ check_path_priorities_internal(VecZNode *path) {
 }
 
 /* avoid cases without operator priorities */
-bool check_path_priorities(VecZNode * _p)
+bool check_path_priorities(ref VecZNode _p)
 {
     return (_p.n > 1                  && 
-   (_p.v[0].pn.op_assoc || _p.v[1].pn.op_assoc)       && 
+   (_p[0].pn.op_assoc || _p[1].pn.op_assoc)       && 
    check_path_priorities_internal(_p));
 }
 
@@ -1539,7 +1539,7 @@ reduce_one(Parser *p, Reduction *r) {
         if (j >= path.v[r.new_depth].sns.n)
           continue;
       }
-      if (check_path_priorities(path))
+      if (check_path_priorities(*path))
         continue;
       p.reductions++;
       PNode *last_pn = path.v[0].pn;
@@ -1557,7 +1557,7 @@ reduce_one(Parser *p, Reduction *r) {
 }
 
 private int
-VecSNode_equal(const ref VecSNode vsn1, const ref VecSNode vsn2) @nogc @safe nothrow pure {
+VecSNode_equal(const ref VecSNode vsn1, const ref VecSNode vsn2) @safe nothrow pure {
   if (vsn1.n != vsn2.n)
     return 0;
   for (int i = 0; i < vsn1.n; i++) {

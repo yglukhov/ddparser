@@ -9,8 +9,8 @@ import std.string;
 import std.stdio;
 import std.json;
 import std.traits;
+import std.conv;
 import ddparser.serialize;
-import core.vararg;
 
 enum INITIAL_SET_SIZE_INDEX =       2;
 
@@ -80,7 +80,7 @@ struct Vec(T)
 
     ref inout(T) opIndex(size_t index) inout @trusted
     {
-        assert(index < n);
+        assert(index < n, "Index out of bounds: " ~ index.to!string());
         return v[index];
     }
 
