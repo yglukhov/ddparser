@@ -882,17 +882,16 @@ lookup_token(Grammar *g, const(char)[] name) {
 
 private Term *
 unique_term(Grammar *g, Term *t) {
-  int i;
-  for (i = 0; i < g.terminals.n; i++) 
-    if (t.kind == g.terminals.v[i].kind && 
-	t.string_len == g.terminals.v[i].string_len &&
-	t.term_priority == g.terminals.v[i].term_priority &&
-	t.term_name == g.terminals.v[i].term_name &&
+  foreach (i; g.terminals) 
+    if (t.kind == i.kind && 
+	t.string_len == i.string_len &&
+	t.term_priority == i.term_priority &&
+	t.term_name == i.term_name &&
 	(!g.set_op_priority_from_rule ||
-	 (t.op_assoc == g.terminals.v[i].op_assoc &&
-	  t.op_priority == g.terminals.v[i].op_priority)) &&
-	!strncmp(t.string_, g.terminals.v[i].string_, t.string_len)) 
-      return g.terminals.v[i];
+	 (t.op_assoc == i.op_assoc &&
+	  t.op_priority == i.op_priority)) &&
+	!strncmp(t.string_, i.string_, t.string_len)) 
+      return i;
   return t;
 }
 
@@ -913,14 +912,13 @@ compute_nullable(Grammar *g) {
         changed = false;
         foreach (p; g.productions) {
             if (!p.nullable)
-                for (int j = 0; j < p.rules.n; j++) {
-                    for (int k = 0; k < p.rules.v[j].elems.n; k++) {
-                        Elem *e = p.rules.v[j].elems.v[k];
+                foreach (r; p.rules) {
+                    foreach (e; r.elems) {
                         if (e.kind != ElemKind.ELEM_NTERM || !e.e.nterm.nullable) 
                             goto Lnot_nullable;
                     }
                     changed = true;
-                    p.nullable = p.rules.v[j];
+                    p.nullable = r;
                     break;
                 }
 Lnot_nullable:;
@@ -942,7 +940,7 @@ resolve_grammar(Grammar *g) {
   
   g.rule_index = 0;
   for (int i = 0; i < g.productions.n; i++) {
-    p = g.productions.v[i];
+    p = g.productions[i];
     if (p != lookup_production(g, p.name))
       d_fail("duplicate production '%s'", p.name);
     p.index = i;
@@ -950,7 +948,7 @@ resolve_grammar(Grammar *g) {
       r.index = g.rule_index++;
       last_term = null;
       for (int k = 0; k < r.elems.n; k++) {
-	e = r.elems.v[k];
+	e = r.elems[k];
 	e.index = k;
 	if (e.kind == ElemKind.ELEM_UNRESOLVED) {
       pp = lookup_production(g, e.e.unresolved);
@@ -983,7 +981,7 @@ resolve_grammar(Grammar *g) {
     }
   }
   for (int i = 0; i < g.terminals.n; i++)
-    g.terminals.v[i].index = i;
+    g.terminals[i].index = i;
   compute_nullable(g);
 }
 
@@ -1048,7 +1046,7 @@ print_rule(Rule *r) {
 
   logf("%s: ", r.prod.name);
   for (k = 0; k < r.elems.n; k++)
-    print_elem(r.elems.v[k]);
+    print_elem(r.elems[k]);
   if (r.speculative_code.code)
     logf("SPECULATIVE_CODE\n%s\nEND CODE\n", r.speculative_code.code);
   if (r.final_code.code)
@@ -1065,16 +1063,16 @@ print_grammar(Grammar *g) {
     return;
   logf("PRODUCTIONS\n\n");
   for (i = 0; i < g.productions.n; i++) {
-    pp = g.productions.v[i];
+    pp = g.productions[i];
     logf("%s (%d)\n", pp.name, i);
     for (j = 0; j < pp.rules.n; j++) {
-      rr = pp.rules.v[j];
+      rr = pp.rules[j];
       if (!j) 
 	logf("\t: ");
       else
 	logf("\t| ");
       for (k = 0; k < rr.elems.n; k++)
-	print_elem(rr.elems.v[k]);
+	print_elem(rr.elems[k]);
       if (rr.op_priority)
 	logf("op %d ", rr.op_priority);
       if (rr.op_assoc)
@@ -1095,7 +1093,7 @@ print_grammar(Grammar *g) {
   logf("TERMINALS\n\n");
   for (i = 0; i < g.terminals.n; i++) {
     logf("\t");
-    print_term(g.terminals.v[i]);
+    print_term(g.terminals[i]);
     logf("(%d)\n", i + g.productions.n);
   }
   logf("\n");
@@ -1107,7 +1105,7 @@ print_item(Item *i) {
 
   logf("\t%s: ", i.rule.prod.name);
   for (j = 0; j < i.rule.elems.n; j++) {
-    Elem *e = i.rule.elems.v[j];
+    Elem *e = i.rule.elems[j];
     if (i == e) {
       logf(". ");
       end = 0;
@@ -1136,23 +1134,23 @@ print_state(State *s) {
   writefln("STATE %d (%d ITEMS)%s", s.index, s.items.n,
 	 s.accept ? " ACCEPT" : "");
   for (j = 0; j < s.items.n; j++)
-    print_item(s.items.v[j]);
+    print_item(s.items[j]);
   if (s.gotos.n)
     logf("  GOTO\n");
   for (j = 0; j < s.gotos.n; j++) {
     logf("\t");
-    print_elem(s.gotos.v[j].elem);
-    logf(" : %d\n", s.gotos.v[j].state.index);
+    print_elem(s.gotos[j].elem);
+    logf(" : %d\n", s.gotos[j].state.index);
   }
   logf("  ACTION\n");
   for (j = 0; j < s.reduce_actions.n; j++) {
-    Action *a = s.reduce_actions.v[j];
+    Action *a = s.reduce_actions[j];
     writefln("\t%s\t", action_types[a.kind]);
     print_rule(a.rule);
     logf("\n");
   }
   for (j = 0; j < s.shift_actions.n; j++) {
-    Action *a = s.shift_actions.v[j];
+    Action *a = s.shift_actions[j];
     writefln("\t%s\t", action_types[a.kind]);
     if (a.kind == ActionKind.ACTION_SHIFT) {
       print_term(a.term);
@@ -1172,7 +1170,7 @@ print_states(Grammar *g) {
   int i;
 
   for (i = 0; i < g.states.n; i++)
-    print_state(g.states.v[i]);
+    print_state(g.states[i]);
 }
 
 private bool
@@ -1190,25 +1188,25 @@ make_elems_for_productions(Grammar *g) {
   Rule *rr;
   Production *ppp;
 
-  Production *pp = g.productions.v[0];
+  Production *pp = g.productions[0];
   for (i = 0; i < g.productions.n; i++)
-    if (!g.productions.v[i].internal) {
+    if (!g.productions[i].internal) {
       if (g.states_for_all_nterms || 
 	  state_for_declaration(g, i)) {
 	/* try to find an existing elem */
 	for (j = 0; j < g.productions.n; j++)
-	  for (k = 0; k < g.productions.v[j].rules.n; k++) {
-	    rr = g.productions.v[j].rules.v[k];
+	  for (k = 0; k < g.productions[j].rules.n; k++) {
+	    rr = g.productions[j].rules[k];
 	    for (l = 0; l < rr.elems.n; l++)
-	      if (rr.elems.v[l].e.term_or_nterm == g.productions.v[i]) {
-		g.productions.v[i].elem = rr.elems.v[l];
+	      if (rr.elems[l].e.term_or_nterm == g.productions[i]) {
+		g.productions[i].elem = rr.elems[l];
 		break;
 	      }
 	  }
 	if (j >= g.productions.n) { /* not found */
-	  g.productions.v[i].elem = 
-	    new_elem_nterm(g.productions.v[i], new_rule(g, pp));
-	  g.productions.v[i].elem.rule.index = g.rule_index++; /* fake */
+	  g.productions[i].elem = 
+	    new_elem_nterm(g.productions[i], new_rule(g, pp));
+	  g.productions[i].elem.rule.index = g.rule_index++; /* fake */
 	}
       }
     }
@@ -1340,24 +1338,17 @@ convert_regex_production_one(Grammar *g, Production *p) {
 
 private void
 convert_regex_productions(Grammar *g) {
-  int i, j, k;
-  Production *p;
-  Rule *r;
-
-  for (i = 0; i < g.productions.n; i++) {
-    p = g.productions.v[i];
+  foreach (p; g.productions) {
     if (!p.regex)
       continue;
     convert_regex_production_one(g, p);
   }
-  for (i = 0; i < g.productions.n; i++) {
-    p = g.productions.v[i];
-    for (j = 0; j < p.rules.n; j++) {
-      r = p.rules.v[j];
-      for (k = 0; k < r.elems.n; k++) {
-	if (r.elems.v[k].kind == ElemKind.ELEM_NTERM && r.elems.v[k].e.nterm.regex_term) {
-	  r.elems.v[k].e.term = r.elems.v[k].e.nterm.regex_term;
-	  r.elems.v[k].kind = ElemKind.ELEM_TERM;
+  foreach (p; g.productions) {
+    foreach (r; p.rules) {
+      foreach (e; r.elems) {
+	if (e.kind == ElemKind.ELEM_NTERM && e.e.nterm.regex_term) {
+	  e.e.term = e.e.nterm.regex_term;
+	  e.kind = ElemKind.ELEM_TERM;
 	}
       }
     }
