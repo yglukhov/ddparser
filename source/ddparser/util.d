@@ -219,7 +219,7 @@ alias uint32 = uint;
 alias uint64 = ulong;
 
 
-void vec_clear(T)(T vec)
+void vec_clear(T)(T vec) if (isPointer!T)
 {
     vec.clear();
 }

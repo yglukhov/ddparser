@@ -1209,19 +1209,19 @@ add_PNode(Parser *p, int symbol, d_loc_t *start_loc, char *e, PNode *pn,
 */
 
 private void
-set_union_znode(VecZNode *v, VecZNode *vv) {
+set_union_znode(ref VecZNode v, VecZNode *vv) {
   foreach(z; *vv)
     if (z)
       set_add_znode(v, z);
 }
 
 private ZNode *
-set_find_znode(VecZNode *v, PNode *pn) {
+set_find_znode(ref VecZNode v, PNode *pn) {
   uint i, j, n = v.n, h;
   if (n <= INTEGRAL_VEC_SIZE) {
     for (i = 0; i < n; i++)
-      if (v.v[i].pn == pn)
-        return v.v[i];
+      if (v[i].pn == pn)
+        return v[i];
     return null;
   }
   h = (cast(uintptr_t)pn) % n;
@@ -1229,16 +1229,16 @@ set_find_znode(VecZNode *v, PNode *pn) {
        i < v.n && j < SET_MAX_SEQUENTIAL;
        i = ((i + 1) % n), j++)
   {
-    if (!v.v[i])
+    if (!v[i])
       return null;
-    else if (v.v[i].pn == pn)
-      return v.v[i];
+    else if (v[i].pn == pn)
+      return v[i];
   }
   return null;
 }
 
 private void
-set_add_znode_hash(VecZNode *v, ZNode *z) {
+set_add_znode_hash(ref VecZNode v, ZNode *z) {
   VecZNode vv;
   vec_clear(&vv);
   int i, j, n = v.n;
@@ -1248,8 +1248,8 @@ set_add_znode_hash(VecZNode *v, ZNode *z) {
          i < v.n && j < SET_MAX_SEQUENTIAL;
          i = ((i + 1) % n), j++)
     {
-      if (!v.v[i]) {
-        v.v[i] = z;
+      if (!v[i]) {
+        v[i] = z;
         return;
       }
     }
@@ -1271,19 +1271,19 @@ set_add_znode_hash(VecZNode *v, ZNode *z) {
 }
 
 private void
-set_add_znode(VecZNode *v, ZNode *z) {
+set_add_znode(ref VecZNode v, ZNode *z) {
   VecZNode vv;
   vec_clear(&vv);
   int i, n = v.n;
   if (n < INTEGRAL_VEC_SIZE) {
-    vec_add(v, z);
+    vec_add(&v, z);
     return;
   }
   if (n == INTEGRAL_VEC_SIZE) {
-    vv = *v;
-    vec_clear(v);
+    vv = v;
+    vec_clear(&v);
     for (i = 0; i < n; i++)
-      set_add_znode_hash(v, vv.v[i]);
+      set_add_znode_hash(v, vv[i]);
   }
   set_add_znode_hash(v, z);
 }
@@ -1312,9 +1312,9 @@ goto_PNode(Parser *p, d_loc_t *loc, PNode *pn, SNode *ps) {
   if (ps != new_ps && new_ps.depth < ps.depth + 1)
     new_ps.depth = ps.depth + 1;
   /* find/create ZNode */
-  ZNode *z = set_find_znode(&new_ps.zns, pn);
+  ZNode *z = set_find_znode(new_ps.zns, pn);
   if (!z) { /* not found */
-    set_add_znode(&new_ps.zns, (z = new_ZNode(p, pn)));
+    set_add_znode(new_ps.zns, (z = new_ZNode(p, pn)));
     foreach(r; state.reductions)
       if (r.nelements)
         add_Reduction(p, z, new_ps, r);
@@ -1333,7 +1333,7 @@ goto_PNode(Parser *p, d_loc_t *loc, PNode *pn, SNode *ps) {
       }
   }
   for (i = 0; i < z.sns.n; i++)
-    if (z.sns.v[i] == ps) break;
+    if (z.sns[i] == ps) break;
   if (i >= z.sns.n) { /* not found */
     vec_add(&z.sns, ps);
   }
@@ -1963,7 +1963,7 @@ error_recovery(Parser *p) {
     SNode *new_sn = new_SNode(p, best_sn.stateIndex, &best_loc, new_pn.initial_scope, new_pn.initial_globals);
     new_sn.last_pn = new_pn;
     ZNode *z = new_ZNode(p, new_pn);
-    set_add_znode(&new_sn.zns, z);
+    set_add_znode(new_sn.zns, z);
     vec_add(&z.sns, best_sn);
     Reduction *r = new Reduction();
     r.znode = z;
@@ -2058,7 +2058,7 @@ exhaustive_parse(Parser *p, int state) {
   tpn.parse_node.end = loc.s;
   PNode *pn = add_PNode(p, 0, &loc, loc.s, &tpn, null, null, null);
   sn.last_pn = pn;
-  set_add_znode(&sn.zns, new_ZNode(p, pn));
+  set_add_znode(sn.zns, new_ZNode(p, pn));
   while (1) {
     /* reduce all */
     while (p.reductions_todo) {
