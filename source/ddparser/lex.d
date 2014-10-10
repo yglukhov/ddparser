@@ -127,7 +127,7 @@ eq_dfa_state(DFAState *x, DFAState *y) {
   if (x.states.n != y.states.n)
     return false;
   for (int i = 0; i < x.states.n; i++)
-    if (x.states.v[i] != y.states.v[i])
+    if (x.states[i] != y.states[i])
       return false;
   return true;
 }
@@ -347,12 +347,12 @@ action_intersect(ref VecAction a, ref VecAction b, ref VecAction c) {
     if (cc >= c.n)
       break;
   Lagainb:
-    if (b.v[bb].index == c.v[cc].index) {
-      vec_add(&a, b.v[bb++]);
+    if (b[bb].index == c[cc].index) {
+      vec_add(&a, b[bb++]);
       cc++;
       continue;
     }
-    if (b.v[bb].index < c.v[cc].index) {
+    if (b[bb].index < c[cc].index) {
       bb++;
       if (bb >= b.n)
 	break;
@@ -412,10 +412,10 @@ trans_cmp_fn(ScanStateTransition *a, ScanStateTransition *b, hash_fns_t *fns) {
     return 1;
   if (!fns.data[0])
     for (i = 0; i < a.live_diff.n; i++)
-      if (a.live_diff.v[i] != b.live_diff.v[i])
+      if (a.live_diff[i] != b.live_diff[i])
 	return 1;
   for (i = 0; i < a.accepts_diff.n; i++)
-    if (a.accepts_diff.v[i] != b.accepts_diff.v[i])
+    if (a.accepts_diff[i] != b.accepts_diff[i])
       return 1;
   return 0;
 }
@@ -468,7 +468,7 @@ build_transitions(LexState *ls, Scanner *s) {
     FREE(trans);
   set_to_vec(&s.transitions);
   for (int i = 0; i < s.transitions.n; i++)
-    s.transitions.v[i].index = i;
+    s.transitions[i].index = i;
   ls.transitions += s.transitions.n;
 }
 
@@ -491,7 +491,7 @@ build_state_scanner(Grammar *g, LexState *ls, State *s) {
       if (!n.chars[0].n) 
 	vec_add(&n.chars[0], (nnn = new_NFAState(ls)));
       else
-	nnn = n.chars[0].v[0];
+	nnn = n.chars[0][0];
       vec_add(&nnn.accepts, a);
     } else if (a.kind == ActionKind.ACTION_SHIFT && a.term.kind == TermKind.TERM_STRING) {
       one = true;
@@ -501,7 +501,7 @@ build_state_scanner(Grammar *g, LexState *ls, State *s) {
 	  if (!nn.chars[*c].n) 
 	    vec_add(&nn.chars[*c], (nnn = new_NFAState(ls)));
 	  else
-	    nnn = nn.chars[*c].v[0];
+	    nnn = nn.chars[*c][0];
 	  nn = nnn;
 	}
       } else { /* use new states */
@@ -560,22 +560,22 @@ build_scanners(Grammar *g) {
 
   /* detect identical scanners */
   for (int i = 0; i < g.states.n; i++) {
-    State *s = g.states.v[i];
+    State *s = g.states[i];
     if (s.same_shifts)
       continue;
     for (int j = 0; j < i; j++) {
-      if (g.states.v[j].same_shifts)
+      if (g.states[j].same_shifts)
 	continue;
-      if (g.states.v[j].shift_actions.n != s.shift_actions.n)
+      if (g.states[j].shift_actions.n != s.shift_actions.n)
 	continue;
-      if (g.states.v[j].scan_kind != s.scan_kind)
+      if (g.states[j].scan_kind != s.scan_kind)
 	continue;
-      for (k = 0; k < g.states.v[j].shift_actions.n; k++)
-	if (s.shift_actions.v[k].term != 
-	    g.states.v[j].shift_actions.v[k].term)
+      for (k = 0; k < g.states[j].shift_actions.n; k++)
+	if (s.shift_actions[k].term != 
+	    g.states[j].shift_actions[k].term)
 	  break;
-      if (k >= g.states.v[j].shift_actions.n) {
-	s.same_shifts = g.states.v[j];
+      if (k >= g.states[j].shift_actions.n) {
+	s.same_shifts = g.states[j];
 	break;
       }
     }

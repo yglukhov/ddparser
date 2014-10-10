@@ -1480,7 +1480,7 @@ new_VecZNode(ref VecVecZNode paths, int n, int parent) {
   vec_clear(pv);
   if (parent >= 0)
     for (i = 0; i < n; i++)
-      vec_add(pv,  paths[parent].v[i]);
+      vec_add(pv, (*paths[parent])[i]);
   return pv;
 }
 
@@ -1533,17 +1533,17 @@ reduce_one(Parser *p, Reduction *r) {
     build_paths(r.znode, paths, n);
     foreach (path; paths) {
       if (r.new_snode) { /* prune paths by new right epsilon node */
-        for (j = 0; j < path.v[r.new_depth].sns.n; j++)
-          if (path.v[r.new_depth].sns[j] == r.new_snode)
+        for (j = 0; j < (*path)[r.new_depth].sns.n; j++)
+          if ((*path)[r.new_depth].sns[j] == r.new_snode)
             break;
-        if (j >= path.v[r.new_depth].sns.n)
+        if (j >= (*path)[r.new_depth].sns.n)
           continue;
       }
       if (check_path_priorities(*path))
         continue;
       p.reductions++;
-      PNode *last_pn = path.v[0].pn;
-      ZNode *first_z = path.v[n - 1];
+      PNode *last_pn = (*path)[0].pn;
+      ZNode *first_z = (*path)[n - 1];
       pn = add_PNode(p, r.reduction.symbol,
                      &first_z.pn.parse_node.start_loc,
                      sn.loc.s, last_pn, r.reduction, path, null);
