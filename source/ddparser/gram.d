@@ -383,7 +383,7 @@ alias D_Grammar = Grammar;
 /* for creating grammars */
 ref auto last_elem(Rule* _r)
 {
-    return (_r.elems.v[_r.elems.n-1]);
+    return (_r.elems[_r.elems.n-1]);
 }
 
 /*
@@ -710,10 +710,10 @@ D_Pass *
 find_pass(Grammar *g, char *start, char *end) {
   while (*start && isWhite(*start)) start++;
   auto l = end - start;
-  for (int i = 0; i < g.passes.n; i++)
-    if (l == g.passes.v[i].name_len &&
-	!strncmp(g.passes.v[i].name, start, l))
-      return g.passes.v[i];
+  foreach (p; g.passes)
+    if (l == p.name_len &&
+	!strncmp(p.name, start, l))
+      return p;
   return null;
 }
 
@@ -739,9 +739,9 @@ add_pass_code(Grammar *g, Rule *r, char *pass_start, char *pass_end,
   if (!p)
     d_fail("unknown pass '%s' line %d", dup_str(pass_start, pass_end), pass_line);
   while (r.pass_code.n <= p.index) vec_add(&r.pass_code, null);
-  r.pass_code.v[p.index] = new Code();
-  r.pass_code.v[p.index].code = dup_str(code_start, code_end);
-  r.pass_code.v[p.index].line = code_line;
+  r.pass_code[p.index] = new Code();
+  r.pass_code[p.index].code = dup_str(code_start, code_end);
+  r.pass_code[p.index].line = code_line;
 }
 
     
@@ -757,13 +757,13 @@ new_internal_production(Grammar *g, Production *p) {
       Production *tp = null, ttp;
       for (int i = 0; i < g.productions.n; i++) {
           if (found) {
-              ttp = g.productions.v[i];
-              g.productions.v[i] = tp;
+              ttp = g.productions[i];
+              g.productions[i] = tp;
               tp = ttp;
-          } else if (p == g.productions.v[i]) {
+          } else if (p == g.productions[i]) {
               found = true;
-              tp = g.productions.v[i+1];
-              g.productions.v[i+1] = pp;
+              tp = g.productions[i+1];
+              g.productions[i+1] = pp;
               i++;
           }
       }
@@ -778,7 +778,7 @@ conditional_EBNF(Grammar *g) {
   Rule *rr = new_rule(g, pp);
   vec_add(&rr.elems, last_elem(g.r));
   last_elem(g.r).rule = rr;
-  rr.elems.v[rr.elems.n - 1].rule = rr;
+  rr.elems[rr.elems.n - 1].rule = rr;
   vec_add(&pp.rules, rr);
   vec_add(&pp.rules, new_rule(g, pp));
   last_elem(g.r) = new_elem_nterm(pp, g.r);
@@ -858,11 +858,11 @@ initialize_productions(Grammar *g) {
 
 void
 finish_productions(Grammar *g) {
-  Production *pp = g.productions.v[0];
+  Production *pp = g.productions[0];
   Rule *rr = new_rule(g, pp);
   vec_add(&rr.elems, new_elem_nterm(null, rr));
   vec_add(&pp.rules, rr);
-  rr.elems.v[0].e.nterm = g.productions.v[1];
+  rr.elems[0].e.nterm = g.productions[1];
 }
 
 Production* lookup_production(Grammar* g, const(char)[] name)
@@ -1380,10 +1380,10 @@ build_eq(Grammar *g) {
   while (changed) {
     changed = 0;
     for (i = 0; i < g.states.n; i++) {
-      s = g.states.v[i];
+      s = g.states[i];
       e = &eq[s.index];
       for (j = i + 1; j < g.states.n; j++) {
-	ss = g.states.v[j];
+	ss = g.states[j];
 	ee = &eq[ss.index];
 	if (e.eq || ee.eq)
 	  continue;
@@ -1393,38 +1393,38 @@ build_eq(Grammar *g) {
 	if (s.gotos.n != ss.gotos.n)
 	  continue;
 	for (k = 0; k < s.gotos.n; k++) {
-	  if (elem_symbol(g, s.gotos.v[k].elem) != elem_symbol(g, ss.gotos.v[k].elem))
+	  if (elem_symbol(g, s.gotos[k].elem) != elem_symbol(g, ss.gotos[k].elem))
 	    goto Lcontinue;
-	  if (s.gotos.v[k].state != ss.gotos.v[k].state) {
-	    EqState *ge = &eq[s.gotos.v[k].state.index];
-	    EqState *gee = &eq[ss.gotos.v[k].state.index];
-	    if (ge.eq != ss.gotos.v[k].state && gee.eq != s.gotos.v[k].state)
+	  if (s.gotos[k].state != ss.gotos[k].state) {
+	    EqState *ge = &eq[s.gotos[k].state.index];
+	    EqState *gee = &eq[ss.gotos[k].state.index];
+	    if (ge.eq != ss.gotos[k].state && gee.eq != s.gotos[k].state)
 	      goto Lcontinue;
-	    if ((ee.diff_state && ee.diff_state != eq[ss.gotos.v[k].state.index].eq) ||
-		(e.diff_state && e.diff_state != eq[s.gotos.v[k].state.index].eq))
+	    if ((ee.diff_state && ee.diff_state != eq[ss.gotos[k].state.index].eq) ||
+		(e.diff_state && e.diff_state != eq[s.gotos[k].state.index].eq))
 	      goto Lcontinue;
 	    /* allow one different state */
-	    ee.diff_state = ss.gotos.v[k].state;
-	    e.diff_state = s.gotos.v[k].state;
+	    ee.diff_state = ss.gotos[k].state;
+	    e.diff_state = s.gotos[k].state;
 	  }
 	}
 	/* check reductions */
 	if (s.reduce_actions.n != ss.reduce_actions.n)
 	  continue;
 	for (k = 0; k < s.reduce_actions.n; k++) {
-	  if (s.reduce_actions.v[k].rule == ss.reduce_actions.v[k].rule)
+	  if (s.reduce_actions[k].rule == ss.reduce_actions[k].rule)
 	    continue;
-	  if (s.reduce_actions.v[k].rule.prod !=
-	      ss.reduce_actions.v[k].rule.prod)
+	  if (s.reduce_actions[k].rule.prod !=
+	      ss.reduce_actions[k].rule.prod)
 	    goto Lcontinue;
-	  if ((x = s.reduce_actions.v[k].rule.elems.n) !=
-	      (xx = ss.reduce_actions.v[k].rule.elems.n)) {
-	    if ((ee.diff_rule && ee.diff_rule != ss.reduce_actions.v[k].rule) ||
-		(e.diff_rule && e.diff_rule != s.reduce_actions.v[k].rule))
+	  if ((x = s.reduce_actions[k].rule.elems.n) !=
+	      (xx = ss.reduce_actions[k].rule.elems.n)) {
+	    if ((ee.diff_rule && ee.diff_rule != ss.reduce_actions[k].rule) ||
+		(e.diff_rule && e.diff_rule != s.reduce_actions[k].rule))
 	      goto Lcontinue;
 	    /* allow one different rule */
-	    ee.diff_rule = ss.reduce_actions.v[k].rule;
-	    e.diff_rule = s.reduce_actions.v[k].rule;
+	    ee.diff_rule = ss.reduce_actions[k].rule;
+	    e.diff_rule = s.reduce_actions[k].rule;
 	  }
 	}
 	ee.eq = s;	
@@ -1434,7 +1434,7 @@ build_eq(Grammar *g) {
     }
   }
   for (i = 0; i < g.states.n; i++) {
-    s = g.states.v[i];	
+    s = g.states[i];	
     e = &eq[s.index];
     if (e.eq) {
       if (d_verbose_level > 2) {
@@ -1456,7 +1456,7 @@ build_eq(Grammar *g) {
     }
   }
   for (i = 0; i < g.states.n; i++) {
-    s = g.states.v[i];
+    s = g.states[i];
     e = &eq[s.index];
     if (e.eq && e.diff_state) {
       if (eq[e.diff_state.index].diff_rule &&
@@ -1475,7 +1475,7 @@ build_eq(Grammar *g) {
     }
   }
   for (i = 0; i < g.states.n; i++) {
-    s = g.states.v[i];
+    s = g.states[i];
     if (s.reduces_to)
       if (d_verbose_level)
 	logf("reduces_to %d %d\n", s.index, s.reduces_to.index);
@@ -1605,7 +1605,6 @@ scanner_declaration(Declaration *d) {
 
 private void
 set_declaration_group(Production *p, Production *root, Declaration *d) {
-  int i, j;
   if (p.declaration_group[d.kind] == root)
     return;
   if (d.kind == DeclarationKind.DECLARE_TOKENIZE && p.declaration_group[d.kind]) {
@@ -1614,28 +1613,28 @@ set_declaration_group(Production *p, Production *root, Declaration *d) {
   }
   p.declaration_group[d.kind] = root;
   p.last_declaration[d.kind] = d;
-  for (i = 0; i < p.rules.n; i++) {
-    for (j = 0; j < p.rules.v[i].elems.n; j++)
-      if (p.rules.v[i].elems.v[j].kind == ElemKind.ELEM_NTERM)
-	set_declaration_group(p.rules.v[i].elems.v[j].e.nterm, root, d);
+  foreach (r; p.rules) {
+    foreach (e; r.elems)
+      if (e.kind == ElemKind.ELEM_NTERM)
+	set_declaration_group(e.e.nterm, root, d);
   }
 }
 
 private void
 propogate_declarations(Grammar *g) {
-  Production *p, start = g.productions.v[0];
+  Production *p, start = g.productions[0];
 
   /* global defaults */ 	 
    if (g.tokenizer) 	 
-     new_declaration(g, new_elem_nterm(g.productions.v[0], null), DeclarationKind.DECLARE_TOKENIZE); 	 
+     new_declaration(g, new_elem_nterm(g.productions[0], null), DeclarationKind.DECLARE_TOKENIZE); 	 
    if (g.longest_match) 	 
-     new_declaration(g, new_elem_nterm(g.productions.v[0], null), DeclarationKind.DECLARE_LONGEST_MATCH);
+     new_declaration(g, new_elem_nterm(g.productions[0], null), DeclarationKind.DECLARE_LONGEST_MATCH);
   /* resolve declarations */
    foreach (d; g.declarations) {
        Elem *e = d.elem;
        if (e.kind == ElemKind.ELEM_UNRESOLVED) {
            if (e.e.unresolved.length == 0)
-               p = g.productions.v[0];
+               p = g.productions[0];
            else
            {
                p = lookup_production(g, e.e.unresolved);
@@ -1689,12 +1688,11 @@ propogate_declarations(Grammar *g) {
 
 private void
 merge_shift_actions(State *to, State *from) {
-    int i, j;
-    for (i = 0; i < from.shift_actions.n; i++) {
-        for (j = 0; j < to.shift_actions.n; j++)
-            if (from.shift_actions.v[i].term == to.shift_actions.v[j].term)
+    foreach (f; from.shift_actions) {
+        foreach (t; to.shift_actions)
+            if (f.term == t.term)
                 goto Lnext;
-        vec_add(&to.shift_actions, from.shift_actions.v[i]);
+        vec_add(&to.shift_actions, f);
 Lnext:;
     }
 }
@@ -1740,20 +1738,14 @@ compute_declaration_states(Grammar *g, Production *p, Declaration *d) {
 
 private void
 map_declarations_to_states(Grammar *g) {
-  int i;
-  State *s;
-  
-  for (i = 0; i < g.states.n; i++) {
-    s = g.states.v[i];
+  foreach (s; g.states) {
     s.scan_kind = D_SCAN_RESERVED;
   }
   /* map groups to sets of states */
-  for (i = 0; i < g.declarations.n; i++)
-    if (scanner_declaration(g.declarations.v[i]))
-      compute_declaration_states(g, g.declarations.v[i].elem.e.nterm, 
-				 g.declarations.v[i]);
-  for (i = 0; i < g.states.n; i++) {
-    s = g.states.v[i];
+  foreach (d; g.declarations)
+    if (scanner_declaration(d))
+      compute_declaration_states(g, d.elem.e.nterm, d);
+  foreach (s; g.states) {
     if (s.scan_kind == D_SCAN_RESERVED)
       s.scan_kind = D_SCAN_DEFAULT; /* set the default */
   }
