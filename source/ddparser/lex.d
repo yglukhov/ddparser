@@ -198,12 +198,14 @@ Lnext:
 
 /* build a NFA for the regular expression */
 private int
-build_regex_nfa(LexState *ls, uint8 **areg, NFAState *pp, NFAState *nn, Action *trailing) {
-  uint8 c, pc;
-  uint8 *reg = *areg;
+build_regex_nfa(LexState *ls, const(uint8) **areg, NFAState *pp, NFAState *nn, Action *trailing) {
+  uint8 c;
+  const(uint8) *reg = *areg;
   NFAState *p = pp, s, x, n = nn;
-  int reversed, i, has_trailing = 0;
+  int i, has_trailing = 0;
   uint8 mark[256];
+
+  bool reversed = false;
 
   s = p;
   while ((c = *reg++) != 0) {
@@ -221,14 +223,14 @@ build_regex_nfa(LexState *ls, uint8 **areg, NFAState *pp, NFAState *nn, Action *
               vec_add(&pp.epsilon, (s = new_NFAState(ls)));
               break;
           case '[':
+              reversed = false;
               if (*reg == '^') {
                   reg++;
-                  reversed = 1;
-              } else
-                  reversed = 0;
-              memset(mark.ptr, 0, (mark).sizeof);
-              pc = ubyte.max;
-              while ({(c = *reg++); return c; }()) {
+                  reversed = true;
+              }
+              memset(mark.ptr, 0, mark.sizeof);
+              ubyte pc = ubyte.max;
+              while ((c = *reg++) != 0) {
                   switch(c) {
                       case ']':
                           goto Lsetdone;
@@ -421,7 +423,6 @@ static this()
         cast(cmp_fn_t)&trans_cmp_fn,
           [ null, null ]
     );
-
 }
 
 private void
@@ -519,7 +520,7 @@ build_state_scanner(Grammar *g, LexState *ls, State *s) {
       trailing_context.kind = ActionKind.ACTION_SHIFT_TRAILING;
       trailing_context.index = g.action_count++;
       one = true;
-      uint8* reg = cast(uint8*)a.term.string_;
+      const(uint8)* reg = cast(uint8*)a.term.string_;
       nnn = new_NFAState(ls);
       vec_add(&n.epsilon, nnn);
       nn = new_NFAState(ls);
