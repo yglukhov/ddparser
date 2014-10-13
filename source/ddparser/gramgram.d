@@ -768,7 +768,7 @@ g.r = new_rule(g, g.p);
 vec_add(&g.p.rules, g.r);
 // TRACE 109
 ///printf("// u1.p: %p\n// u1.r: %p\n", _c1.user.p, _c1.user.r);
-g.e = new_elem_nterm(g.p, var0x10fc9f300); g.p = var0x10fc9f500; g.r = var0x10fc9f300; vec_add(&g.r.elems, g.e);
+g.e = new_elem_nterm(g.p, var0x10fc9f300); g.p = var0x10fc9f500; g.r = var0x10fc9f300; g.r.elems ~= g.e;
 // u1.p: 0x10fc9f500
 // u1.r: 0x10fc9f300
 // new_elem: 0x10FCA3BE0
@@ -817,7 +817,7 @@ g.r = new_rule(g, g.p);
 vec_add(&g.p.rules, g.r);
 // TRACE 109
 ///printf("// u1.p: %p\n// u1.r: %p\n", _c1.user.p, _c1.user.r);
-g.e = new_elem_nterm(g.p, var0x10fca2600); g.p = var0x10fca2700; g.r = var0x10fca2600; vec_add(&g.r.elems, g.e);
+g.e = new_elem_nterm(g.p, var0x10fca2600); g.p = var0x10fca2700; g.r = var0x10fca2600; g.r.elems ~= g.e;
 // u1.p: 0x10fca2700
 // u1.r: 0x10fca2600
 // new_elem: 0x10FCA3580
@@ -885,7 +885,7 @@ star_EBNF(g);
 vec_add(&g.p.rules, g.r);
 // TRACE 109
 ///printf("// u1.p: %p\n// u1.r: %p\n", _c1.user.p, _c1.user.r);
-g.e = new_elem_nterm(g.p, var0x10fca5400); g.p = var0x10fca5500; g.r = var0x10fca5400; vec_add(&g.r.elems, g.e);
+g.e = new_elem_nterm(g.p, var0x10fca5400); g.p = var0x10fca5500; g.r = var0x10fca5400; g.r.elems ~= g.e;
 // u1.p: 0x10fca5500
 // u1.r: 0x10fca5400
 // new_elem: 0x10FCA7CE0
@@ -917,7 +917,7 @@ star_EBNF(g);
 vec_add(&g.p.rules, g.r);
 // TRACE 109
 ///printf("// u1.p: %p\n// u1.r: %p\n", _c1.user.p, _c1.user.r);
-g.e = new_elem_nterm(g.p, var0x10fca5900); g.p = var0x10fca5a00; g.r = var0x10fca5900; vec_add(&g.r.elems, g.e);
+g.e = new_elem_nterm(g.p, var0x10fca5900); g.p = var0x10fca5a00; g.r = var0x10fca5900; g.r.elems ~= g.e;
 // u1.p: 0x10fca5a00
 // u1.r: 0x10fca5900
 // new_elem: 0x10FCA7900
@@ -1120,13 +1120,13 @@ g.r = new_rule(g, g.p);
       g.e = new_elem_nterm(g.p, u1.r);
       g.p = u1.p;
       g.r = u1.r;
-      vec_add(&g.r.elems, g.e);
+      g.r.elems ~= g.e;
     
   return 0;
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "element"); // : 0x10FCB4500
@@ -1159,7 +1159,7 @@ g.r = new_rule(g, g.p);
       r.speculative_code.code = dup_code(n0.start_loc.s + 1, n0.end - 1);
       r.speculative_code.line = n0.start_loc.line;
       g.e = new_elem_nterm(p, g.r);
-      vec_add(&g.r.elems, g.e);
+      g.r.elems ~= g.e;
     
   return 0;
 };
@@ -1186,7 +1186,7 @@ g.r = new_rule(g, g.p);
       r.final_code.code = dup_code(n0.start_loc.s + 1, n0.end - 1);
       r.final_code.line = n0.start_loc.line;
       g.e = new_elem_nterm(p, g.r);
-      vec_add(&g.r.elems, g.e);
+      g.r.elems ~= g.e;
   
   return 0;
 };
@@ -1283,7 +1283,7 @@ g.r = new_rule(g, g.p);
 vec_add(&g.p.rules, g.r);
 // TRACE 109
 ///printf("// u1.p: %p\n// u1.r: %p\n", _c1.user.p, _c1.user.r);
-g.e = new_elem_nterm(g.p, var0x10fccb700); g.p = var0x10fcc8200; g.r = var0x10fccb700; vec_add(&g.r.elems, g.e);
+g.e = new_elem_nterm(g.p, var0x10fccb700); g.p = var0x10fcc8200; g.r = var0x10fccb700; g.r.elems ~= g.e;
 // u1.p: 0x10fcc8200
 // u1.r: 0x10fccb700
 // new_elem: 0x10FCCDD40

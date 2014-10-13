@@ -13,7 +13,7 @@ enum INITIAL_ALLITEMS =	3359;
 private uint item_hash(Item* _i)
 {
     return  ((cast(uint)_i.rule.index << 8) + 			
-     (cast(uint)(_i.kind != ElemKind.ELEM_END ? _i.index : _i.rule.elems.n)));
+     (cast(uint)(_i.kind != ElemKind.ELEM_END ? _i.index : _i.rule.elems.length)));
 }
 
 private int
@@ -75,7 +75,7 @@ maybe_add_state(Grammar *g, State *s) {
 
 private Elem *
 next_elem(Item *i) {
-  if (i.index + 1 >= i.rule.elems.n)
+  if (i.index + 1 >= i.rule.elems.length)
     return i.rule.end;
   else
     return i.rule.elems[i.index + 1];
@@ -86,12 +86,12 @@ build_closure(Grammar *g, State *s) {
   for (int i = 0; i < s.items.length; i++) { // s.items may change during iteration
     if (s.items[i].kind == ElemKind.ELEM_NTERM) {
       foreach (r; s.items[i].e.nterm.rules)
-	insert_item(s, r.elems.v ? 
+	insert_item(s, r.elems.length ? 
 		    r.elems[0] : r.end);
     }
   }
   s.items.sort!itemIsLessThanItem();
-  /* qsort(s.items.v, s.items.n, (Item*).sizeof, &itemcmp); */
+  /* qsort(s.items.v, s.items.length, (Item*).sizeof, &itemcmp); */
   s.hash = 0;
   foreach (i; s.items)
     s.hash += item_hash(i);
@@ -175,7 +175,7 @@ private void
 sort_Gotos(Grammar *g) {
   foreach (s; g.states) {
     VecGoto *vg = &s.gotos;
-    qsort(vg.v, vg.n, (Goto*).sizeof, &gotocmp);
+    qsort(vg.v, vg.length, (Goto*).sizeof, &gotocmp);
   }
 }
 
@@ -257,7 +257,7 @@ actioncmp(const void *aa, const void *bb) {
 
 void
 sort_VecAction(VecAction *v) {
-  qsort(v.v, v.n, (Action*).sizeof, &actioncmp);
+  qsort(v.v, v.length, (Action*).sizeof, &actioncmp);
 }
 
 private void
@@ -293,9 +293,9 @@ goto_State(State *s, Elem *e) {
 }
 
 private Hint *
-new_Hint(uint d, State *s, Rule *r) {
+new_Hint(size_t d, State *s, Rule *r) {
   Hint *h = new Hint();
-  h.depth = d;
+  h.depth = cast(uint)d;
   h.state = s;
   h.rule = r;
   return h;
@@ -319,7 +319,7 @@ build_right_epsilon_hints(Grammar *g) {
           if (e.kind != ElemKind.ELEM_END) {
               Rule *r = e.rule;
               bool next = false;
-              for (int z = e.index; z < r.elems.n; z++) {
+              for (int z = e.index; z < r.elems.length; z++) {
                   if ((r.elems[z].kind != ElemKind.ELEM_NTERM ||
                               !r.elems[z].e.nterm.nullable))
                   {
@@ -330,17 +330,17 @@ build_right_epsilon_hints(Grammar *g) {
               if (!next)
               {
                   State *ss = s;
-                  for (int z = e.index; z < r.elems.n; z++)
+                  for (int z = e.index; z < r.elems.length; z++)
                       ss = goto_State(ss, r.elems[z]);
-                  if (ss && r.elems.n)
+                  if (ss && r.elems.length)
                       vec_add(&s.right_epsilon_hints, 
-                              new_Hint(r.elems.n - e.index - 1, ss, r));
+                              new_Hint(r.elems.length - e.index - 1, ss, r));
                   else { /* ignore for states_for_each_productions */ }
               }
           }
       }
-      if (s.right_epsilon_hints.n > 1)
-          qsort(s.right_epsilon_hints.v, s.right_epsilon_hints.n, 
+      if (s.right_epsilon_hints.length > 1)
+          qsort(s.right_epsilon_hints.v, s.right_epsilon_hints.length, 
                   (Hint*).sizeof, &hintcmp);
   }
 }
@@ -350,16 +350,16 @@ build_error_recovery(Grammar *g) {
     foreach (s; g.states) {
         foreach (i; s.items) {
             Rule *r = i.rule;
-            if (r.elems.n > 1 &&
-                    r.elems[r.elems.n - 1].kind == ElemKind.ELEM_TERM &&
-                    r.elems[r.elems.n - 1].e.term.kind == TermKind.TERM_STRING)
+            if (r.elems.length > 1 &&
+                    r.elems[r.elems.length - 1].kind == ElemKind.ELEM_TERM &&
+                    r.elems[r.elems.length - 1].e.term.kind == TermKind.TERM_STRING)
             {
                 int depth = i.index;
-                Elem *e = r.elems[r.elems.n - 1];
+                Elem *e = r.elems[r.elems.length - 1];
                 bool done = false;
                 foreach (erh; s.error_recovery_hints) {
                     Rule *rr = erh.rule;
-                    Elem *ee = rr.elems[rr.elems.n - 1];
+                    Elem *ee = rr.elems[rr.elems.length - 1];
                     if (e.e.term.string_ == ee.e.term.string_) 
                     {
                         if (erh.depth > depth)
@@ -374,7 +374,7 @@ build_error_recovery(Grammar *g) {
                 }
             }
         }
-        qsort(s.error_recovery_hints.v, s.error_recovery_hints.n, 
+        qsort(s.error_recovery_hints.v, s.error_recovery_hints.length, 
                 (Hint*).sizeof, &hintcmp);
     }
 }

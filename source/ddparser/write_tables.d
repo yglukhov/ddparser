@@ -163,7 +163,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
         int action_index = -1;
         Term *t = g.terminals[i];
         if (t.regex_production) {
-            action_index = t.regex_production.rules.v[0].action_index;
+            action_index = t.regex_production.rules[0].action_index;
         }
         D_Shift* shift = new D_Shift();
         shift.symbol = cast(ushort)(t.index + g.productions.length);
@@ -217,7 +217,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
         /* build accepts differences */
         for (int j = 0; j < s.scanner.transitions.n; j++) {
             D_Shift* d_accepts_diff2[];
-            foreach (k; s.scanner.transitions.v[j].accepts_diff) {
+            foreach (k; s.scanner.transitions[j].accepts_diff) {
                 if (k.kind != ActionKind.ACTION_SHIFT_TRAILING)
                     d_accepts_diff2 ~= allShifts[k.term.index];
                 else
@@ -473,7 +473,7 @@ buildReductions(Grammar *g, ref BuildTables tables) {
         for (int j = p.rules.n - 1; j >= 0; j--) {
             Rule *r = p.rules.v[j];
             for (int k = 0; k < j; k++)
-                if (r.elems.n == p.rules.v[k].elems.n &&
+                if (r.elems.length == p.rules.v[k].elems.length &&
                         r.speculative_code.code == p.rules.v[k].speculative_code.code &&
                         r.final_code.code == p.rules.v[k].final_code.code &&
                         r.op_priority == p.rules.v[k].op_priority &&
@@ -509,7 +509,7 @@ buildReductions(Grammar *g, ref BuildTables tables) {
                 continue;
             D_Reduction* red = new D_Reduction();
             tables.reductions[r.index] = red;
-            red.nelements = cast(ushort)r.elems.n;
+            red.nelements = cast(ushort)r.elems.length;
             red.symbol = cast(ushort)r.prod.index;
             if (!r.prod.internal && r.final_code.line == -1)
             {
@@ -540,7 +540,7 @@ er_hint_hash_fn(State *a, hash_fns_t *fns) {
   Term *ta;
 
   for (i = 0; i < sa.n; i++) {
-    ta = sa.v[i].rule.elems.v[sa.v[i].rule.elems.n - 1].e.term;
+    ta = sa.v[i].rule.elems[$ - 1].e.term;
     hash += (sa.v[i].depth + 1) * 13;
     hash += strhashl(ta.string_);
     if (sa.v[i].rule)
@@ -556,8 +556,8 @@ er_hint_cmp_fn(State *a, State *b, hash_fns_t *fns) {
   if (sa.n != sb.n)
     return 1;
   for (i = 0; i < sa.n; i++) {
-    Term *ta = sa.v[i].rule.elems.v[sa.v[i].rule.elems.n - 1].e.term;
-    Term *tb = sb.v[i].rule.elems.v[sb.v[i].rule.elems.n - 1].e.term;
+    Term *ta = sa.v[i].rule.elems[$ - 1].e.term;
+    Term *tb = sb.v[i].rule.elems[$ - 1].e.term;
     if (sa.v[i].depth != sb.v[i].depth ||
 	ta.string_ != tb.string_ ||
 	sa.v[i].rule.prod.index != sb.v[i].rule.prod.index)
@@ -588,7 +588,7 @@ buildErrorData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
             if (h == s) {
                 D_ErrorRecoveryHint d_error_recovery_hints[];
                 foreach (erh; s.error_recovery_hints) {
-                    Term *t = erh.rule.elems.v[erh.rule.elems.n - 1].e.term;
+                    Term *t = erh.rule.elems[$ - 1].e.term;
                     D_ErrorRecoveryHint hint;
                     hint.depth = cast(ushort)erh.depth;
                     hint.symbol = cast(ushort)erh.rule.prod.index;

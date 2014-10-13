@@ -220,7 +220,7 @@ alias uint32 = uint;
 alias uint64 = ulong;
 
 
-void vec_clear(T)(T vec) if (isPointer!T)
+void vec_clear(T)(T vec) if (isPointer!T && !isArray!(typeof(*vec)))
 {
     vec.clear();
 }
