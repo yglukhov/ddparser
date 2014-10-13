@@ -32,8 +32,15 @@ int d_rdebug_grammar_level = 0;
 
 void trace(string file = __FILE__, int line = __LINE__, Args...)(Args args)
 {
-    /* write(file, ":", line, ": "); */
-    /* writeln(args); */
+    /+
+    stderr.write(file, ":", line);
+    if (args.length)
+    {
+        stderr.write(":");
+        stderr.writeln(args);
+    }
+    else stderr.writeln();
+    +/
 }
 
 struct Vec(T)

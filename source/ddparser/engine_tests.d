@@ -58,7 +58,7 @@ unittest
 
     foreach(i; tests)
     {
-        writeln(i);
+        stderr.writeln(i);
         D_Grammar* g = createEmptyGrammar();
         string testFolder = "/Volumes/Work/Projects/ddparser/d/tests";
         string gram = readContentsOfFile(testFolder ~ "/" ~ i ~ ".g");
