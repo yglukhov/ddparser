@@ -394,7 +394,7 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
             /* check for goto on token */
             foreach (j; s.gotos)
                 if (j.elem.kind == ElemKind.ELEM_TERM &&
-                        j.elem.e.term.kind == TermKind.TERM_TOKEN)
+                        j.elem.term.kind == TermKind.TERM_TOKEN)
                 {
                     s.goto_on_token = 1;
                     break;
@@ -469,27 +469,27 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
 private void
 buildReductions(Grammar *g, ref BuildTables tables) {
     foreach (p; g.productions) {
-        for (int j = p.rules.n - 1; j >= 0; j--) {
-            Rule *r = p.rules.v[j];
+        for (long j = p.rules.length - 1; j >= 0; j--) {
+            Rule *r = p.rules[j];
             for (int k = 0; k < j; k++)
-                if (r.elems.length == p.rules.v[k].elems.length &&
-                        r.speculative_code.code == p.rules.v[k].speculative_code.code &&
-                        r.final_code.code == p.rules.v[k].final_code.code &&
-                        r.op_priority == p.rules.v[k].op_priority &&
-                        r.op_assoc == p.rules.v[k].op_assoc &&
-                        r.rule_priority == p.rules.v[k].rule_priority &&
-                        r.rule_assoc == p.rules.v[k].rule_assoc &&
-                        r.action_index == p.rules.v[k].action_index) 
+                if (r.elems.length == p.rules[k].elems.length &&
+                        r.speculative_code.code == p.rules[k].speculative_code.code &&
+                        r.final_code.code == p.rules[k].final_code.code &&
+                        r.op_priority == p.rules[k].op_priority &&
+                        r.op_assoc == p.rules[k].op_assoc &&
+                        r.rule_priority == p.rules[k].rule_priority &&
+                        r.rule_assoc == p.rules[k].rule_assoc &&
+                        r.action_index == p.rules[k].action_index) 
                 {
-                    if (r.pass_code.n != p.rules.v[k].pass_code.n)
+                    if (r.pass_code.n != p.rules[k].pass_code.n)
                         continue;
 
                     bool cont = false;
                     for (int l = 0; l < r.pass_code.n; l++) {
-                        if (!r.pass_code.v[l] && !p.rules.v[k].pass_code.v[l])
+                        if (!r.pass_code[l] && !p.rules[k].pass_code[l])
                             continue;
-                        if ((!r.pass_code.v[l] || !p.rules.v[k].pass_code.v[l]) ||
-                            (r.pass_code.v[l].code != p.rules.v[k].pass_code.v[l].code))
+                        if ((!r.pass_code[l] || !p.rules[k].pass_code[l]) ||
+                            (r.pass_code[l].code != p.rules[k].pass_code[l].code))
                         {
                             cont = true;
                             break;
@@ -498,7 +498,7 @@ buildReductions(Grammar *g, ref BuildTables tables) {
 
                     if (!cont)
                     {
-                        r.same_reduction = p.rules.v[k];
+                        r.same_reduction = p.rules[k];
                         break;
                     }
                 }
@@ -539,7 +539,7 @@ er_hint_hash_fn(State *a, hash_fns_t *fns) {
   Term *ta;
 
   for (i = 0; i < sa.n; i++) {
-    ta = sa.v[i].rule.elems[$ - 1].e.term;
+    ta = sa.v[i].rule.elems[$ - 1].term;
     hash += (sa.v[i].depth + 1) * 13;
     hash += strhashl(ta.string_);
     if (sa.v[i].rule)
@@ -555,8 +555,8 @@ er_hint_cmp_fn(State *a, State *b, hash_fns_t *fns) {
   if (sa.n != sb.n)
     return 1;
   for (i = 0; i < sa.n; i++) {
-    Term *ta = sa.v[i].rule.elems[$ - 1].e.term;
-    Term *tb = sb.v[i].rule.elems[$ - 1].e.term;
+    Term *ta = sa.v[i].rule.elems[$ - 1].term;
+    Term *tb = sb.v[i].rule.elems[$ - 1].term;
     if (sa.v[i].depth != sb.v[i].depth ||
 	ta.string_ != tb.string_ ||
 	sa.v[i].rule.prod.index != sb.v[i].rule.prod.index)
@@ -587,7 +587,7 @@ buildErrorData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
             if (h == s) {
                 D_ErrorRecoveryHint d_error_recovery_hints[];
                 foreach (erh; s.error_recovery_hints) {
-                    Term *t = erh.rule.elems[$ - 1].e.term;
+                    Term *t = erh.rule.elems[$ - 1].term;
                     D_ErrorRecoveryHint hint;
                     hint.depth = cast(ushort)erh.depth;
                     hint.symbol = cast(ushort)erh.rule.prod.index;

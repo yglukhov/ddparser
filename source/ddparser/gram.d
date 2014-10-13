@@ -244,7 +244,7 @@ enum InternalKind {
 
 struct Production {
     string          name;
-    Vec!(Rule *)    rules;
+    Rule*[]         rules;
     uint            index;
     mixin(bitfields!(
                 uint, "regex", 1,
@@ -297,6 +297,30 @@ struct Elem {
         string unresolved;
     }
     E e;
+
+    @property inout(Term)* term() inout @trusted
+    {
+        assert(kind == ElemKind.ELEM_TERM);
+        return e.term;
+    }
+
+    @property void term(Term* t) @trusted
+    {
+        e.term = t;
+        kind = ElemKind.ELEM_TERM;
+    }
+
+    @property inout(Production)* nterm() inout @trusted
+    {
+        assert(kind == ElemKind.ELEM_NTERM);
+        return e.nterm;
+    }
+
+    @property void nterm(Production* p)
+    {
+        kind = ElemKind.ELEM_NTERM;
+        e.nterm = p;
+    }
 
     void serialize(Serializer s)
     {
@@ -392,40 +416,29 @@ Production* new_production(Grammar *g, string name) @safe {
     return p;
 }
 
-private Elem *
-new_elem() {
-    return new Elem();
-}
-
 Rule *
-new_rule(Grammar *g, Production *p) {
+new_rule(Grammar *g, Production *p) @safe {
     Rule *r = new Rule();
     r.prod = p;
-    r.end = new_elem();
+    r.end = new Elem();
     r.end.kind = ElemKind.ELEM_END;
     r.end.rule = r;
     r.action_index = g.action_index;
     return r;
 }
 
-private Term *
-new_term() {
-    return new Term();
-}
-
 private Elem *
-new_elem_term(Term *t, Rule *r) {
-    Elem *e = new_elem();
-    e.kind = ElemKind.ELEM_TERM;
-    e.e.term = t;
+new_elem_term(Term *t, Rule *r) @safe {
+    Elem *e = new Elem();
+    e.term = t;
     e.rule = r;
     r.elems ~= e;
     return e;
 }
 
 Elem *
-new_elem_nterm(Production *p, Rule *r) {
-    Elem *e = new_elem();
+new_elem_nterm(Production *p, Rule *r) @safe {
+    Elem *e = new Elem();
     e.kind = ElemKind.ELEM_NTERM;
     e.e.nterm = p;
     e.rule = r;
@@ -433,15 +446,15 @@ new_elem_nterm(Production *p, Rule *r) {
 }
 
 private Elem *
-new_term_string(Grammar *g, string s, Rule *r)
+new_term_string(Grammar *g, string s, Rule *r) @safe
 {
-    Term *t = new_term();
+    Term *t = new Term();
     t.string_ = s;
     g.terminals ~= t;
     return new_elem_term(t, r);
 }
 
-string escape_string_for_regex(const char[] s)
+string escape_string_for_regex(const char[] s) @safe
 {
     auto result = appender!string();
     result.reserve(s.length * 2);
@@ -627,9 +640,9 @@ new_utf8_char(Grammar *g, const(char) *s, const(char) *e, Rule *r) {
 }
 
     Elem *
-new_ident(string s, Rule *r)
+new_ident(string s, Rule *r) @safe
 {
-    Elem *x = new_elem();
+    Elem *x = new Elem();
     x.kind = ElemKind.ELEM_UNRESOLVED;
     x.e.unresolved = s;
     x.rule = r;
@@ -639,8 +652,8 @@ new_ident(string s, Rule *r)
 }
 
 void
-new_token(Grammar *g, string s) {
-    Term *t = new_term();
+new_token(Grammar *g, string s) @safe {
+    Term *t = new Term();
     t.string_ = s;
     g.terminals ~= t;
     t.kind = TermKind.TERM_TOKEN;
@@ -654,11 +667,9 @@ new_code(Grammar *g, string s, Rule *r) {
 }
 
 Elem *
-dup_elem(Elem *e, Rule *r) {
+dup_elem(Elem *e, Rule *r) @safe {
     Elem *ee = new Elem();
     *ee = *e;
-    if (ee.kind == ElemKind.ELEM_UNRESOLVED)
-        ee.e.unresolved = e.e.unresolved;
     ee.rule = r;
     return ee;
 }
@@ -766,8 +777,8 @@ conditional_EBNF(Grammar *g) {
     rr.elems ~= g.r.lastElem;
     g.r.lastElem.rule = rr;
     rr.lastElem.rule = rr;
-    vec_add(&pp.rules, rr);
-    vec_add(&pp.rules, new_rule(g, pp));
+    pp.rules ~= rr;
+    pp.rules ~= new_rule(g, pp);
     g.r.lastElem = new_elem_nterm(pp, g.r);
 }
 
@@ -787,8 +798,8 @@ star_EBNF(Grammar *g) {
         rr.lastElem.rule = rr;
         rr.elems ~= new_elem_nterm(pp, rr);
     }
-    vec_add(&pp.rules, rr);
-    vec_add(&pp.rules, new_rule(g, pp));
+    pp.rules ~= rr;
+    pp.rules ~= new_rule(g, pp);
 }
 
 void
@@ -814,11 +825,11 @@ plus_EBNF(Grammar *g) {
             rr.rule_assoc = AssocKind.ASSOC_NARY_RIGHT;
         }
     }
-    vec_add(&pp.rules, rr);
+    pp.rules ~= rr;
     rr = new_rule(g, pp);
     rr.elems ~= elem;
     elem.rule = rr;
-    vec_add(&pp.rules, rr);
+    pp.rules ~= rr;
 }
 
 void
@@ -831,7 +842,7 @@ rep_EBNF(Grammar *g, int min, int max) {
         Rule *rr = new_rule(g, pp);
         for (int j = 0; j < i; j++)
             rr.elems ~= dup_elem(elem, rr);
-        vec_add(&pp.rules, rr);
+        pp.rules ~= rr;
     }
     g.r.lastElem = new_elem_nterm(pp, g.r);
     FREE(elem);
@@ -848,7 +859,7 @@ finish_productions(Grammar *g) {
     Production *pp = g.productions[0];
     Rule *rr = new_rule(g, pp);
     rr.elems ~= new_elem_nterm(null, rr);
-    vec_add(&pp.rules, rr);
+    pp.rules ~= rr;
     rr.elems[0].e.nterm = g.productions[1];
 }
 
@@ -860,7 +871,7 @@ Production* lookup_production(Grammar* g, const(char)[] name) @safe
 }
 
 private Term *
-lookup_token(Grammar *g, const(char)[] name) {
+lookup_token(Grammar *g, const(char)[] name) @safe {
     foreach(t; g.terminals)
         if (t.kind == TermKind.TERM_TOKEN && t.string_ == name)
             return t;
@@ -868,7 +879,7 @@ lookup_token(Grammar *g, const(char)[] name) {
 }
 
 private Term *
-unique_term(Grammar *g, Term *t) {
+unique_term(Grammar *g, Term *t) @safe {
     foreach (i; g.terminals)
         if (t.kind == i.kind &&
                 t.term_priority == i.term_priority &&
@@ -920,7 +931,6 @@ Lnot_nullable:;
 private void
 resolve_grammar(Grammar *g) {
     Production *p, pp;
-    Rule *r;
     Elem *e;
     Term *last_term, t;
 
@@ -1211,7 +1221,7 @@ make_elems_for_productions(Grammar *g) {
 private void
 convert_regex_production_one(Grammar *g, Production *p) {
     size_t l;
-    Rule *r, rr;
+    Rule *rr;
 
     if (p.regex_term) /* already done */
         return;
@@ -1245,7 +1255,7 @@ convert_regex_production_one(Grammar *g, Production *p) {
         }
     }
     string buffer;
-    Term *t = new_term();
+    Term *t = new Term();
     t.kind = TermKind.TERM_REGEX;
     t.index = cast(uint)g.terminals.length;
     t.regex_production = p;
@@ -1260,7 +1270,7 @@ convert_regex_production_one(Grammar *g, Production *p) {
         if (l == 2 || l == 3) {
             if (p.rules[0].elems.length != 2 && p.rules[1].elems.length != 2)
                 goto Lfail;
-            r = p.rules[0].elems.length == 2 ? p.rules[0] : p.rules[1];
+            Rule *r = p.rules[0].elems.length == 2 ? p.rules[0] : p.rules[1];
             rr = p.rules[0] == r ? p.rules[1] : p.rules[0];
             if (r.elems[0].e.nterm != p && r.elems[1].e.nterm != p)
                 goto Lfail;
@@ -1285,7 +1295,7 @@ convert_regex_production_one(Grammar *g, Production *p) {
         if (p.rules.length > 1)
         {  buffer ~= '('; }
         for (int j = 0; j < p.rules.length; j++) {
-            r = p.rules[j];
+            Rule *r = p.rules[j];
             if (r.elems.length > 1)
             { buffer ~= '('; }
             foreach (e; r.elems) {
@@ -1494,7 +1504,6 @@ free_D_Grammar(Grammar *g) {
                 p.elem = null;
             free_rule(r);
         }
-        vec_free(&p.rules);
         if (p.elem) {
             free_rule(p.elem.rule);
             FREE(p.elem);

@@ -76,7 +76,7 @@ private State *
 build_closure(Grammar *g, State *s) {
   for (int i = 0; i < s.items.length; i++) { // s.items may change during iteration
     if (s.items[i].kind == ElemKind.ELEM_NTERM) {
-      foreach (r; s.items[i].e.nterm.rules)
+      foreach (r; s.items[i].nterm.rules)
 	insert_item(s, r.elems.length ? 
 		    r.elems[0] : r.end);
     }
@@ -124,13 +124,11 @@ build_new_states(Grammar *g) {
   Elem e;
   for (int i = 0; i < g.states.length; i++) { // g.states may change during iteration
     foreach (t; g.terminals) {
-      e.kind = ElemKind.ELEM_TERM;
-      e.e.term = t;
+      e.term = t;
       build_state_for(g, g.states[i], &e);
     }
     foreach (p; g.productions) {
-      e.kind = ElemKind.ELEM_NTERM;
-      e.e.nterm = p;
+      e.nterm = p;
       build_state_for(g, g.states[i], &e);
     }
   }
@@ -149,9 +147,9 @@ build_states_for_each_production(Grammar *g) {
 uint
 elem_symbol(Grammar *g, Elem *e) {
   if (e.kind == ElemKind.ELEM_NTERM)
-    return e.e.nterm.index;
+    return e.nterm.index;
   else
-    return cast(uint)(g.productions.length + e.e.term.index);
+    return cast(uint)(g.productions.length + e.term.index);
 }
 
 bool gotoIsLessThanGoto(Goto* a, Goto* b)
@@ -274,9 +272,9 @@ build_actions(Grammar *g) {
             if (e.kind != ElemKind.ELEM_END) {
                 if (e.kind == ElemKind.ELEM_TERM) {
                     foreach (z; s.gotos) {
-                        if (z.elem.e.term == e.e.term)
+                        if (z.elem.e.term_or_nterm == e.term)
                             add_action(g, s, ActionKind.ACTION_SHIFT, 
-                                    e.e.term, null, z.state);
+                                    e.term, null, z.state);
                     }
                 }
             } else if (e.rule.prod.index)
@@ -326,7 +324,7 @@ build_right_epsilon_hints(Grammar *g) {
               bool next = false;
               for (int z = e.index; z < r.elems.length; z++) {
                   if ((r.elems[z].kind != ElemKind.ELEM_NTERM ||
-                              !r.elems[z].e.nterm.nullable))
+                              !r.elems[z].nterm.nullable))
                   {
                       next = true;
                       break;
@@ -357,7 +355,7 @@ build_error_recovery(Grammar *g) {
             Rule *r = i.rule;
             if (r.elems.length > 1 &&
                     r.elems[r.elems.length - 1].kind == ElemKind.ELEM_TERM &&
-                    r.elems[r.elems.length - 1].e.term.kind == TermKind.TERM_STRING)
+                    r.elems[r.elems.length - 1].term.kind == TermKind.TERM_STRING)
             {
                 int depth = i.index;
                 Elem *e = r.elems[r.elems.length - 1];
@@ -365,7 +363,7 @@ build_error_recovery(Grammar *g) {
                 foreach (erh; s.error_recovery_hints) {
                     Rule *rr = erh.rule;
                     Elem *ee = rr.elems[rr.elems.length - 1];
-                    if (e.e.term.string_ == ee.e.term.string_) 
+                    if (e.term.string_ == ee.term.string_) 
                     {
                         if (erh.depth > depth)
                             erh.depth = depth;

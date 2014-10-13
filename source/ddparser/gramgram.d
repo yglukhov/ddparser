@@ -92,7 +92,7 @@ star_EBNF(g);
 // new_elem: 0x10FC86CC0
 // g.r = new_rule(g, g.p); // : 0x10FC87F00
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "top_level_statement"); // : 0x10FC87E00
@@ -104,7 +104,7 @@ g.r = new_rule(g, g.p);
 /// g.e = new_ident(_c0.start_loc.s, _c0.end, g.r);
  g.e = new_ident("global_code", g.r); // new_elem: 0x10FC86A20
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FC86900
@@ -113,7 +113,7 @@ g.r = new_rule(g, g.p);
 /// g.e = new_ident(_c0.start_loc.s, _c0.end, g.r);
  g.e = new_ident("production", g.r); // new_elem: 0x10FC86860
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FC86740
@@ -122,7 +122,7 @@ g.r = new_rule(g, g.p);
 /// g.e = new_ident(_c0.start_loc.s, _c0.end, g.r);
  g.e = new_ident("include_statement", g.r); // new_elem: 0x10FC866A0
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "include_statement"); // : 0x10FC87A00
@@ -151,7 +151,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "global_code"); // : 0x10FC87500
@@ -189,7 +189,7 @@ return 0;
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FC89C60
@@ -207,7 +207,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FC89A20
@@ -245,7 +245,7 @@ plus_EBNF(g);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FC89580
@@ -293,7 +293,7 @@ star_EBNF(g);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FC89040
@@ -319,7 +319,7 @@ plus_EBNF(g);
  g.e = new_string(g, `'}'`, g.r);
 // new_elem: 0x10FC92D00
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FC92BE0
@@ -349,7 +349,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "pass_types"); // : 0x10FC94000
@@ -358,7 +358,7 @@ g.r = new_rule(g, g.p);
 // new_elem: 0x10FC926E0
 // g.r = new_rule(g, g.p); // : 0x10FC96F00
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FC925C0
@@ -379,7 +379,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "pass_type"); // : 0x10FC96B00
@@ -401,7 +401,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FC97FE0
@@ -420,7 +420,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FC97D80
@@ -439,7 +439,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FC97B20
@@ -458,7 +458,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FC978C0
@@ -477,7 +477,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "declarationtype"); // : 0x10FC99B00
@@ -499,7 +499,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FC97340
@@ -518,7 +518,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FC970E0
@@ -537,7 +537,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FC9BE80
@@ -556,7 +556,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FC9BC20
@@ -575,7 +575,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FC9B9A0
@@ -594,7 +594,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FC9B740
@@ -613,7 +613,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FC9B4E0
@@ -632,7 +632,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "token_identifier"); // : 0x10FC9D100
@@ -654,7 +654,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "production"); // : 0x10FC9FD00
@@ -677,7 +677,7 @@ g.r = new_rule(g, g.p);
  g.e = new_string(g, `';'`, g.r);
 // new_elem: 0x10FCA0BA0
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCA0A80
@@ -696,7 +696,7 @@ g.r = new_rule(g, g.p);
  g.e = new_string(g, `';'`, g.r);
 // new_elem: 0x10FCA07A0
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCA0680
@@ -706,7 +706,7 @@ g.r = new_rule(g, g.p);
  g.e = new_string(g, `';'`, g.r);
 // new_elem: 0x10FCA05C0
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "regex_production"); // : 0x10FC9F900
@@ -731,7 +731,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "production_name"); // : 0x10FC9F500
@@ -755,7 +755,7 @@ g.r = new_rule(g, g.p);
 /// g.e = new_ident(_c0.start_loc.s, _c0.end, g.r);
  g.e = new_ident("identifier", g.r); // new_elem: 0x10FCA3EC0
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCA3DA0
@@ -765,7 +765,7 @@ g.r = new_rule(g, g.p);
  g.e = new_string(g, `'_'`, g.r);
 // new_elem: 0x10FCA3CE0
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 109
 ///printf("// u1.p: %p\n// u1.r: %p\n", _c1.user.p, _c1.user.r);
 g.e = new_elem_nterm(g.p, var0x10fc9f300); g.p = var0x10fc9f500; g.r = var0x10fc9f300; g.r.elems ~= g.e;
@@ -783,7 +783,7 @@ g.e = new_elem_nterm(g.p, var0x10fc9f300); g.p = var0x10fc9f500; g.r = var0x10fc
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "rules"); // : 0x10FCA2700
@@ -814,7 +814,7 @@ g.r = new_rule(g, g.p);
 /// g.e = new_ident(_c0.start_loc.s, _c0.end, g.r);
  g.e = new_ident("rule", g.r); // new_elem: 0x10FCA3680
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 109
 ///printf("// u1.p: %p\n// u1.r: %p\n", _c1.user.p, _c1.user.r);
 g.e = new_elem_nterm(g.p, var0x10fca2600); g.p = var0x10fca2700; g.r = var0x10fca2600; g.r.elems ~= g.e;
@@ -831,7 +831,7 @@ star_EBNF(g);
 // new_elem: 0x10FCA34C0
 // g.r = new_rule(g, g.p); // : 0x10FCA5B00
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "rule"); // : 0x10FCA5A00
@@ -882,7 +882,7 @@ star_EBNF(g);
 // new_elem: 0x10FCA7DE0
 // g.r = new_rule(g, g.p); // : 0x10FCA6C00
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 109
 ///printf("// u1.p: %p\n// u1.r: %p\n", _c1.user.p, _c1.user.r);
 g.e = new_elem_nterm(g.p, var0x10fca5400); g.p = var0x10fca5500; g.r = var0x10fca5400; g.r.elems ~= g.e;
@@ -914,7 +914,7 @@ star_EBNF(g);
 // new_elem: 0x10FCA7A00
 // g.r = new_rule(g, g.p); // : 0x10FCA6300
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 109
 ///printf("// u1.p: %p\n// u1.r: %p\n", _c1.user.p, _c1.user.r);
 g.e = new_elem_nterm(g.p, var0x10fca5900); g.p = var0x10fca5a00; g.r = var0x10fca5900; g.r.elems ~= g.e;
@@ -951,13 +951,13 @@ star_EBNF(g);
 
      mixin(commonValues);
 
-  vec_add(&g.p.rules, g.r);
+  g.p.rules ~= g.r;
 
   return 0;
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "new_rule"); // : 0x10FCAA700
@@ -976,7 +976,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "simple_element"); // : 0x10FCAA300
@@ -998,7 +998,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCAEF80
@@ -1017,7 +1017,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCAED40
@@ -1036,7 +1036,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCAEB00
@@ -1055,7 +1055,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCAE8C0
@@ -1091,7 +1091,7 @@ plus_EBNF(g);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCAE420
@@ -1138,7 +1138,7 @@ g.r = new_rule(g, g.p);
 /// g.e = new_ident(_c0.start_loc.s, _c0.end, g.r);
  g.e = new_ident("simple_element", g.r); // new_elem: 0x10FCB7E80
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCB7D60
@@ -1155,7 +1155,7 @@ g.r = new_rule(g, g.p);
 
       Production *p = new_internal_production(g, null);
       Rule *r = new_rule(g, p);
-      vec_add(&p.rules, r);
+      p.rules ~= r;
       r.speculative_code.code = dup_code(n0.start_loc.s + 1, n0.end - 1);
       r.speculative_code.line = n0.start_loc.line;
       g.e = new_elem_nterm(p, g.r);
@@ -1165,7 +1165,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCB7B20
@@ -1182,7 +1182,7 @@ g.r = new_rule(g, g.p);
 
       Production *p = new_internal_production(g, null);
       Rule *r = new_rule(g, p);
-      vec_add(&p.rules, r);
+      p.rules ~= r;
       r.final_code.code = dup_code(n0.start_loc.s + 1, n0.end - 1);
       r.final_code.line = n0.start_loc.line;
       g.e = new_elem_nterm(p, g.r);
@@ -1192,7 +1192,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "new_subrule"); // : 0x10FCC4200
@@ -1216,7 +1216,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "element_modifier"); // : 0x10FCC8200
@@ -1240,13 +1240,13 @@ g.r = new_rule(g, g.p);
  
       if (g.e.kind != ElemKind.ELEM_TERM) 
         d_fail("terminal priority on non-terminal");
-      g.e.e.term.term_priority = cast(int)strtol(n1.start_loc.s, null, 0); 
+      g.e.term.term_priority = cast(int)strtol(n1.start_loc.s, null, 0); 
     
   return 0;
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCB72A0
@@ -1271,7 +1271,7 @@ g.r = new_rule(g, g.p);
 /// g.e = new_ident(_c0.start_loc.s, _c0.end, g.r);
  g.e = new_ident("string", g.r); // new_elem: 0x10FCB7000
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCCDEE0
@@ -1280,7 +1280,7 @@ g.r = new_rule(g, g.p);
 /// g.e = new_ident(_c0.start_loc.s, _c0.end, g.r);
  g.e = new_ident("regex", g.r); // new_elem: 0x10FCCDE40
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 109
 ///printf("// u1.p: %p\n// u1.r: %p\n", _c1.user.p, _c1.user.r);
 g.e = new_elem_nterm(g.p, var0x10fccb700); g.p = var0x10fcc8200; g.r = var0x10fccb700; g.r.elems ~= g.e;
@@ -1296,13 +1296,13 @@ g.e = new_elem_nterm(g.p, var0x10fccb700); g.p = var0x10fcc8200; g.r = var0x10fc
  
       if (g.e.kind != ElemKind.ELEM_TERM) 
 	d_fail("terminal name on non-terminal");
-      g.e.e.term.term_name = n1.matchedString[1 .. $ - 1];
+      g.e.term.term_name = n1.matchedString[1 .. $ - 1];
     
   return 0;
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCCDBA0
@@ -1320,13 +1320,13 @@ g.r = new_rule(g, g.p);
  
       if (g.e.kind != ElemKind.ELEM_TERM) 
 	d_fail("ignore-case (/i) on non-terminal");
-      g.e.e.term.ignore_case = 1; 
+      g.e.term.ignore_case = 1; 
     
   return 0;
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCCD940
@@ -1346,7 +1346,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCCD6E0
@@ -1366,7 +1366,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCCD460
@@ -1386,7 +1386,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCCD1E0
@@ -1409,7 +1409,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCD3EE0
@@ -1439,7 +1439,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "rule_modifier"); // : 0x10FCD4B00
@@ -1454,7 +1454,7 @@ g.r = new_rule(g, g.p);
 /// g.e = new_ident(_c0.start_loc.s, _c0.end, g.r);
  g.e = new_ident("rule_priority", g.r); // new_elem: 0x10FCD38A0
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCD3780
@@ -1463,7 +1463,7 @@ g.r = new_rule(g, g.p);
 /// g.e = new_ident(_c0.start_loc.s, _c0.end, g.r);
  g.e = new_ident("external_action", g.r); // new_elem: 0x10FCD36E0
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "rule_assoc"); // : 0x10FCD4700
@@ -1486,7 +1486,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCD3280
@@ -1506,7 +1506,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCD3020
@@ -1526,7 +1526,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCD7DA0
@@ -1546,7 +1546,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCD7B20
@@ -1566,7 +1566,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCD78C0
@@ -1586,7 +1586,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCD7660
@@ -1606,7 +1606,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCD7400
@@ -1626,7 +1626,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCD71A0
@@ -1646,7 +1646,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCDCF40
@@ -1666,7 +1666,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "rule_priority"); // : 0x10FCDB700
@@ -1691,7 +1691,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "external_action"); // : 0x10FCDE600
@@ -1714,7 +1714,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FCDC6E0
@@ -1741,7 +1741,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "rule_code"); // : 0x10FCE0D00
@@ -1784,7 +1784,7 @@ star_EBNF(g);
 // new_elem: 0x10FCE2E40
 // g.r = new_rule(g, g.p); // : 0x10FCE0300
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "speculative_code"); // : 0x10FCE0100
@@ -1809,7 +1809,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "final_code"); // : 0x10FCE5B00
@@ -1834,7 +1834,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "pass_code"); // : 0x10FCE7600
@@ -1866,7 +1866,7 @@ g.r = new_rule(g, g.p);
 };
 
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "curly_code"); // : 0x10FD7C000
@@ -1895,7 +1895,7 @@ star_EBNF(g);
  g.e = new_string(g, `'}'`, g.r);
 // new_elem: 0x10FD80F40
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "bracket_code"); // : 0x10FD7FA00
@@ -1924,7 +1924,7 @@ star_EBNF(g);
  g.e = new_string(g, `']'`, g.r);
 // new_elem: 0x10FD80A80
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "balanced_code"); // : 0x10FD7F400
@@ -1953,7 +1953,7 @@ star_EBNF(g);
  g.e = new_string(g, `')'`, g.r);
 // new_elem: 0x10FD805E0
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FD804C0
@@ -1979,7 +1979,7 @@ star_EBNF(g);
  g.e = new_string(g, `']'`, g.r);
 // new_elem: 0x10FD801E0
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FD800C0
@@ -2005,7 +2005,7 @@ star_EBNF(g);
  g.e = new_string(g, `'}'`, g.r);
 // new_elem: 0x10FD84DE0
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FD84CC0
@@ -2014,7 +2014,7 @@ g.r = new_rule(g, g.p);
 /// g.e = new_ident(_c0.start_loc.s, _c0.end, g.r);
  g.e = new_ident("string", g.r); // new_elem: 0x10FD84C20
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FD84B00
@@ -2023,7 +2023,7 @@ g.r = new_rule(g, g.p);
 /// g.e = new_ident(_c0.start_loc.s, _c0.end, g.r);
  g.e = new_ident("identifier", g.r); // new_elem: 0x10FD84A60
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FD84940
@@ -2032,7 +2032,7 @@ g.r = new_rule(g, g.p);
 /// g.e = new_ident(_c0.start_loc.s, _c0.end, g.r);
  g.e = new_ident("regex", g.r); // new_elem: 0x10FD848A0
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FD84780
@@ -2041,7 +2041,7 @@ g.r = new_rule(g, g.p);
 /// g.e = new_ident(_c0.start_loc.s, _c0.end, g.r);
  g.e = new_ident("integer", g.r); // new_elem: 0x10FD846E0
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FD845C0
@@ -2050,7 +2050,7 @@ g.r = new_rule(g, g.p);
 /// g.e = new_ident(_c0.start_loc.s, _c0.end, g.r);
  g.e = new_ident("symbols", g.r); // new_elem: 0x10FD84520
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "symbols"); // : 0x10FD83100
@@ -2063,7 +2063,7 @@ g.r = new_rule(g, g.p);
  g.e = new_string(g, `"[!~` ~ "`" ~ `@#$%^&*\-_+=|:;\\<,>.?/]"`, g.r);
 // new_elem: 0x10FD84280
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "string"); // : 0x10FD87E00
@@ -2076,7 +2076,7 @@ g.r = new_rule(g, g.p);
  g.e = new_string(g, `"'([^'\\]|\\[^])*'"`, g.r);
 // new_elem: 0x10FD88FE0
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "regex"); // : 0x10FD87B00
@@ -2089,7 +2089,7 @@ g.r = new_rule(g, g.p);
  g.e = new_string(g, `"\"([^\"\\]|\\[^])*\""`, g.r);
 // new_elem: 0x10FD88D40
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "unicode_char"); // : 0x10FD87800
@@ -2102,7 +2102,7 @@ g.r = new_rule(g, g.p);
  g.e = new_string(g, `"[uU]\+[0-9a-fA-F]+"`, g.r);
 // new_elem: 0x10FD88AA0
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "identifier"); // : 0x10FD87500
@@ -2117,9 +2117,9 @@ g.r = new_rule(g, g.p);
 // TRACE 147
 /// if (g.e.kind != ElemKind.ELEM_TERM) d_fail("terminal priority on non-terminal"); 
  assert(g.e.kind == ElemKind.ELEM_TERM);
- g.e.e.term.term_priority = -1;
+ g.e.term.term_priority = -1;
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "integer"); // : 0x10FD8AF00
@@ -2131,7 +2131,7 @@ g.r = new_rule(g, g.p);
 /// g.e = new_ident(_c0.start_loc.s, _c0.end, g.r);
  g.e = new_ident("decimalint", g.r); // new_elem: 0x10FD88540
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FD88420
@@ -2140,7 +2140,7 @@ g.r = new_rule(g, g.p);
 /// g.e = new_ident(_c0.start_loc.s, _c0.end, g.r);
  g.e = new_ident("hexint", g.r); // new_elem: 0x10FD88380
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 95
 g.r = new_rule(g, g.p);
 // new_elem: 0x10FD88260
@@ -2149,7 +2149,7 @@ g.r = new_rule(g, g.p);
 /// g.e = new_ident(_c0.start_loc.s, _c0.end, g.r);
  g.e = new_ident("octalint", g.r); // new_elem: 0x10FD881C0
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "decimalint"); // : 0x10FD8AA00
@@ -2162,7 +2162,7 @@ g.r = new_rule(g, g.p);
  g.e = new_string(g, `"-?[1-9][0-9]*[uUlL]?"`, g.r);
 // new_elem: 0x10FD8CF20
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "hexint"); // : 0x10FD8A700
@@ -2175,7 +2175,7 @@ g.r = new_rule(g, g.p);
  g.e = new_string(g, `"-?(0x|0X)[0-9a-fA-F]+[uUlL]?"`, g.r);
 // new_elem: 0x10FD8CC80
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 // TRACE 87
 /// g.p = new_production(g, dup_str(_c0.start_loc.s, _c0.end));
  g.p = new_production(g, "octalint"); // : 0x10FD8A400
@@ -2188,7 +2188,7 @@ g.r = new_rule(g, g.p);
  g.e = new_string(g, `"-?0[0-7]*[uUlL]?"`, g.r);
 // new_elem: 0x10FD8C9E0
 // TRACE 93
-vec_add(&g.p.rules, g.r);
+g.p.rules ~= g.r;
 
 finish_productions(g);
 build_grammar(g);
