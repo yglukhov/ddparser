@@ -68,7 +68,7 @@ free_DFAState(DFAState *y) @safe {
 private void
 free_VecDFAState(VecDFAState *dfas) @safe {
   int i;
-  for (i = 0; i < dfas.n; i++)
+  for (i = 0; i < dfas.length; i++)
     free_DFAState((*dfas)[i]);
   vec_free(dfas);
 }
@@ -527,7 +527,7 @@ build_state_scanner(Grammar *g, LexState *ls, State *s) {
       if (build_regex_nfa(ls, reg, nnn, nn, trailing_context)) {
 	a.term.trailing_context = 1;
 	s.trailing_context = 1;
-	vec_add(&g.actions, trailing_context);
+    g.actions ~= trailing_context;
       } else
 	FREE(trailing_context);
       vec_add(&nn.accepts, a);
@@ -547,7 +547,7 @@ build_scanners(Grammar *g) {
   LexState *ls = new LexState();
 
   /* detect identical scanners */
-  for (int i = 0; i < g.states.n; i++) {
+  for (int i = 0; i < g.states.length; i++) {
     State *s = g.states[i];
     if (s.same_shifts)
       continue;

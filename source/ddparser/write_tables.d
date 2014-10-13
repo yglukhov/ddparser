@@ -152,14 +152,14 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
     VecScannerBlock trans_scanner_block_hash[4];
     VecScannerBlock *ptrans_scanner_block_hash;
     VecAction shift_hash;
-    int i, k, x, xx;
+    int k, x, xx;
     VecScanState *ss;
 
-    D_Shift*[] allShifts = new D_Shift*[g.terminals.n];
+    D_Shift*[] allShifts = new D_Shift*[g.terminals.length];
     D_Shift*[uint] allTShifts;
 
     /* shift_actions */
-    for (i = 0; i < g.terminals.n; i++) {
+    for (int i = 0; i < g.terminals.length; i++) {
         int action_index = -1;
         Term *t = g.terminals[i];
         if (t.regex_production) {
@@ -191,7 +191,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
     foreach (i; g.states)
         nvsblocks += i.scanner.states.n * g.scanner_blocks;
     ScannerBlock[] vsblock = new ScannerBlock[nvsblocks ? nvsblocks : 1];
-    for (i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++) {
         vec_clear(&scanner_block_hash[i]);
         vec_clear(&trans_scanner_block_hash[i]);
     }
@@ -208,8 +208,8 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
     TableMap!(ubyte[], 3) tables_d_accepts_diff3;
     TableMap!(ubyte[], 3) tables_d_scanner3;
 
-    for (i = 0; i < g.states.n; i++) {
-        State *s = g.states.v[i];
+    for (int i = 0; i < g.states.length; i++) {
+        State *s = g.states[i];
         if (s.same_shifts)
             continue;
         ss = &s.scanner.states;
@@ -317,8 +317,8 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
             }
         }
     }
-    for (i = 0; i < g.states.n; i++) {
-        State *s = g.states.v[i];
+    for (int i = 0; i < g.states.length; i++) {
+        State *s = g.states[i];
         ss = &s.scanner.states;
         ivsblock = 0;
         if (ss.n && !s.same_shifts) {
@@ -389,8 +389,8 @@ private void
 buildGotoData(Grammar *g, ref BuildTables tables) {
     size_t nvalid_bytes = ((g.productions.length + g.terminals.length) + 7) / 8;
     ushort[] vgoto;
-    for (int i = 0; i < g.states.n; i++) {
-        State *s = g.states.v[i];
+    for (int i = 0; i < g.states.length; i++) {
+        State *s = g.states[i];
         if (s.gotos.n) {
             /* check for goto on token */
             foreach (j; s.gotos)
@@ -581,8 +581,8 @@ er_hint_hash_fns = hash_fns_t(
 
 private void
 buildErrorData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
-    for (int i = 0; i < g.states.n; i++) {
-        State *s = g.states.v[i];
+    for (int i = 0; i < g.states.length; i++) {
+        State *s = g.states[i];
         if (s.error_recovery_hints.n) {
             State *h = cast(State*)set_add_fn(er_hash, s, &er_hint_hash_fns);
             if (h == s) {
@@ -725,7 +725,7 @@ D_ParserTables* createTablesFromGrammar(Grammar* g, D_ReductionCode spec_code, D
     buildPassesData(g, tables);
 
     result.states = tables.d_states;
-    assert(result.states.length == g.states.n);
+    assert(result.states.length == g.states.length);
 
     result.goto_table = tables.d_gotos;
     auto ws = lookup_production(g, "whitespace");

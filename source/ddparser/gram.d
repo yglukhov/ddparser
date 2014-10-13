@@ -314,13 +314,13 @@ struct Elem {
 
 struct Grammar {
     Production*[]   productions;
-    Vec!(Term *)        terminals;
-    Vec!(State *)       states;
-    Vec!(Action *)      actions;
+    Term*[]         terminals;
+    State*[]        states;
+    Action*[]       actions;
     Code            scanner;
     /* Code         *code; */
     /* int          ncode; */
-    Vec!(Declaration *) declarations;
+    Declaration*[]  declarations; 
     Vec!(D_Pass *)      passes;
     string          default_white_space;
     /* grammar construction options */
@@ -441,7 +441,7 @@ new_term_string(Grammar *g, string s, Rule *r)
 {
     Term *t = new_term();
     t.string_ = s;
-    vec_add(&g.terminals, t);
+    g.terminals ~= t;
     return new_elem_term(t, r);
 }
 
@@ -646,7 +646,7 @@ void
 new_token(Grammar *g, string s) {
     Term *t = new_term();
     t.string_ = s;
-    vec_add(&g.terminals, t);
+    g.terminals ~= t;
     t.kind = TermKind.TERM_TOKEN;
 }
 
@@ -672,8 +672,8 @@ new_declaration(Grammar *g, Elem *e, uint kind) {
     Declaration *d = new Declaration();
     d.elem = e;
     d.kind = kind;
-    d.index = g.declarations.n;
-    vec_add(&g.declarations, d);
+    d.index = cast(uint)g.declarations.length;
+    g.declarations ~= d;
 }
 
 void
@@ -970,7 +970,7 @@ resolve_grammar(Grammar *g) {
             }
         }
     }
-    for (int i = 0; i < g.terminals.n; i++)
+    for (int i = 0; i < g.terminals.length; i++)
         g.terminals[i].index = i;
     compute_nullable(g);
 }
@@ -1081,7 +1081,7 @@ print_grammar(Grammar *g) {
         logf("\n");
     }
     logf("TERMINALS\n\n");
-    for (i = 0; i < g.terminals.n; i++) {
+    for (i = 0; i < g.terminals.length; i++) {
         logf("\t");
         print_term(g.terminals[i]);
         logf("(%d)\n", i + g.productions.length);
@@ -1159,7 +1159,7 @@ void
 print_states(Grammar *g) {
     int i;
 
-    for (i = 0; i < g.states.n; i++)
+    for (i = 0; i < g.states.length; i++)
         print_state(g.states[i]);
 }
 
@@ -1188,7 +1188,7 @@ make_elems_for_productions(Grammar *g) {
                     for (k = 0; k < g.productions[j].rules.n; k++) {
                         rr = g.productions[j].rules[k];
                         for (l = 0; l < rr.elems.n; l++)
-                            if (rr.elems[l].e.term_or_nterm == g.productions[i]) {
+                            if (rr.elems[l].e.nterm == g.productions[i]) {
                                 g.productions[i].elem = rr.elems[l];
                                 break;
                             }
@@ -1251,9 +1251,9 @@ convert_regex_production_one(Grammar *g, Production *p) {
     string buffer;
     Term *t = new_term();
     t.kind = TermKind.TERM_REGEX;
-    t.index = g.terminals.n;
+    t.index = cast(uint)g.terminals.length;
     t.regex_production = p;
-    vec_add(&g.terminals, t);
+    g.terminals ~= t;
     p.regex_term = t;
     p.regex_term.term_name = p.name;
     Elem *e;
@@ -1354,10 +1354,10 @@ build_eq(Grammar *g) {
     EqState[] eq = new EqState[g.states.length];
     while (changed) {
         changed = 0;
-        for (i = 0; i < g.states.n; i++) {
+        for (i = 0; i < g.states.length; i++) {
             s = g.states[i];
             e = &eq[s.index];
-            for (j = i + 1; j < g.states.n; j++) {
+            for (j = i + 1; j < g.states.length; j++) {
                 ss = g.states[j];
                 ee = &eq[ss.index];
                 if (e.eq || ee.eq)
@@ -1408,7 +1408,7 @@ Lcontinue:;
             }
         }
     }
-    for (i = 0; i < g.states.n; i++) {
+    for (i = 0; i < g.states.length; i++) {
         s = g.states[i];
         e = &eq[s.index];
         if (e.eq) {
@@ -1430,7 +1430,7 @@ Lcontinue:;
             }
         }
     }
-    for (i = 0; i < g.states.n; i++) {
+    for (i = 0; i < g.states.length; i++) {
         s = g.states[i];
         e = &eq[s.index];
         if (e.eq && e.diff_state) {
@@ -1449,7 +1449,7 @@ Lcontinue:;
             }
         }
     }
-    for (i = 0; i < g.states.n; i++) {
+    for (i = 0; i < g.states.length; i++) {
         s = g.states[i];
         if (s.reduces_to)
             if (d_verbose_level)
@@ -1506,16 +1506,11 @@ free_D_Grammar(Grammar *g) {
         }
         FREE(p);
     }
-    for (i = 0; i < g.terminals.n; i++) {
-        Term *t = g.terminals[i];
-    }
-    vec_free(&g.terminals);
-    for (i = 0; i < g.actions.n; i++)
+    for (i = 0; i < g.actions.length; i++)
         free_Action(g.actions[i]);
-    vec_free(&g.actions);
     if (g.scanner.code)
         FREE(g.scanner.code);
-    for (i = 0; i < g.states.n; i++) {
+    for (i = 0; i < g.states.length; i++) {
         State *s = g.states[i];
         vec_free(&s.items_hash);
         for (j = 0; j < s.gotos.n; j++) {
@@ -1548,12 +1543,10 @@ free_D_Grammar(Grammar *g) {
         }
         FREE(s);
     }
-    vec_free(&g.states);
-    for (i = 0; i < g.declarations.n; i++) {
+    for (i = 0; i < g.declarations.length; i++) {
         FREE(g.declarations[i].elem);
         FREE(g.declarations[i]);
     }
-    vec_free(&g.declarations);
     for (i = 0; i < g.passes.n; i++) {
         FREE(g.passes[i]);
     }
@@ -1734,8 +1727,8 @@ build_grammar(Grammar *g) {
     map_declarations_to_states(g);
     if (d_verbose_level) {
         logf("%d productions %d terminals %d states %d declarations\n",
-                g.productions.length, g.terminals.n, g.states.n,
-                g.declarations.n);
+                g.productions.length, g.terminals.length, g.states.length,
+                g.declarations.length);
     }
     if (d_verbose_level > 1) {
         print_grammar(g);
@@ -1880,7 +1873,7 @@ print_declarations(Grammar *g) {
 
     if (g.tokenizer)
         logf("${declare tokenize}\n");
-    for (i = 0; i < g.declarations.n; i++) {
+    for (i = 0; i < g.declarations.length; i++) {
         Declaration *dd = g.declarations[i];
         Elem *ee = dd.elem;
         switch (dd.kind) {
@@ -1916,7 +1909,7 @@ print_declarations(Grammar *g) {
         logf("${scanner %s}\n", g.scanner.code);
 
     { int token_exists = 0;
-        for (i = 0; i < g.terminals.n; i++) {
+        for (i = 0; i < g.terminals.length; i++) {
             Term *t = g.terminals[i];
             if (t.kind == TermKind.TERM_TOKEN) {
                 writefln("%s %s", token_exists?"":"${token", t.string_);

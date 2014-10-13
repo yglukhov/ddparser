@@ -68,8 +68,8 @@ maybe_add_state(Grammar *g, State *s) {
             }
         }
     }
-    s.index = g.states.n;
-    vec_add(&g.states, s);
+    s.index = cast(uint)g.states.length;
+    g.states ~= s;
     return s;
 }
 
@@ -197,7 +197,7 @@ new_Action(Grammar *g, ActionKind akind, Term *aterm, Rule *arule, State *astate
   a.rule = arule;
   a.state = astate;
   a.index = g.action_count++;
-  vec_add(&g.actions, a);
+  g.actions ~= a;
   return a;
 }
 
