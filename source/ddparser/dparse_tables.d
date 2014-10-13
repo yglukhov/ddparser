@@ -139,8 +139,7 @@ enum D_PASS_MANUAL		=0x0004;
 enum D_PASS_FOR_ALL		=0x0008;
 enum D_PASS_FOR_UNDEFINED	=0x0010;
 struct D_Pass {
-    char    *name;
-    uint	name_len;
+    string name;
     uint    kind;
     uint	index;
 }

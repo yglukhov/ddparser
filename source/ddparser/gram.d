@@ -718,8 +718,7 @@ D_Pass *
 find_pass(Grammar *g, const(char)[] name) {
   name = name.stripLeft();
   foreach (p; g.passes)
-    if (name.length == p.name_len &&
-	!strncmp(p.name, name.ptr, name.length))
+    if (p.name == name)
       return p;
   return null;
 }
@@ -730,8 +729,7 @@ add_pass(Grammar *g, string name, uint kind, uint line) {
     d_fail("duplicate pass '%s' line %d", name, line);
   else {
     D_Pass *p = new D_Pass();
-    p.name = cast(char*)name.toStringz();
-    p.name_len = cast(uint)name.length;
+    p.name = name;
     p.kind = kind;
     p.index = g.pass_index++;
     vec_add(&g.passes, p);
@@ -1591,7 +1589,6 @@ free_D_Grammar(Grammar *g) {
   }
   vec_free(&g.declarations);
   for (i = 0; i < g.passes.n; i++) {
-    FREE(g.passes[i].name);
     FREE(g.passes[i]);
   }
   vec_free(&g.passes);
