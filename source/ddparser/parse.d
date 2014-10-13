@@ -953,7 +953,7 @@ get_unshared_pnodes(Parser *p, PNode *x, PNode *y, ref PNode*[] pvx, ref PNode*[
 }
 
 int
-greedycmp(PNode* x, PNode* y) {
+greedycmp(PNode* x, PNode* y) @safe {
   // first by start
   if (x.parse_node.start_loc.s < y.parse_node.start_loc.s)
     return -1;
@@ -972,7 +972,7 @@ greedycmp(PNode* x, PNode* y) {
   return 0;
 }
 
-bool PNodeIsLessGreedyThanPNode(PNode* x, PNode* y)
+bool PNodeIsLessGreedyThanPNode(PNode* x, PNode* y) @safe
 {
     return greedycmp(x, y) < 0;
 }
@@ -1265,14 +1265,14 @@ set_add_znode_hash(ref VecZNode v, ZNode *z) {
 
 private void
 set_add_znode(ref VecZNode v, ZNode *z) {
-  VecZNode vv;
-  vec_clear(&vv);
   int i, n = v.n;
   if (n < INTEGRAL_VEC_SIZE) {
     vec_add(&v, z);
     return;
   }
   if (n == INTEGRAL_VEC_SIZE) {
+    VecZNode vv;
+    vec_clear(&vv);
     vv = v;
     vec_clear(&v);
     for (i = 0; i < n; i++)
@@ -1281,7 +1281,7 @@ set_add_znode(ref VecZNode v, ZNode *z) {
   set_add_znode_hash(v, z);
 }
 
-private int GOTO_STATE(Parser* _p, PNode* _pn, SNode* _ps)
+private int GOTO_STATE(Parser* _p, PNode* _pn, SNode* _ps) @safe
 {
     auto offset = _p.t.states[_ps.stateIndex].goto_table_offset;
     return _p.t.goto_table[_pn.parse_node.symbol - offset] - 1;

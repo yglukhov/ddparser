@@ -3,10 +3,11 @@ module ddparser.lex;
 import ddparser.gram;
 import ddparser.util;
 import ddparser.lr;
-import core.stdc.string;
+
+import std.stdio;
+
 import core.stdc.stdlib;
 import core.stdc.ctype;
-import core.stdc.stdio;
 
 enum LIVE_DIFF_IN_TRANSITIONS = false;
 
@@ -51,34 +52,29 @@ struct LexState {
 }
 
 private NFAState *
-new_NFAState(LexState *ls) {
+new_NFAState(LexState *ls) @safe {
   NFAState *n = new NFAState();
   n.index = ls.nfa_index++;
   vec_add(&ls.allnfas, n);
   return n;
 }
 
-private DFAState *
-new_DFAState() {
-  return new DFAState();
-}
-
 private void
-free_DFAState(DFAState *y) {
+free_DFAState(DFAState *y) @safe {
   vec_free(&y.states);
   FREE(y);
 }
 
 private void
-free_VecDFAState(VecDFAState *dfas) {
+free_VecDFAState(VecDFAState *dfas) @safe {
   int i;
   for (i = 0; i < dfas.n; i++)
-    free_DFAState(dfas.v[i]);
+    free_DFAState((*dfas)[i]);
   vec_free(dfas);
 }
 
 private void
-free_NFAState(NFAState *y) {
+free_NFAState(NFAState *y) @safe {
   int i;
   for (i = 0; i < 256; i++)
     vec_free(&y.chars[i]);
@@ -93,11 +89,6 @@ free_VecNFAState(VecNFAState *nfas) {
   for (i = 0; i < nfas.n; i++)
     free_NFAState(nfas.v[i]);
   vec_free(nfas);
-}
-
-private ScanState *
-new_ScanState() {
-  return new ScanState();
 }
 
 extern(C) private int 
@@ -123,7 +114,7 @@ Lbreak:;
 }
 
 private bool
-eq_dfa_state(DFAState *x, DFAState *y) {
+eq_dfa_state(DFAState *x, DFAState *y) @safe {
   if (x.states.n != y.states.n)
     return false;
   for (int i = 0; i < x.states.n; i++)
@@ -136,7 +127,7 @@ private void
 dfa_to_scanner(ref VecDFAState alldfas, ref VecScanState scanner) {
   vec_clear(&scanner);
   for (int i = 0; i < alldfas.n; i++) {
-    alldfas[i].scan = new_ScanState();
+    alldfas[i].scan = new ScanState();
     alldfas[i].scan.index = i;
     vec_add(&scanner, alldfas[i].scan);
   }
@@ -161,7 +152,7 @@ dfa_to_scanner(ref VecDFAState alldfas, ref VecScanState scanner) {
 
 private void
 nfa_to_scanner(NFAState *n, Scanner *s) {
-  DFAState *x = new_DFAState(), y;
+  DFAState *x = new DFAState(), y;
   VecDFAState alldfas;
 
   vec_add(&x.states, n);
@@ -173,7 +164,7 @@ nfa_to_scanner(NFAState *n, Scanner *s) {
           foreach (i_state; alldfas[i].states) {
               foreach (i; i_state.chars[i_char]) {
                   if (!y)
-                      y = new_DFAState();
+                      y = new DFAState();
                   set_add(&y.states, i);
               }
           }
@@ -196,7 +187,7 @@ Lnext:
   free_VecDFAState(&alldfas);
 }
 
-T popFront(T)(ref T[] v)
+T popFront(T)(ref T[] v) @safe
 {
     if (!v.length) return 0;
     scope(exit) v = v[1 .. $];
@@ -205,12 +196,11 @@ T popFront(T)(ref T[] v)
 
 /* build a NFA for the regular expression */
 private int
-build_regex_nfa(LexState *ls, ref const(uint8)[] areg, NFAState *pp, NFAState *nn, Action *trailing) {
+build_regex_nfa(LexState *ls, ref const(uint8)[] areg, NFAState *pp, NFAState *nn, Action *trailing) @safe {
   uint8 c;
   const(ubyte)[] reg = areg;
   NFAState *p = pp, s, x, n = nn;
   int i, has_trailing = 0;
-  uint8 mark[256];
 
   s = p;
   while ((c = reg.popFront()) != 0) {
@@ -229,44 +219,47 @@ build_regex_nfa(LexState *ls, ref const(uint8)[] areg, NFAState *pp, NFAState *n
               vec_add(&pp.epsilon, (s = new_NFAState(ls)));
               break;
           case '[':
-              bool reversed = false;
-              if (reg[0] == '^') {
-                  reg.popFront();
-                  reversed = true;
-              }
-              memset(mark.ptr, 0, mark.sizeof);
-              ubyte pc = ubyte.max;
-              while ((c = reg.popFront()) != 0) {
-                  switch(c) {
-                      case ']':
-                          goto Lsetdone;
-                      case '-':
-                          c = reg.popFront();
-                          if (!c)
-                              goto Lerror;
-                          if (c == '\\')
-                              c = reg.popFront();
-                          if (!c)
-                              goto Lerror;
-                          for (;pc <= c; pc++)
-                              mark[pc] = 1;
-                          break;
-                      case '\\':
-                          c = reg.popFront();
-                          goto default;
-                      default:
-                          pc = c;
-                          mark[c] = 1;
-                          break;
+              {
+                  bool mark[256];
+                  bool reversed = false;
+                  if (reg[0] == '^') {
+                      reg.popFront();
+                      reversed = true;
                   }
-              }
+
+                  ubyte pc = ubyte.max;
+                  while ((c = reg.popFront()) != 0) {
+                      switch(c) {
+                          case ']':
+                              goto Lsetdone;
+                          case '-':
+                              c = reg.popFront();
+                              if (!c)
+                                  goto Lerror;
+                              if (c == '\\')
+                                  c = reg.popFront();
+                              if (!c)
+                                  goto Lerror;
+                              for (;pc <= c; pc++)
+                                  mark[pc] = true;
+                              break;
+                          case '\\':
+                              c = reg.popFront();
+                              goto default;
+                          default:
+                              pc = c;
+                              mark[c] = true;
+                              break;
+                      }
+                  }
 Lsetdone:
-              x = new_NFAState(ls);
-              for (i = 1; i < 256; i++)
-                  if ((!reversed && mark[i]) || (reversed && !mark[i]))
-                      vec_add(&s.chars[i], x);
-              p = s;
-              s = x;
+                  x = new_NFAState(ls);
+                  for (i = 1; i < 256; i++)
+                      if ((!reversed && mark[i]) || (reversed && !mark[i]))
+                          vec_add(&s.chars[i], x);
+                  p = s;
+                  s = x;
+              }
               break;
           case '?':
               vec_add(&p.epsilon, s);
@@ -548,15 +541,10 @@ build_state_scanner(Grammar *g, LexState *ls, State *s) {
   ls.scanners++;
 }
 
-private LexState *
-new_LexState() {
-  return new LexState();
-}
-
 void 
 build_scanners(Grammar *g) {
   int k;
-  LexState *ls = new_LexState();
+  LexState *ls = new LexState();
 
   /* detect identical scanners */
   for (int i = 0; i < g.states.n; i++) {
@@ -590,6 +578,6 @@ build_scanners(Grammar *g) {
     }
   }
   if (d_verbose_level)
-    printf("%d scanners %d transitions\n", ls.scanners, ls.transitions);
+    writefln("%d scanners %d transitions", ls.scanners, ls.transitions);
 }
 

@@ -55,11 +55,8 @@ Grammar* createEmptyGrammar()
   g.tokenizer = 0;
   g.longest_match = 0;
   /* grammar writing options */
-  strcpy(g.grammar_ident.ptr, "-".ptr);
   g.scanner_blocks = 4;
   g.scanner_block_size = 0;
-  g.write_line_directives = 1;
-  g.token_type = 0;
     return g;
 }
 
@@ -2234,23 +2231,7 @@ parse_grammar(Grammar *g, string pathname, string sarg) {
 
 void testGramJson()
 {
-      Grammar *g;
-
-
-  g = new_D_Grammar();
-  /* grammar construction options */
-  g.set_op_priority_from_rule = 0;
-  g.right_recursive_BNF = 0;
-  g.states_for_whitespace = 1;
-  g.states_for_all_nterms = 0;
-  g.tokenizer = 0;
-  g.longest_match = 0;
-  /* grammar writing options */
-  strcpy(g.grammar_ident.ptr, "-".ptr);
-  g.scanner_blocks = 4;
-  g.scanner_block_size = 0;
-  g.write_line_directives = 1;
-  g.token_type = 0;
+      Grammar *g = createEmptyGrammar();
 
   if (parse_grammar(g, "d/grammar.g", null) < 0)
     assert(false);

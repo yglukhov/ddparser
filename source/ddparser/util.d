@@ -285,7 +285,7 @@ void* REALLOC(void* p, size_t s)
     return GC.realloc(p, s);
 }
 
-void FREE(void* p)
+void FREE(void* p) @safe
 {
 
 }
@@ -383,23 +383,17 @@ string readContentsOfFile(string path)
     return cast(string)outbuf;
 }
 
-void d_fail(Args...)(Args args)
+void d_fail(Args...)(Args args) @trusted
 {
     write("error: ");
     writefln(args);
     assert(false);
 }
 
-void d_warn(Args...)(Args args)
+void d_warn(Args...)(Args args) @trusted
 {
     write("warning: ");
     writefln(args);
-}
-
-void
-vec_add_internal(void *v, void *elem) {
-  AbstractVec *av = cast(AbstractVec*)v;
-  av.vec_add_internal(elem);
 }
 
 string escape_string(const(char)[] s, bool singleQuote = false)
@@ -443,10 +437,9 @@ string escape_string_single_quote(const(char)[] s)
 }
 
 
-int
-set_add(void *av, void *t) {
-    AbstractVec *v = cast(AbstractVec*)av;
-    AbstractVec vv;
+bool
+set_add(T, V : Vec!T)(V* v, T t) @trusted {
+    V vv;
     int j, n = v.n;
     uint i;
     if (n) {
@@ -458,9 +451,9 @@ set_add(void *av, void *t) {
         {
             if (!v.v[i]) {
                 v.v[i] = t;
-                return 1;
+                return true;
             } else if (v.v[i] == t)
-                return 0;
+                return false;
         }
     }
     if (!n) {
@@ -472,10 +465,9 @@ set_add(void *av, void *t) {
         v.i = v.i + 1;
     }
     v.n = d_prime2[v.i];
-    v.v = cast(void**)MALLOC(v.n * (void *).sizeof);
-    memset(v.v, 0, v.n * (void *).sizeof);
+    v.v = cast(T*)MALLOC(v.n * T.sizeof);
     if (vv.v) {
-        set_union(av, &vv);
+        set_union(v, &vv);
     }
     return set_add(v, t);
 }
@@ -519,13 +511,12 @@ set_add_fn(void *av, void *t, hash_fns_t *fns) {
   return set_add_fn(v, t, fns);
 }
 
-int
-set_union(void *av, void *avv) {
-  AbstractVec *vv = cast(AbstractVec*)avv;
-  int changed = 0;
+bool
+set_union(V)(V *v, V *vv) @trusted {
+  bool changed = false;
   foreach (i; *vv)
     if (i)
-      changed = set_add(av, i) || changed;
+      changed = set_add(v, i) || changed;
   return changed;
 }
 
@@ -540,9 +531,8 @@ set_union_fn(void *av, void *avv, hash_fns_t *fns) {
 }
 
 void
-set_to_vec(void *av) {
-  AbstractVec *v = cast(AbstractVec*)av;
-  AbstractVec vv;
+set_to_vec(V)(V *v) {
+  V vv;
   uint i;
 
   vv.n = v.n;
@@ -555,12 +545,11 @@ set_to_vec(void *av) {
   v.v = null;
   for (i = 0; i < vv.n; i++)
     if (vv.v[i])
-      vec_add_internal(v, vv.v[i]);
+      v.vec_add_internal(vv[i]);
 }
 
-int
-set_find(void *av, void *t) {
-  AbstractVec *v = cast(AbstractVec*)av;
+bool
+set_find(T, V : Vec!T)(V *v, T t) {
   int j, n = v.n;
   uint i;
   if (n) {
@@ -571,12 +560,12 @@ set_find(void *av, void *t) {
      i = ((i + 1) % n), j++)
     {
       if (!v.v[i]) {
-    return 0;
+    return false;
       } else if (v.v[i] == t)
-    return 1;
+    return true;
     }
   }
-  return 0;
+  return false;
 }
 
 void d_free(void *x) { }

@@ -332,12 +332,8 @@ struct Grammar {
     int         longest_match;
     int         save_parse_tree;
     /* grammar writing options */
-    char            grammar_ident[256];
     int         scanner_blocks;
     int         scanner_block_size;
-    int         write_line_directives;
-    int         token_type;
-    char            write_extension[256];
     /* temporary variables for grammar construction */
     Production *    p;
     Rule *      r;
@@ -370,8 +366,6 @@ struct Grammar {
 
         s.map(scanner_blocks, "scanner_blocks");
         s.map(scanner_block_size, "scanner_block_size");
-        s.map(write_line_directives, "write_line_directives");
-        s.map(token_type, "token_type");
     }
 }
 

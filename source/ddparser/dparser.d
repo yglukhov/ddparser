@@ -342,11 +342,8 @@ private:
         g.states_for_all_nterms = 1;
         g.tokenizer = 0;
         g.longest_match = 1;
-        strcpy(g.grammar_ident.ptr, "grammar".ptr);
         g.scanner_blocks = 4;
         g.scanner_block_size = 0;
-        g.write_line_directives = 1;
-        g.token_type = 0;
 
         // TODO: Can't handle syntax error here =(
         if (parse_grammar(g, null, grammarString) < 0) return null;
