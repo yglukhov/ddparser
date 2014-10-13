@@ -348,7 +348,7 @@ private:
         // TODO: Can't handle syntax error here =(
         if (parse_grammar(g, null, grammarString) < 0) return null;
 
-        if (g.productions.n < 2) throw new Exception("Too few productions");
+        if (g.productions.length < 2) throw new Exception("Too few productions");
 
         if (build_grammar(g) < 0) return null;
         return g;
@@ -362,7 +362,6 @@ private:
     bool setGrammar(string grammarString)
     {
         D_Grammar *g = grammarWithString(grammarString);
-        scope(exit) free_D_Grammar(g);
 
         binaryTables = tablesWithGrammar(g);
 

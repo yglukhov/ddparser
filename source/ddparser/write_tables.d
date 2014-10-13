@@ -166,7 +166,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
             action_index = t.regex_production.rules.v[0].action_index;
         }
         D_Shift* shift = new D_Shift();
-        shift.symbol = cast(ushort)(t.index + g.productions.n);
+        shift.symbol = cast(ushort)(t.index + g.productions.length);
         shift.shift_kind = cast(ubyte)t.scan_kind;
         shift.op_assoc = cast(ubyte)t.op_assoc;
         shift.op_priority = t.op_priority;
@@ -176,7 +176,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
         allShifts[i] = shift;
         if (t.trailing_context) {
             shift = new D_Shift();
-            shift.symbol = cast(ushort)(t.index + g.productions.n);
+            shift.symbol = cast(ushort)(t.index + g.productions.length);
             shift.shift_kind = D_SCAN_TRAILING;
             shift.op_assoc = cast(ubyte)t.op_assoc;
             shift.op_priority = t.op_priority;
@@ -387,7 +387,7 @@ private Rule* original_reduction(Rule* r)
 
 private void
 buildGotoData(Grammar *g, ref BuildTables tables) {
-    int nvalid_bytes = ((g.productions.n + g.terminals.n) + 7) / 8;
+    size_t nvalid_bytes = ((g.productions.length + g.terminals.length) + 7) / 8;
     ushort[] vgoto;
     for (int i = 0; i < g.states.n; i++) {
         State *s = g.states.v[i];
@@ -731,7 +731,7 @@ D_ParserTables* createTablesFromGrammar(Grammar* g, D_ReductionCode spec_code, D
     auto ws = lookup_production(g, "whitespace");
     if (ws) result.whitespace_state = ws.state.index;
     result.symbols = tables.d_symbols;
-    assert(result.symbols.length == g.productions.n + g.terminals.n);
+    assert(result.symbols.length == g.productions.length + g.terminals.length);
     result.passes = tables.d_passes;
     assert(result.passes.length == g.passes.length);
     result.save_parse_tree = g.save_parse_tree;

@@ -2,6 +2,9 @@ module ddparser.lr;
 
 import ddparser.gram;
 import ddparser.util;
+
+import std.algorithm;
+
 import core.stdc.string;
 import core.stdc.stdlib;
 
@@ -16,7 +19,7 @@ private uint item_hash(Item* _i)
 private int
 insert_item(State *s, Elem *e) {
   if (set_add(&s.items_hash, e)) {
-    vec_add(&s.items, e);
+    s.items ~= e;
     return 1;
   }
   return 0;
@@ -29,6 +32,13 @@ itemcmp(const void *ai, const void *aj) {
   return (i > j) ? 1 : ((i < j) ? -1 : 0);
 }
 
+bool itemIsLessThanItem(Item* a, Item* b)
+{
+  uint i = item_hash(a);	
+  uint j = item_hash(b);
+  return i < j;
+}
+
 private State *
 new_state() {
   return new State();
@@ -36,7 +46,6 @@ new_state() {
 
 private void
 free_state(State *s) {
-  vec_free(&s.items);
   vec_free(&s.items_hash);
   FREE(s);
 }
@@ -44,9 +53,9 @@ free_state(State *s) {
 private State *
 maybe_add_state(Grammar *g, State *s) {
     foreach (i; g.states) {
-        if (s.hash == i.hash && s.items.n == i.items.n) {
+        if (s.hash == i.hash && s.items.length == i.items.length) {
             bool cont = false;
-            for (int j = 0; j < s.items.n; j++)
+            for (int j = 0; j < s.items.length; j++)
                 if (s.items[j] != i.items[j])
                 {
                     cont = true;
@@ -81,7 +90,8 @@ build_closure(Grammar *g, State *s) {
 		    r.elems[0] : r.end);
     }
   }
-  qsort(s.items.v, s.items.n, (Item*).sizeof, &itemcmp);
+  s.items.sort!itemIsLessThanItem();
+  /* qsort(s.items.v, s.items.n, (Item*).sizeof, &itemcmp); */
   s.hash = 0;
   foreach (i; s.items)
     s.hash += item_hash(i);
@@ -151,7 +161,7 @@ elem_symbol(Grammar *g, Elem *e) {
   if (e.kind == ElemKind.ELEM_NTERM)
     return e.e.nterm.index;
   else
-    return g.productions.n + e.e.term.index;
+    return cast(uint)(g.productions.length + e.e.term.index);
 }
 
 extern(C) private int 

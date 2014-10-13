@@ -2203,14 +2203,14 @@ bool parseGrammar(Grammar* g, string str)
     if (gramGramTables == null)
         gramGramTables = createTablesFromGrammar(grammarGrammar(), null, null);
 
-    if (!g.productions.n)
+    if (!g.productions.length)
         initialize_productions(g);
     D_Parser *p = new_D_Parser(gramGramTables, (GramGramParseNode_User).sizeof);
     p.initial_globals = g;
     if (!dparse(p, str))
         return false;
 
-    if (g.productions.n > 1)
+    if (g.productions.length > 1)
         finish_productions(g);
 
     return true;
@@ -2231,10 +2231,10 @@ parse_grammar(Grammar *g, string pathname, string sarg) {
 
 void testGramJson()
 {
-      Grammar *g = createEmptyGrammar();
+    Grammar *g = createEmptyGrammar();
 
-  if (parse_grammar(g, "d/grammar.g", null) < 0)
-    assert(false);
+    if (parse_grammar(g, "d/grammar.g", null) < 0)
+        assert(false);
 
     auto s = new Serializer();
     JSONValue v = s.serialize(g);
@@ -2246,7 +2246,7 @@ void testGramJson()
 
     v = s.serialize(otherG);
     string v2 = toJSON(&v, true);
-    
+
     if (v2 != v1)
     {
         writeln("JSON2: ", v2);

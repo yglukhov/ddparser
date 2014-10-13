@@ -89,7 +89,7 @@ struct Scanner {
 struct State {
     uint        index;
     uint64  hash;
-    Vec!(Item*) items;
+    Item*[] items;
     Vec!(Item*) items_hash;
     VecGoto gotos;
     VecAction   shift_actions;
@@ -313,7 +313,7 @@ struct Elem {
 }
 
 struct Grammar {
-    Vec!(Production *)  productions;
+    Production*[]   productions;
     Vec!(Term *)        terminals;
     Vec!(State *)       states;
     Vec!(Action *)      actions;
@@ -391,7 +391,7 @@ Production* new_production(Grammar *g, string name) @safe {
         return p;
     }
     p = new Production();
-    vec_add(&g.productions, p);
+    g.productions ~= p;
     p.name = name;
     return p;
 }
@@ -746,7 +746,7 @@ new_internal_production(Grammar *g, Production *p) @safe {
     if (p) {
         bool found = false;
         Production *tp = null, ttp;
-        for (int i = 0; i < g.productions.n; i++) {
+        for (int i = 0; i < g.productions.length; i++) {
             if (found) {
                 ttp = g.productions[i];
                 g.productions[i] = tp;
@@ -929,7 +929,7 @@ resolve_grammar(Grammar *g) {
     Term *last_term, t;
 
     g.rule_index = 0;
-    for (int i = 0; i < g.productions.n; i++) {
+    for (int i = 0; i < g.productions.length; i++) {
         p = g.productions[i];
         if (p != lookup_production(g, p.name))
             d_fail("duplicate production '%s'", p.name);
@@ -1049,10 +1049,10 @@ print_grammar(Grammar *g) {
     Production *pp;
     Rule *rr;
 
-    if (!g.productions.n)
+    if (!g.productions.length)
         return;
     logf("PRODUCTIONS\n\n");
-    for (i = 0; i < g.productions.n; i++) {
+    for (i = 0; i < g.productions.length; i++) {
         pp = g.productions[i];
         logf("%s (%d)\n", pp.name, i);
         for (j = 0; j < pp.rules.n; j++) {
@@ -1084,7 +1084,7 @@ print_grammar(Grammar *g) {
     for (i = 0; i < g.terminals.n; i++) {
         logf("\t");
         print_term(g.terminals[i]);
-        logf("(%d)\n", i + g.productions.n);
+        logf("(%d)\n", i + g.productions.length);
     }
     logf("\n");
 }
@@ -1121,9 +1121,9 @@ private void
 print_state(State *s) {
     int j, conflict = 0;
 
-    writefln("STATE %d (%d ITEMS)%s", s.index, s.items.n,
+    writefln("STATE %d (%d ITEMS)%s", s.index, s.items.length,
             s.accept ? " ACCEPT" : "");
-    for (j = 0; j < s.items.n; j++)
+    for (j = 0; j < s.items.length; j++)
         print_item(s.items[j]);
     if (s.gotos.n)
         logf("  GOTO\n");
@@ -1179,12 +1179,12 @@ make_elems_for_productions(Grammar *g) {
     Production *ppp;
 
     Production *pp = g.productions[0];
-    for (i = 0; i < g.productions.n; i++)
+    for (i = 0; i < g.productions.length; i++)
         if (!g.productions[i].internal) {
             if (g.states_for_all_nterms ||
                     state_for_declaration(g, i)) {
                 /* try to find an existing elem */
-                for (j = 0; j < g.productions.n; j++)
+                for (j = 0; j < g.productions.length; j++)
                     for (k = 0; k < g.productions[j].rules.n; k++) {
                         rr = g.productions[j].rules[k];
                         for (l = 0; l < rr.elems.n; l++)
@@ -1193,7 +1193,7 @@ make_elems_for_productions(Grammar *g) {
                                 break;
                             }
                     }
-                if (j >= g.productions.n) { /* not found */
+                if (j >= g.productions.length) { /* not found */
                     g.productions[i].elem =
                         new_elem_nterm(g.productions[i], new_rule(g, pp));
                     g.productions[i].elem.rule.index = g.rule_index++; /* fake */
@@ -1483,7 +1483,7 @@ void
 free_D_Grammar(Grammar *g) {
     int i, j, k;
 
-    for (i = 0; i < g.productions.n; i++) {
+    for (i = 0; i < g.productions.length; i++) {
         Production *p = g.productions[i];
         for (j = 0; j < p.rules.n; j++) {
             Rule *r = p.rules[j];
@@ -1506,7 +1506,6 @@ free_D_Grammar(Grammar *g) {
         }
         FREE(p);
     }
-    vec_free(&g.productions);
     for (i = 0; i < g.terminals.n; i++) {
         Term *t = g.terminals[i];
     }
@@ -1518,7 +1517,6 @@ free_D_Grammar(Grammar *g) {
         FREE(g.scanner.code);
     for (i = 0; i < g.states.n; i++) {
         State *s = g.states[i];
-        vec_free(&s.items);
         vec_free(&s.items_hash);
         for (j = 0; j < s.gotos.n; j++) {
             FREE(s.gotos[j].elem);
@@ -1594,7 +1592,7 @@ set_declaration_group(Production *p, Production *root, Declaration *d) {
 
 private void
 propogate_declarations(Grammar *g) {
-    Production *p, start = g.productions[0];
+    Production *start = g.productions[0];
 
     /* global defaults */
     if (g.tokenizer)
@@ -1605,6 +1603,7 @@ propogate_declarations(Grammar *g) {
     foreach (d; g.declarations) {
         Elem *e = d.elem;
         if (e.kind == ElemKind.ELEM_UNRESOLVED) {
+            Production *p;
             if (e.e.unresolved.length == 0)
                 p = g.productions[0];
             else
@@ -1621,11 +1620,11 @@ propogate_declarations(Grammar *g) {
     /* build declaration groups (covering a production subtrees) */
     foreach (d; g.declarations) {
         if (scanner_declaration(d)) {
-            p = d.elem.e.nterm;
+            Production *p = d.elem.e.nterm;
             if (p == start) {
-                foreach (p; g.productions) {
-                    p.declaration_group[d.kind] = start;
-                    p.last_declaration[d.kind] = d;
+                foreach (pp; g.productions) {
+                    pp.declaration_group[d.kind] = start;
+                    pp.last_declaration[d.kind] = d;
                 }
             } else
                 set_declaration_group(p, p, d);
@@ -1735,7 +1734,7 @@ build_grammar(Grammar *g) {
     map_declarations_to_states(g);
     if (d_verbose_level) {
         logf("%d productions %d terminals %d states %d declarations\n",
-                g.productions.n, g.terminals.n, g.states.n,
+                g.productions.length, g.terminals.n, g.states.n,
                 g.declarations.n);
     }
     if (d_verbose_level > 1) {
@@ -1862,11 +1861,11 @@ Lmore:
 private void
 print_productions(Grammar *g) {
     uint i;
-    if (!g.productions.n) {
+    if (!g.productions.length) {
         logf("/*\n  There were no productions in the grammar\n*/\n");
         return;
     }
-    for (i = 1; i < g.productions.n; i++)
+    for (i = 1; i < g.productions.length; i++)
         print_production(g.productions[i]);
 }
 
