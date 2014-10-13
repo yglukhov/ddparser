@@ -10,16 +10,6 @@ import ddparser.util;
 import std.stdio;
 
 
-
-string readContentsOfFile(string path)
-{
-    ubyte[] buffer;
-    foreach(c; File(path).byChunk(4086)) buffer ~= c;
-    return cast(string)buffer;
-}
-
-
-
 unittest
 {
     string[] tests = [
@@ -64,8 +54,6 @@ unittest
         /* "g49.test", */
         /* "g50.test", */
         "g51.test",
-
-
     ];
 
     foreach(i; tests)

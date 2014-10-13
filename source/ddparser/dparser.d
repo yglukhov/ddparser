@@ -349,7 +349,7 @@ private:
         g.token_type = 0;
 
         // TODO: Can't handle syntax error here =(
-        if (parse_grammar(g, null, cast(char*)grammarString.toStringz()) < 0) return null;
+        if (parse_grammar(g, null, grammarString) < 0) return null;
 
         if (g.productions.n < 2) throw new Exception("Too few productions");
 

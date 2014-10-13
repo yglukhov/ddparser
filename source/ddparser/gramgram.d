@@ -2220,16 +2220,14 @@ bool parseGrammar(Grammar* g, string str)
 }
 
 int
-parse_grammar(Grammar *g, string pathname, char *sarg) {
-    char *s = sarg;
-
-    if (!s) 
+parse_grammar(Grammar *g, string pathname, string sarg) {
+    if (!sarg) 
     {
-        s = sbuf_read(pathname);
-        if (!s)
+        sarg = readContentsOfFile(pathname);
+        if (!sarg)
             return -1;
     }
-    if (!parseGrammar(g, cast(string)s[0 .. strlen(s)]))
+    if (!parseGrammar(g, sarg))
         return -1;
     return 0;
 }

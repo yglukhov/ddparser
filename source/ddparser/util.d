@@ -376,23 +376,11 @@ uint strhashl(const(char)[] s)
     return h;
 }
 
-int
-buf_read(string pathname, char **buf, int *len) {
+string readContentsOfFile(string path)
+{
     byte[] outbuf;
-    foreach(chunk; File(pathname).byChunk(4096)) outbuf ~= chunk;
-    *buf = cast(char*)outbuf.ptr;
-    *len = cast(int)outbuf.length;
-    return *len;
-}
-
-char *
-sbuf_read(string pathname) {
-  char *buf;
-  int len;
-
-  if (buf_read(pathname, &buf, &len) < 0)
-    return null;
-  return buf;
+    foreach(chunk; File(path).byChunk(4096)) outbuf ~= chunk;
+    return cast(string)outbuf;
 }
 
 void d_fail(Args...)(Args args)
