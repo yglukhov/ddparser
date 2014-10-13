@@ -129,7 +129,40 @@ class Grammar
         assert(false, "Production " ~ sym ~ " not found");
     }
 
+    private static D_Grammar* grammarWithString(string grammarString)
+    {
+        D_Grammar *g = new_D_Grammar();
+
+        g.set_op_priority_from_rule = 0;
+        g.right_recursive_BNF = 0;
+        g.states_for_whitespace = 1;
+        g.states_for_all_nterms = 1;
+        g.tokenizer = 0;
+        g.longest_match = 1;
+        g.scanner_blocks = 4;
+        g.scanner_block_size = 0;
+
+        // TODO: Can't handle syntax error here =(
+        if (parse_grammar(g, null, grammarString) < 0) return null;
+
+        if (g.productions.length < 2) throw new Exception("Too few productions");
+
+        if (build_grammar(g) < 0) return null;
+        return g;
+    }
+
+    private @property final D_ParserTables* tables()
+    {
+        if (!_tables)
+        {
+            _tables = createTablesFromGrammar(
+                    grammarWithString(toString()), &Parser.spec_code, &Parser.final_code);
+        }
+        return _tables;
+    }
+
     Production[] productions;
+    private D_ParserTables* _tables;
 }
 
 struct Location
@@ -204,20 +237,13 @@ class Parser
 
     bool setGrammar(Grammar g)
     {
-        if (!setGrammar(g.toString())) return false;
-        grammar = g;
-        return true;
-    }
-
-    bool setGrammarNewWay(Grammar g)
-    {
-        D_Grammar *_g = grammarWithString(g.toString());
-
-        binaryTables = tablesWithGrammar(_g);
-
-        createParser();
-        grammar = g;
-        return true;
+        binaryTables = g.tables;
+        if (binaryTables)
+        {
+            grammar = g;
+            createParser();
+        }
+        return binaryTables != null;
     }
 
     ParseNode parse(string s)
@@ -324,51 +350,7 @@ class Parser
     AmbiguityHandler ambiguityHandler;
     void delegate(Parser) syntaxErrorHandler;
 
-    static D_ParserTables* tablesWithGrammar(Grammar g, bool oldWay)
-    {
-        auto dg = grammarWithString(g.toString());
-        return tablesWithGrammar(dg);
-    }
-
 private:
-
-    static D_Grammar* grammarWithString(string grammarString)
-    {
-        D_Grammar *g = new_D_Grammar();
-
-        g.set_op_priority_from_rule = 0;
-        g.right_recursive_BNF = 0;
-        g.states_for_whitespace = 1;
-        g.states_for_all_nterms = 1;
-        g.tokenizer = 0;
-        g.longest_match = 1;
-        g.scanner_blocks = 4;
-        g.scanner_block_size = 0;
-
-        // TODO: Can't handle syntax error here =(
-        if (parse_grammar(g, null, grammarString) < 0) return null;
-
-        if (g.productions.length < 2) throw new Exception("Too few productions");
-
-        if (build_grammar(g) < 0) return null;
-        return g;
-    }
-
-    static D_ParserTables* tablesWithGrammar(D_Grammar* g)
-    {
-        return createTablesFromGrammar(g, &spec_code, &final_code);
-    }
-
-    bool setGrammar(string grammarString)
-    {
-        D_Grammar *g = grammarWithString(grammarString);
-
-        binaryTables = tablesWithGrammar(g);
-
-        createParser();
-        return true;
-    }
-
     void createParser()
     {
         parser = new_D_Parser(binaryTables, D_ParseNode_User.sizeof);
