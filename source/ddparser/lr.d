@@ -110,7 +110,7 @@ add_goto(State *s, State *ss, Elem *e) {
   Goto *g = new Goto();
   g.state = ss;
   g.elem = clone_elem(e);
-  vec_add(&s.gotos, g);
+  s.gotos ~= g;
 }
 
 private void
@@ -171,11 +171,15 @@ gotocmp(const void *aa, const void *bb) {
   return ((i > j) ? 1 : ((i < j) ? -1 : 0));
 }
 
+bool gotoIsLessThanGoto(Goto* a, Goto* b)
+{
+    return a.state.index < b.state.index;
+}
+
 private void
 sort_Gotos(Grammar *g) {
   foreach (s; g.states) {
-    VecGoto *vg = &s.gotos;
-    qsort(vg.v, vg.length, (Goto*).sizeof, &gotocmp);
+    s.gotos.sort!gotoIsLessThanGoto();
   }
 }
 

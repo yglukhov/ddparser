@@ -391,7 +391,7 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
     ushort[] vgoto;
     for (int i = 0; i < g.states.length; i++) {
         State *s = g.states[i];
-        if (s.gotos.n) {
+        if (s.gotos.length) {
             /* check for goto on token */
             foreach (j; s.gotos)
                 if (j.elem.kind == ElemKind.ELEM_TERM &&
@@ -403,10 +403,10 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
 
             ubyte[] d_goto_valid = new ubyte[nvalid_bytes];
             /* find lowest goto, set valid bits */
-            int lowest_sym = elem_symbol(g, s.gotos.v[0].elem);
+            int lowest_sym = elem_symbol(g, s.gotos[0].elem);
             SET_BIT(d_goto_valid, lowest_sym);
-            for (int j = 1; j < s.gotos.n; j++) {
-                int sym = elem_symbol(g, s.gotos.v[j].elem);
+            for (int j = 1; j < s.gotos.length; j++) {
+                int sym = elem_symbol(g, s.gotos[j].elem);
                 SET_BIT(d_goto_valid, sym);
                 if (sym < lowest_sym)
                     lowest_sym = sym;
@@ -415,8 +415,8 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
             bool again = true;
             while (again) {
                 again = false;
-                for (int j = 0; j < s.gotos.n; j++) {
-                    int x = elem_symbol(g, s.gotos.v[j].elem);
+                for (int j = 0; j < s.gotos.length; j++) {
+                    int x = elem_symbol(g, s.gotos[j].elem);
                     x -= lowest_sym;
                     if (vgoto.length <= x) 
                         vgoto.length = x + 1;
@@ -425,7 +425,7 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
                         again = true;
                         /* undo the damage */
                         for (--j;j >= 0;j--) {
-                            x = elem_symbol(g, s.gotos.v[j].elem);
+                            x = elem_symbol(g, s.gotos[j].elem);
                             x -= lowest_sym;
                             vgoto[x] = 0;
                         }
@@ -434,9 +434,9 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
                     }
                     else
                     {
-                        if (s.gotos.v[j].state.index + 1 > ushort.max)
+                        if (s.gotos[j].state.index + 1 > ushort.max)
                             d_fail("goto table overflow");
-                        vgoto[x] = cast(ushort)(s.gotos.v[j].state.index + 1);
+                        vgoto[x] = cast(ushort)(s.gotos[j].state.index + 1);
                     }
                 }
             }
@@ -609,7 +609,7 @@ buildStateData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
             State *s = g.states[i];
             State *shifts = s.same_shifts ? s.same_shifts : s;
 
-            if (s.gotos.n)
+            if (s.gotos.length)
                 state.goto_valid = tables.d_goto_valid[i];
 
             state.goto_table_offset = s.goto_table_offset;

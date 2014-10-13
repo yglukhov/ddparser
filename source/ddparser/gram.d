@@ -54,8 +54,6 @@ struct Goto {
     State   *state;
 }
 
-alias VecGoto = Vec!(Goto*);
-
 enum ActionKind {
     ACTION_ACCEPT, ACTION_SHIFT, ACTION_REDUCE, ACTION_SHIFT_TRAILING
 }
@@ -91,7 +89,7 @@ struct State {
     uint64  hash;
     Item*[] items;
     Vec!(Item*) items_hash;
-    VecGoto gotos;
+    Goto*[] gotos;
     VecAction   shift_actions;
     VecAction   reduce_actions;
     VecHint right_epsilon_hints;
@@ -1515,7 +1513,6 @@ free_D_Grammar(Grammar *g) {
             FREE(s.gotos[j].elem);
             FREE(s.gotos[j]);
         }
-        vec_free(&s.gotos);
         vec_free(&s.shift_actions);
         vec_free(&s.reduce_actions);
         for (j = 0; j < s.right_epsilon_hints.length; j++)
