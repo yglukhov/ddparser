@@ -378,7 +378,7 @@ compute_liveness(Scanner *scanner) {
   }
   foreach (ss; scanner.states) {
     set_to_vec(&ss.live);
-    sort_VecAction(&ss.live);
+    sort_VecAction(ss.live);
   }
 }
 
@@ -554,15 +554,15 @@ build_scanners(Grammar *g) {
     for (int j = 0; j < i; j++) {
       if (g.states[j].same_shifts)
 	continue;
-      if (g.states[j].shift_actions.n != s.shift_actions.n)
+      if (g.states[j].shift_actions.length != s.shift_actions.length)
 	continue;
       if (g.states[j].scan_kind != s.scan_kind)
 	continue;
-      for (k = 0; k < g.states[j].shift_actions.n; k++)
+      for (k = 0; k < g.states[j].shift_actions.length; k++)
 	if (s.shift_actions[k].term != 
 	    g.states[j].shift_actions[k].term)
 	  break;
-      if (k >= g.states[j].shift_actions.n) {
+      if (k >= g.states[j].shift_actions.length) {
 	s.same_shifts = g.states[j];
 	break;
       }
@@ -570,7 +570,7 @@ build_scanners(Grammar *g) {
   }
   /* build scanners */
   foreach (s; g.states) {
-    if (s.shift_actions.n) {
+    if (s.shift_actions.length) {
       if (s.same_shifts)
 	s.scanner = s.same_shifts.scanner;
       else 

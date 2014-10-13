@@ -1513,8 +1513,6 @@ free_D_Grammar(Grammar *g) {
             FREE(s.gotos[j].elem);
             FREE(s.gotos[j]);
         }
-        vec_free(&s.shift_actions);
-        vec_free(&s.reduce_actions);
         for (j = 0; j < s.right_epsilon_hints.length; j++)
             FREE(s.right_epsilon_hints[j]);
         vec_free(&s.right_epsilon_hints);
@@ -1651,7 +1649,7 @@ merge_shift_actions(State *to, State *from) {
         foreach (t; to.shift_actions)
             if (f.term == t.term)
                 goto Lnext;
-        vec_add(&to.shift_actions, f);
+        to.shift_actions ~= f;
 Lnext:;
     }
 }

@@ -25,18 +25,9 @@ insert_item(State *s, Elem *e) {
   return 0;
 }
 
-extern(C) private int 
-itemcmp(const void *ai, const void *aj) {
-  uint i = item_hash(*cast(Item**)ai);	
-  uint j = item_hash(*cast(Item**)aj);
-  return (i > j) ? 1 : ((i < j) ? -1 : 0);
-}
-
 bool itemIsLessThanItem(Item* a, Item* b)
 {
-  uint i = item_hash(a);	
-  uint j = item_hash(b);
-  return i < j;
+  return item_hash(a) < item_hash(b);
 }
 
 private State *
@@ -91,7 +82,6 @@ build_closure(Grammar *g, State *s) {
     }
   }
   s.items.sort!itemIsLessThanItem();
-  /* qsort(s.items.v, s.items.length, (Item*).sizeof, &itemcmp); */
   s.hash = 0;
   foreach (i; s.items)
     s.hash += item_hash(i);
@@ -164,13 +154,6 @@ elem_symbol(Grammar *g, Elem *e) {
     return cast(uint)(g.productions.length + e.e.term.index);
 }
 
-extern(C) private int 
-gotocmp(const void *aa, const void *bb) {
-  Goto *a = *cast(Goto **)aa, b = *cast(Goto **)bb;
-  int i = a.state.index, j = b.state.index;
-  return ((i > j) ? 1 : ((i < j) ? -1 : 0));
-}
-
 bool gotoIsLessThanGoto(Goto* a, Goto* b)
 {
     return a.state.index < b.state.index;
@@ -222,7 +205,7 @@ add_action(Grammar *g, State *s, ActionKind akind, Term *aterm,
       if (i.rule == arule)
 	return;
     a = new_Action(g, akind, aterm, arule, astate);
-    vec_add(&s.reduce_actions, a);
+    s.reduce_actions ~= a;
   } else {
     /* eliminate duplicates */
     foreach (i; s.shift_actions)
@@ -231,7 +214,7 @@ add_action(Grammar *g, State *s, ActionKind akind, Term *aterm,
 	  i.kind == akind)
 	return;
     a = new_Action(g, akind, aterm, arule, astate);
-    vec_add(&s.shift_actions, a);
+    s.shift_actions ~= a;
   }
 }
 
@@ -259,9 +242,27 @@ actioncmp(const void *aa, const void *bb) {
   return ((i > j) ? 1 : ((i < j) ? -1 : 0));
 }
 
+bool actionIsLessThanAction(Action* a, Action* b)
+{
+  int i, j;
+  if (a.kind == ActionKind.ACTION_SHIFT_TRAILING)
+    i = a.term.index + 11000000;
+  else if (a.kind == ActionKind.ACTION_SHIFT)
+    i = a.term.index + 1000000;
+  else
+    i = a.rule.index;
+  if (b.kind == ActionKind.ACTION_SHIFT_TRAILING)
+    j = b.term.index + 11000000;
+  else if (b.kind == ActionKind.ACTION_SHIFT)
+    j = b.term.index + 1000000;
+  else
+    j = b.rule.index;
+  return i < j;
+}
+
 void
-sort_VecAction(VecAction *v) {
-  qsort(v.v, v.length, (Action*).sizeof, &actioncmp);
+sort_VecAction(ref VecAction v) {
+  v.array.sort!actionIsLessThanAction();
 }
 
 private void
@@ -283,8 +284,8 @@ build_actions(Grammar *g) {
             else
                 s.accept = 1;
         }
-        sort_VecAction(&s.shift_actions);
-        sort_VecAction(&s.reduce_actions);
+        sort_VecAction(s.shift_actions);
+        sort_VecAction(s.reduce_actions);
     }
 }
 
