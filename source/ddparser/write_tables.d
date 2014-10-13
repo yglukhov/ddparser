@@ -31,9 +31,9 @@ private alias VecState = Vec!(State*);
 
 private int
 scanner_size(State *s) {
-  if (s.scanner.states.n < 255 && s.scanner.transitions.n < 255)
+  if (s.scanner.states.length < 255 && s.scanner.transitions.length < 255)
     return 1;
-  if (s.scanner.states.n < 32384 && s.scanner.transitions.n < 32384)
+  if (s.scanner.states.length < 32384 && s.scanner.transitions.length < 32384)
     return 2;
   return 4;
 }
@@ -153,7 +153,6 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
     VecScannerBlock *ptrans_scanner_block_hash;
     VecAction shift_hash;
     int k, x, xx;
-    VecScanState *ss;
 
     D_Shift*[] allShifts = new D_Shift*[g.terminals.length];
     D_Shift*[uint] allTShifts;
@@ -187,9 +186,9 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
         }
     }
     /* scanners */
-    int nvsblocks = 0;
+    size_t nvsblocks = 0;
     foreach (i; g.states)
-        nvsblocks += i.scanner.states.n * g.scanner_blocks;
+        nvsblocks += i.scanner.states.length * g.scanner_blocks;
     ScannerBlock[] vsblock = new ScannerBlock[nvsblocks ? nvsblocks : 1];
     for (int i = 0; i < 4; i++) {
         vec_clear(&scanner_block_hash[i]);
@@ -212,7 +211,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
         State *s = g.states[i];
         if (s.same_shifts)
             continue;
-        ss = &s.scanner.states;
+        auto ss = s.scanner.states;
 
         /* build accepts differences */
         for (int j = 0; j < s.scanner.transitions.n; j++) {
@@ -236,16 +235,16 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
         /* build scanner_block_hash */
         pscanner_block_hash = &scanner_block_hash[scanner_size(s)-1]; 
         ptrans_scanner_block_hash = &trans_scanner_block_hash[scanner_size(s)-1]; 
-        for (int j = 0; j < ss.n; j++) {
+        for (int j = 0; j < ss.length; j++) {
             if (!s.same_shifts) {
                 for (k = 0; k < g.scanner_blocks; k++) {
                     vsblock[ivsblock].state_index = s.index;
                     vsblock[ivsblock].scanner_index = j;
                     vsblock[ivsblock].block_index = k;
                     vsblock[ivsblock].chars = 
-                        ss.v[j].chars[k * g.scanner_block_size .. $];
+                        ss[j].chars[k * g.scanner_block_size .. $];
                     vsblock[ivsblock].transitions = 
-                        ss.v[j].transition[k * g.scanner_block_size .. $];
+                        ss[j].transition[k * g.scanner_block_size .. $];
                     xv = &vsblock[ivsblock];
                     ivsblock++;
                     assert(ivsblock <= nvsblocks);
@@ -256,7 +255,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                         auto d_scanner3 = appender!(ubyte[])();
                         for (x = 0; x < g.scanner_block_size; x++) {
                             xx = x + k * g.scanner_block_size;
-                            uint val = ss.v[j].chars[xx] ? ss.v[j].chars[xx].index + 1 : 0;
+                            uint val = ss[j].chars[xx] ? ss[j].chars[xx].index + 1 : 0;
                             if (size == 1)
                                 d_scanner3.append!(ubyte, endian)(cast(ubyte)val);
                             else if (size == 2)
@@ -275,7 +274,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                             auto d_accepts_diff3 = appender!(ubyte[])();
                             for (x = 0; x < g.scanner_block_size; x++) {
                                 xx = x + k * g.scanner_block_size;
-                                uint val = ss.v[j].transition[xx].index;
+                                uint val = ss[j].transition[xx].index;
                                 if (size == 1)
                                     d_accepts_diff3.append!(ubyte, endian)(cast(ubyte)val);
                                 else if (size == 2)
@@ -288,11 +287,11 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                     }
                 }
                 /* output shifts */
-                if (ss.v[j].accepts.n) {
+                if (ss[j].accepts.n) {
                     string tmp = i.to!string() ~ "." ~ j.to!string();
-                    for (k = 0; k < ss.v[j].accepts.n; k++) {
-                        Action *a = ss.v[j].accepts.v[k];
-                        if (ss.v[j].accepts.n == 1) {
+                    for (k = 0; k < ss[j].accepts.n; k++) {
+                        Action *a = ss[j].accepts.v[k];
+                        if (ss[j].accepts.n == 1) {
                             if (a.temp_string)
                             {
                                 continue;
@@ -319,18 +318,18 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
     }
     for (int i = 0; i < g.states.length; i++) {
         State *s = g.states[i];
-        ss = &s.scanner.states;
+        auto ss = s.scanner.states;
         ivsblock = 0;
-        if (ss.n && !s.same_shifts) {
+        if (ss.length && !s.same_shifts) {
             /* output scanner state transition tables */
             /* assume SB_uint8, 16, and 32 have same member offsets */
             static assert((SB_uint8).sizeof == (SB_uint16).sizeof && (SB_uint16).sizeof == (SB_uint32).sizeof);
             SB_uint32[] d_scanner = new SB_uint32[ss.length];
             pscanner_block_hash = &scanner_block_hash[scanner_size(s)-1]; 
             foreach (j, ref sb; d_scanner) {
-                if (ss.v[j].accepts.n) {
-                    if (ss.v[j].accepts.n == 1) {
-                        Action* a = ss.v[j].accepts.v[0];
+                if (ss[j].accepts.n) {
+                    if (ss[j].accepts.n == 1) {
+                        Action* a = ss[j].accepts.v[0];
                         a = cast(Action*)set_add_fn(&shift_hash, a, &shift_fns);
                         sb.shift = tables_d_shift2.storage[a.temp_string];
                     } else
@@ -341,9 +340,9 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                     vs.state_index = s.index;
                     vs.scanner_index = cast(uint)j;
                     vs.block_index = k;
-                    vs.chars = ss.v[j].chars[k * g.scanner_block_size .. $];
+                    vs.chars = ss[j].chars[k * g.scanner_block_size .. $];
                     vs.transitions = 
-                        ss.v[j].transition[k * g.scanner_block_size .. $];
+                        ss[j].transition[k * g.scanner_block_size .. $];
                     xv = &vs;
                     yv = cast(ScannerBlock*)set_add_fn(pscanner_block_hash, xv, &scanner_block_fns);
                     assert(yv != xv);
@@ -363,9 +362,9 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                         vs.state_index = s.index;
                         vs.scanner_index = cast(uint)j;
                         vs.block_index = k;
-                        vs.chars = ss.v[j].chars[k * g.scanner_block_size .. $];
+                        vs.chars = ss[j].chars[k * g.scanner_block_size .. $];
                         vs.transitions = 
-                            ss.v[j].transition[k * g.scanner_block_size .. $];
+                            ss[j].transition[k * g.scanner_block_size .. $];
                         xv = &vs;
                         yv = cast(ScannerBlock*)set_add_fn(ptrans_scanner_block_hash, xv, 
                                 &trans_scanner_block_fns);
@@ -632,7 +631,7 @@ buildStateData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
 
             state.shifts = s.shift_actions.n || s.scanner_code || (g.scanner.code && s.goto_on_token);
 
-            if (s.scanner.states.n) {
+            if (s.scanner.states.length) {
                 state.scanner_table = tables.d_scanner1[shifts.index];
             }
 
@@ -641,12 +640,12 @@ buildStateData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
             state.scan_kind = cast(ubyte)s.scan_kind;
 
             if ((shifts.scan_kind != D_SCAN_LONGEST || shifts.trailing_context)
-                    && shifts.scanner.states.n) {
+                    && shifts.scanner.states.length) {
                 state.transition_table = tables.d_transition1[shifts.index];
             }
 
             if ((shifts.scan_kind != D_SCAN_LONGEST || shifts.trailing_context)
-                    && shifts.scanner.states.n)
+                    && shifts.scanner.states.length)
                 state.accepts_diff = tables.d_accepts_diff1[shifts.index];
 
             if (s.reduces_to)

@@ -77,10 +77,9 @@ struct Hint {
 alias VecHint = Vec!(Hint*);
 
 alias VecScanStateTransition = Vec!(ScanStateTransition*);
-alias VecScanState = Vec!(ScanState *);
 
 struct Scanner {
-    VecScanState            states;
+    ScanState*[] states;
     VecScanStateTransition  transitions;
 }
 
@@ -1525,7 +1524,6 @@ free_D_Grammar(Grammar *g) {
                 vec_free(&s.scanner.states[j].live);
                 FREE(s.scanner.states[j]);
             }
-            vec_free(&s.scanner.states);
             for (j = 0; j < s.scanner.transitions.length; j++)
                 if (s.scanner.transitions[j]) {
                     vec_free(&s.scanner.transitions[j].live_diff);

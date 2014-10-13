@@ -124,12 +124,12 @@ eq_dfa_state(DFAState *x, DFAState *y) @safe {
 }
 
 private void
-dfa_to_scanner(ref VecDFAState alldfas, ref VecScanState scanner) {
-  vec_clear(&scanner);
+dfa_to_scanner(ref VecDFAState alldfas, ref ScanState*[] scanner) {
+  assert(scanner.length == 0);
   for (int i = 0; i < alldfas.n; i++) {
     alldfas[i].scan = new ScanState();
     alldfas[i].scan.index = i;
-    vec_add(&scanner, alldfas[i].scan);
+    scanner ~= alldfas[i].scan;
   }
   foreach (i; alldfas) {
     for (int j = 0; j < 256; j++)
@@ -428,7 +428,6 @@ private void
 build_transitions(LexState *ls, Scanner *s) {
   int j;
   ScanStateTransition *trans = null, x;
-  VecScanState *states = &s.states;
 
   if (LIVE_DIFF_IN_TRANSITIONS)
   {
@@ -438,7 +437,7 @@ build_transitions(LexState *ls, Scanner *s) {
   {
   trans_hash_fns.data[0] = cast(void*)1;
   }
-  foreach (ss; *states) {
+  foreach (ss; s.states) {
     for (j = 0; j < 256; j++) {
       if (!trans) {
     trans = new ScanStateTransition();

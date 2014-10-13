@@ -2297,7 +2297,6 @@ handle_top_level_ambiguities(Parser *p, SNode *sn) {
 
 D_ParseNode *
 dparse(D_Parser *p, string buf) {
-    PNode *pn;
     D_ParseNode *res = null;
 
     p.states = p.scans = p.shifts = p.reductions = p.compares = 0;
@@ -2317,6 +2316,7 @@ dparse(D_Parser *p, string buf) {
     int r = exhaustive_parse(p, p.start_state);
     if (!r) {
         SNode *sn = p.accept;
+        PNode *pn;
         if (sn.zns.n != 1)
             pn = handle_top_level_ambiguities(p, sn);
         else
