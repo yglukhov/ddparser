@@ -497,21 +497,21 @@ build_state_scanner(Grammar *g, LexState *ls, State *s) {
       one = true;
       nn = n;
       if (!a.term.ignore_case) {
-	for (uint8* c = cast(uint8*)a.term.string_; *c; c++) {
-	  if (!nn.chars[*c].n) 
-	    vec_add(&nn.chars[*c], (nnn = new_NFAState(ls)));
+	foreach (uint8 c; cast(const uint8[])a.term.string_) {
+	  if (!nn.chars[c].n) 
+	    vec_add(&nn.chars[c], (nnn = new_NFAState(ls)));
 	  else
-	    nnn = nn.chars[*c][0];
+	    nnn = nn.chars[c][0];
 	  nn = nnn;
 	}
       } else { /* use new states */
-	for (uint8*c = cast(uint8*)a.term.string_; *c; c++) {
+	foreach (uint8 c; cast(const uint8[])a.term.string_) {
       nnn = new_NFAState(ls);
-	  if (isalpha(*c)) {
-	    vec_add(&nn.chars[toupper(*c)], nnn);
-	    vec_add(&nn.chars[tolower(*c)], nnn);
+	  if (isalpha(c)) {
+	    vec_add(&nn.chars[toupper(c)], nnn);
+	    vec_add(&nn.chars[tolower(c)], nnn);
 	  } else
-	    vec_add(&nn.chars[*c], nnn);
+	    vec_add(&nn.chars[c], nnn);
 	  nn = nnn;
 	}
       }
@@ -526,7 +526,7 @@ build_state_scanner(Grammar *g, LexState *ls, State *s) {
       trailing_context.kind = ActionKind.ACTION_SHIFT_TRAILING;
       trailing_context.index = g.action_count++;
       one = true;
-      const(uint8)[] reg = cast(uint8[])a.term.string_[0 .. strlen(a.term.string_)];
+      const(uint8)[] reg = cast(const uint8[])a.term.string_;
       nnn = new_NFAState(ls);
       vec_add(&n.epsilon, nnn);
       nn = new_NFAState(ls);

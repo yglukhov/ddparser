@@ -350,8 +350,7 @@ build_error_recovery(Grammar *g) {
                 foreach (erh; s.error_recovery_hints) {
                     Rule *rr = erh.rule;
                     Elem *ee = rr.elems[rr.elems.n - 1];
-                    if (e.e.term.string_len == ee.e.term.string_len &&
-                            !strcmp(e.e.term.string_, ee.e.term.string_)) 
+                    if (e.e.term.string_ == ee.e.term.string_) 
                     {
                         if (erh.depth > depth)
                             erh.depth = depth;

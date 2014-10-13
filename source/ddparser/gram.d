@@ -189,8 +189,9 @@ struct Term {
   string		term_name;
   AssocKind		op_assoc;
   int			op_priority;
-  char			*string_;
-  int			string_len;
+  string string_;
+  /* char			*string_; */
+  /* int			string_len; */
   mixin(bitfields!(
               uint, "scan_kind", 3,
               uint, "ignore_case", 1,
@@ -207,7 +208,7 @@ struct Term {
         //s.map(term_name, "term_name");
         s.map(op_assoc, "op_assoc");
         s.map(op_priority, "op_priority");
-        s.mapCStringWithLength(string_, "string_", string_len);
+        //s.mapCStringWithLength(string_, "string_", string_len);
 
         mixin(fieldMap!("scan_kind", s));
         mixin(fieldMap!("ignore_case", s));
@@ -449,8 +450,7 @@ private Elem *
 new_term_string(Grammar *g, string s, Rule *r)
 {
   Term *t = new_term();
-  t.string_ = cast(char*)s.toStringz();
-  t.string_len = cast(int)s.length;
+  t.string_ = s;
   vec_add(&g.terminals, t);
   return new_elem_term(t, r);
 }
@@ -590,9 +590,7 @@ private string unescapeTermString(const(char)[] termString, TermKind kind)
 
 private void
 unescape_term_string(Term *t) {
-  string s = unescapeTermString(t.string_[0 .. strlen(t.string_)], t.kind);
-  t.string_ = cast(char*)s.toStringz();
-  t.string_len = cast(int)s.length;
+  t.string_ = unescapeTermString(t.string_, t.kind);
 }
 
 Elem * new_string(Grammar *g, string s, Rule *r)
@@ -658,8 +656,7 @@ new_ident(string s, Rule *r)
 void
 new_token(Grammar *g, string s) {
   Term *t = new_term();
-  t.string_ = cast(char*)s.toStringz();
-  t.string_len = cast(int)s.length;
+  t.string_ = s;
   vec_add(&g.terminals, t);
   t.kind = TermKind.TERM_TOKEN;
 }
@@ -880,7 +877,7 @@ Production* lookup_production(Grammar* g, const(char)[] name) @trusted
 private Term *
 lookup_token(Grammar *g, const(char)[] name) {
     foreach(t; g.terminals)
-        if (t.kind == TermKind.TERM_TOKEN && t.string_[0 .. t.string_len] == name)
+        if (t.kind == TermKind.TERM_TOKEN && t.string_ == name)
             return t;
     return null;
 }
@@ -889,13 +886,12 @@ private Term *
 unique_term(Grammar *g, Term *t) {
   foreach (i; g.terminals) 
     if (t.kind == i.kind && 
-	t.string_len == i.string_len &&
 	t.term_priority == i.term_priority &&
 	t.term_name == i.term_name &&
 	(!g.set_op_priority_from_rule ||
 	 (t.op_assoc == i.op_assoc &&
 	  t.op_priority == i.op_priority)) &&
-	!strncmp(t.string_, i.string_, t.string_len)) 
+	t.string_ == i.string_) 
       return i;
   return t;
 }
@@ -1004,11 +1000,11 @@ merge_identical_terminals(Grammar *g) {
 
 void
 print_term(Term *t) {
-  string s = t.string_ ? escape_string(t.string_[0 .. strlen(t.string_)]) : null;
+  string s = t.string_ ? escape_string(t.string_) : null;
   if (t.term_name)
     logf("term_name(\"%s\") ", t.term_name);
   else if (t.kind == TermKind.TERM_STRING) {
-    if (!t.string_ || !*t.string_)
+    if (!t.string_.length)
       logf("<EOF> ");
     else
       logf("string(\"%s\") ", s);
@@ -1233,7 +1229,6 @@ convert_regex_production_one(Grammar *g, Production *p) {
   Production *pp;
   Rule *r, rr;
   const(char)[] s;
-  int buf_len = 0;
 
   if (p.regex_term) /* already done */
     return;
@@ -1257,20 +1252,15 @@ convert_regex_production_one(Grammar *g, Production *p) {
 	    d_fail("code not permitted in rule %d of regex productions '%s'", l, p.name);
 	if (p != pp) {
 	  convert_regex_production_one(g, pp);
-	  buf_len += pp.regex_term.string_len + 5;
 	} else {
 	  circular = true;
-	  buf_len += 5;
 	}
       } else { /* e.kind == ElemKind.ELEM_TERM */
 	if (e.e.term.kind == TermKind.TERM_CODE || e.e.term.kind == TermKind.TERM_TOKEN)
 	  d_fail("regex production '%s' cannot include scanners or tokens");
-	buf_len += e.e.term.string_len + 5;
       }
     }
   }
-  /* char *buf = null, b; */
-  /* b = buf = cast(char*)MALLOC(buf_len + 1); */
   string buffer;
   Term *t = new_term();
   t.kind = TermKind.TERM_REGEX;
@@ -1298,9 +1288,9 @@ convert_regex_production_one(Grammar *g, Production *p) {
       t = e.kind == ElemKind.ELEM_TERM ? e.e.term : e.e.nterm.regex_term;
       buffer ~= '(';
       if (t.kind == TermKind.TERM_STRING)
-	s = escape_string_for_regex(t.string_[0 .. strlen(t.string_)]);
+	s = escape_string_for_regex(t.string_);
       else
-	s = t.string_[0 .. strlen(t.string_)];
+	s = t.string_;
       /* memcpy(b, s.ptr, s.length); b += s.length; */
       buffer ~= s;
       /* *b++ = ')';  */
@@ -1311,8 +1301,7 @@ convert_regex_production_one(Grammar *g, Production *p) {
       {	buffer ~= '+'; }
       /* *b = 0; */
     /* assert(buf[0 .. strlen(buf)] == buffer); */
-      p.regex_term.string_ = cast(char*)buffer.toStringz();
-      p.regex_term.string_len = cast(uint)strlen(p.regex_term.string_);
+      p.regex_term.string_ = buffer;
     } else
       goto Lfail;
   } else { /* handle the base case, p = (r | r'), r = (e e') */
@@ -1325,9 +1314,9 @@ convert_regex_production_one(Grammar *g, Production *p) {
       foreach (e; r.elems) {
 	t = e.kind == ElemKind.ELEM_TERM ? e.e.term : e.e.nterm.regex_term;
 	if (t.kind == TermKind.TERM_STRING)
-	  s = escape_string_for_regex(t.string_[0 .. strlen(t.string_)]);
+	  s = escape_string_for_regex(t.string_);
 	else
-	  s = t.string_[0 .. strlen(t.string_)];
+	  s = t.string_;
 	/* memcpy(b, s.ptr, s.length); b += s.length; */
     buffer ~= s;
       }
@@ -1340,10 +1329,8 @@ convert_regex_production_one(Grammar *g, Production *p) {
     {  buffer ~= ')'; }
     /* *b = 0; */
     /* assert(buf[0 .. strlen(buf)] == buffer); */
-      p.regex_term.string_ = cast(char*)buffer.toStringz();
-    p.regex_term.string_len = cast(int)strlen(p.regex_term.string_);
+      p.regex_term.string_ = buffer;
   }
-  //assert(b - buf <= buf_len);
   p.in_regex = 0;
 }
 
@@ -1545,8 +1532,6 @@ free_D_Grammar(Grammar *g) {
   vec_free(&g.productions);
   for (i = 0; i < g.terminals.n; i++) {
     Term *t = g.terminals[i];
-    if (t.string_)
-      FREE(t.string_);
   }
   vec_free(&g.terminals);
   for (i = 0; i < g.actions.n; i++)
@@ -1795,8 +1780,8 @@ print_term_escaped(Term *t, int double_escaped) {
   if (t.term_name) {
     logf("%s ", t.term_name);
   } else if (t.kind == TermKind.TERM_STRING) {
-    s = t.string_ ? escape_string_single_quote(t.string_[0 .. strlen(t.string_)]) : null;
-    if (!t.string_ || !*t.string_)
+    s = t.string_ ? escape_string_single_quote(t.string_) : null;
+    if (!t.string_)
       logf("<EOF> ");
     else {
       logf("'%s' ", double_escaped ? escape_string_single_quote(s) : s);
@@ -1806,7 +1791,7 @@ print_term_escaped(Term *t, int double_escaped) {
 	writefln("%sterm %d ", double_escaped?"#":"$", t.term_priority);
     }
   } else if (t.kind == TermKind.TERM_REGEX) {
-    s = t.string_ ? escape_string(t.string_[0 .. strlen(t.string_)]) : null;
+    s = t.string_ ? escape_string(t.string_) : null;
     //char *s = t.string_; // ? escape_string(t.string_) : null;
     string quote = double_escaped ? "\\\"" : "\"";
     logf("%s%s%s ", quote, double_escaped ? escape_string(s) : s, quote);
@@ -1815,10 +1800,10 @@ print_term_escaped(Term *t, int double_escaped) {
     if (t.term_priority)
       writefln("%sterm %d ", double_escaped?"#":"$", t.term_priority);
   } else if (t.kind == TermKind.TERM_CODE) {
-    s = t.string_ ? escape_string(t.string_[0 .. strlen(t.string_)]) : null;
+    s = t.string_ ? escape_string(t.string_) : null;
     logf("code(\"%s\") ", s);
   } else if (t.kind == TermKind.TERM_TOKEN) {
-    s = t.string_ ? escape_string(t.string_[0 .. strlen(t.string_)]) : null;
+    s = t.string_ ? escape_string(t.string_) : null;
     logf("%s ", s);
   } else
     d_fail("unknown token kind");

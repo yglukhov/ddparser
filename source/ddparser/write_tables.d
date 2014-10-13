@@ -580,7 +580,7 @@ er_hint_hash_fn(State *a, hash_fns_t *fns) {
   for (i = 0; i < sa.n; i++) {
     ta = sa.v[i].rule.elems.v[sa.v[i].rule.elems.n - 1].e.term;
     hash += (sa.v[i].depth + 1) * 13;
-    hash += strhashl(ta.string_[0 .. ta.string_len]);
+    hash += strhashl(ta.string_);
     if (sa.v[i].rule)
       hash += sa.v[i].rule.prod.index * 10007;
   }
@@ -597,7 +597,7 @@ er_hint_cmp_fn(State *a, State *b, hash_fns_t *fns) {
     Term *ta = sa.v[i].rule.elems.v[sa.v[i].rule.elems.n - 1].e.term;
     Term *tb = sb.v[i].rule.elems.v[sb.v[i].rule.elems.n - 1].e.term;
     if (sa.v[i].depth != sb.v[i].depth ||
-	strcmp(ta.string_, tb.string_) ||
+	ta.string_ != tb.string_ ||
 	sa.v[i].rule.prod.index != sb.v[i].rule.prod.index)
       return 1;
   }
@@ -630,7 +630,7 @@ buildErrorData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
                     D_ErrorRecoveryHint hint;
                     hint.depth = cast(ushort)erh.depth;
                     hint.symbol = cast(ushort)erh.rule.prod.index;
-                    hint.str = escape_string(t.string_[0 .. strlen(t.string_)]);
+                    hint.str = escape_string(t.string_);
                     d_error_recovery_hints ~= hint;
                 }
                 tables.d_error_recovery_hints1[i] = d_error_recovery_hints;
@@ -720,7 +720,7 @@ buildSymbolData(Grammar *g, ref BuildTables tables) {
     }
     foreach (t; g.terminals) {
         string name = t.term_name;
-        if (!name.length) name = escape_string(t.string_[0 .. strlen(t.string_)]);
+        if (!name.length) name = escape_string(t.string_);
         d_symbols[i].kind = d_symbol_values[t.kind];
         d_symbols[i].name = name;
         ++i;
