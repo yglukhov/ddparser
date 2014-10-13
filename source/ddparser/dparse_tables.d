@@ -22,7 +22,7 @@ D_ParseNode* D_PN(T)(void* _x, T _o)
 }
 
 struct d_loc_t {
-  char *s, pathname, ws;
+  const(char) *s, pathname, ws;
   int col, line;
 }
 

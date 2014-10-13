@@ -17,8 +17,8 @@ alias D_FreeNodeFn = void function(D_ParseNode *d);
 struct D_ParseNode {
   int			symbol;
   d_loc_t		start_loc;
-  char			*end;
-  char			*end_skip;
+  const(char)	*end;
+  const(char)	*end_skip;
   D_Scope	*scope_;
   D_WhiteSpaceFn	white_space;
   D_ParseNode_Globals	*globals;

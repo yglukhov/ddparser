@@ -600,7 +600,7 @@ Elem * new_string(Grammar *g, string s, Rule *r)
 }
 
 Elem *
-new_utf8_char(Grammar *g, char *s, char *e, Rule *r) {
+new_utf8_char(Grammar *g, const(char) *s, const(char) *e, Rule *r) {
   char utf8_code[4];
   ulong utf32_code, base, len = 0;
   for (utf32_code=0, base=1; e>=s+3; base*=16) {

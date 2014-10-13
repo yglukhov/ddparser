@@ -90,7 +90,7 @@ struct Parser {
   int 			syntax_errors;
 
   /* string to parse */
-  char *start, end;
+  const(char) *start, end;
 
 private:
   D_ParserTables *t;
@@ -139,8 +139,8 @@ struct PNode {
   PNode		*bucket_next;
   PNode		*ambiguities;
   PNode		*latest;	/* latest version of this PNode */
-  char			*ws_before;
-  char			*ws_after;
+  const(char)	*ws_before;
+  const(char)	*ws_after;
   D_Scope               *initial_scope;
   void                  *initial_globals;
   D_ParseNode		parse_node;	/* public fields */
@@ -201,7 +201,7 @@ alias StackInt = Stack!int;
 private void
 print_paren(Parser *pp, PNode *p) {
   int i;
-  char *c;
+  const(char) *c;
   LATEST(p);
   if (!p.error_recovery) {
     if (p.children.n) {
@@ -223,7 +223,7 @@ print_paren(Parser *pp, PNode *p) {
 void
 xprint_paren(Parser *pp, PNode *p) {
   int i;
-  char *c;
+  const(char) *c;
   LATEST(p);
   if (!p.error_recovery) {
     logf("[%X %s]", p, pp.t.symbols[p.parse_node.symbol].name);
@@ -286,13 +286,13 @@ d_find_in_tree(D_ParseNode *apn, int symbol) {
   return null;
 }
 
-char *
+const(char) *
 d_ws_before(D_Parser *ap, D_ParseNode *apn) {
   PNode *pn = D_ParseNode_to_PNode(apn);
   return pn.ws_before;
 }
 
-char *
+const(char) *
 d_ws_after(D_Parser *ap, D_ParseNode *apn) {
   PNode *pn = D_ParseNode_to_PNode(apn);
   return pn.ws_after;
@@ -394,13 +394,13 @@ free_PNode(Parser *p, PNode *pn) {
   vec_free(&pn.children);
 }
 
-uint PNODE_HASH(char* _si, char* _ei, int _s, D_Scope* _sc, void* _g)
+uint PNODE_HASH(const char* _si, const char* _ei, int _s, D_Scope* _sc, void* _g)
 {
     return cast(uint)(((cast(uintptr_t)_si) << 8) + ((cast(uintptr_t)_ei) << 16) + ((cast(uintptr_t)_s)) + ((cast(uintptr_t)_sc)) + ((cast(uintptr_t)_g)));
 }
 
 private PNode *
-find_PNode(Parser *p, char *start, char *end_skip, int symbol, D_Scope *sc, void *g, uint *hash) {
+find_PNode(Parser *p, const char *start, const char *end_skip, int symbol, D_Scope *sc, void *g, uint *hash) {
   PNodeHash *ph = &p.pnode_hash;
   PNode *pn;
   uint h = PNODE_HASH(start, end_skip, symbol, sc, g);
@@ -1054,7 +1054,7 @@ cmp_pnodes(Parser *p, PNode *x, PNode *y) {
 }
 
 private PNode *
-make_PNode(Parser *p, uint hash, int symbol, d_loc_t *start_loc, char *e, PNode *pn,
+make_PNode(Parser *p, uint hash, int symbol, d_loc_t *start_loc, const char *e, PNode *pn,
            D_Reduction *r, VecZNode *path, const D_Shift *sh, D_Scope *scope_)
 {
   int l = cast(int)(PNode.sizeof - d_voidp.sizeof + p.sizeof_user_parse_node);
@@ -1151,7 +1151,7 @@ PNode_equal(Parser *p, PNode *pn, D_Reduction *r, VecZNode *path, const D_Shift*
 
 /* find/create PNode */
 private PNode *
-add_PNode(Parser *p, int symbol, d_loc_t *start_loc, char *e, PNode *pn,
+add_PNode(Parser *p, int symbol, d_loc_t *start_loc, const char *e, PNode *pn,
           D_Reduction *r, VecZNode *path, const D_Shift* sh)
 {
   D_Scope *scope_ = equiv_D_Scope(pn.parse_node.scope_);
@@ -1617,12 +1617,11 @@ print_stack(Parser *p, SNode *s, int indent) {
 */
 private void
 cmp_stacks(Parser *p) {
-  char *pos;
   Shift *a, b;
   Shift **al, bl;
   ZNode *az, bz;
 
-  pos = p.shifts_todo.snode.loc.s;
+  const char *pos = p.shifts_todo.snode.loc.s;
   debug(trace) {
     int i = 0;
     for (al = &p.shifts_todo, a = *al; a && a.snode.loc.s == pos;
@@ -2035,7 +2034,7 @@ d_pass(D_Parser *p, D_ParseNode *apn, int pass_number) {
 
 private int
 exhaustive_parse(Parser *p, int state) {
-  char *pos, epos = null;
+  const(char) *pos, epos = null;
   PNode tpn;
   int progress = 0;
   d_loc_t loc;
@@ -2113,12 +2112,12 @@ private bool wspace(char _x) // doesn't include nl
 void
 white_space(D_Parser *p, d_loc_t *loc, void **p_user_globals) {
   int rec = 0;
-  char *s = loc.s, scol = null;
+  const(char) *s = loc.s, scol = null;
 
   if (*s == '#' && loc.col == 0) {
   Ldirective:
     {
-      char *save = s;
+      const char *save = s;
       s++;
       while (wspace(*s)) s++;
       if (!strncmp("line", s, 4)) {
@@ -2302,8 +2301,8 @@ dparse(D_Parser *p, string buf) {
     D_ParseNode *res = null;
 
     p.states = p.scans = p.shifts = p.reductions = p.compares = 0;
-    p.start = cast(char*)buf.ptr;
-    p.end = cast(char*)buf.ptr + buf.length;
+    p.start = buf.ptr;
+    p.end = buf.ptr + buf.length;
 
     initialize_whitespace_parser(p);
     alloc_parser_working_data(p);

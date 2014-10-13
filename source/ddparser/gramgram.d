@@ -39,7 +39,7 @@ char* dup_code(string c)
     return cast(char*)c.toStringz();
 }
 
-char* dup_code(char* s, char* e)
+char* dup_code(const char* s, const char* e)
 {
     return dup_str(s, e);
 }

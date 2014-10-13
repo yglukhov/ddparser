@@ -598,10 +598,10 @@ private:
         //print_parsetree(*binaryTables, node);
     }
 
-    final @property char* inputPtr() const pure nothrow @trusted
+    final @property const(char)* inputPtr() const pure nothrow @trusted
     {
         assert(parser);
-        return (cast(_Parser*)parser).start;
+        return parser.start;
     }
 
     final void copyLocationFromDParseNodeToParseNode(D_ParseNode* from, ParseNode to) pure nothrow @safe const

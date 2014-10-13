@@ -24,7 +24,7 @@ private void do_smth(State)(ref d_loc_t loc, ref d_loc_t last_loc,
     auto tst = cast(SB_trans!(State)[])parse_state.transition_table;
     State state, last, prev;
 
-    char *s = loc.s;
+    const(char) *s = loc.s;
     int col = loc.col, line = loc.line;
 
     while (true)
@@ -81,7 +81,7 @@ scan_buffer(d_loc_t loc, const ref D_State parse_state, ShiftResult[] results) {
 
     if (nresults) {
         bool longest = parse_state.scan_kind == D_SCAN_LONGEST;
-        char *end = results[nresults-1].loc.s;
+        const char *end = results[nresults-1].loc.s;
 
         int i = 0;
         if (parse_state.scan_kind == D_SCAN_MIXED) {
