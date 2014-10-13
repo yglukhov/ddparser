@@ -482,21 +482,21 @@ string escape_string_for_regex(const char[] s)
     return result.data;
 }
 
-private void
-unescape_term_string(Term *t) {
+private string unescapeTermString(const(char)[] termString, TermKind kind)
+{
   char *s;
   char *start = null;
   char *ss;
   int length;
   uint base = 0;
 
-  char* res = cast(char*)t.string_[0 .. strlen(t.string_)].dup.toStringz();
+  char* res = cast(char*)termString.dup.toStringz();
 
   for (ss = s = res; *s; s++) {
     if (*s == '\\') {
       switch (s[1]) {
 	case '\\':
-    if (t.kind == TermKind.TERM_STRING)
+    if (kind == TermKind.TERM_STRING)
       { *ss = '\\'; s++; break; }
     else
       goto Ldefault;
@@ -507,14 +507,14 @@ unescape_term_string(Term *t) {
 	case 't': *ss = '\t'; s++; break;
 	case 'v': *ss = '\v'; s++; break;
 	case 'a': *ss = '\a'; s++; break;
-	case 'c': *ss = 0; return;
+	case 'c': *ss = 0; assert(false); //return;
 	case '\"': 
-	  if (t.kind == TermKind.TERM_REGEX)
+	  if (kind == TermKind.TERM_REGEX)
 	    { *ss = '\"'; s++; break; }
 	  else
 	    goto Ldefault;
 	case '\'': 
-	  if (t.kind == TermKind.TERM_STRING)
+	  if (kind == TermKind.TERM_STRING)
 	    { *ss = '\''; s++; break; }
 	  else
 	    goto Ldefault;
@@ -562,7 +562,7 @@ unescape_term_string(Term *t) {
         *ss = start[0 .. length].to!ubyte(base);
 	    if (*s > 0)	     
 	      break;
-	    d_fail("encountered an escaped null while processing '%s'", t.string_);
+	    d_fail("encountered an escaped null while processing '%s'", termString);
 	  } else
 	    goto next;
       Ldefault:
@@ -579,12 +579,20 @@ unescape_term_string(Term *t) {
   }
   *s = 0;
   *ss = 0;
-  //res.length = ss - res.ptr;
-  //writeln("aft: ", t.string_[0 .. strlen(t.string_)]);
-  t.string_ = cast(char*)res[0 .. strlen(res)].toStringz();
-  t.string_len = cast(int)strlen(t.string_);
-  if (!t.string_len)
-    d_fail("empty string after unescape '%s'", t.string_);
+
+  string result = cast(string)res[0 .. strlen(res)];
+
+  if (!result.length)
+    d_fail("empty string after unescape '%s'", termString);
+
+  return result;
+}
+
+private void
+unescape_term_string(Term *t) {
+  string s = unescapeTermString(t.string_[0 .. strlen(t.string_)], t.kind);
+  t.string_ = cast(char*)s.toStringz();
+  t.string_len = cast(int)s.length;
 }
 
 Elem * new_string(Grammar *g, string s, Rule *r)
