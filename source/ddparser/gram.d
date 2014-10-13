@@ -1229,7 +1229,7 @@ make_elems_for_productions(Grammar *g) {
 
 private void
 convert_regex_production_one(Grammar *g, Production *p) {
-  int k, l;
+  int l;
   Production *pp;
   Rule *r, rr;
   const(char)[] s;
@@ -1269,8 +1269,9 @@ convert_regex_production_one(Grammar *g, Production *p) {
       }
     }
   }
-  char *buf = null, b;
-  b = buf = cast(char*)MALLOC(buf_len + 1);
+  /* char *buf = null, b; */
+  /* b = buf = cast(char*)MALLOC(buf_len + 1); */
+  string buffer;
   Term *t = new_term();
   t.kind = TermKind.TERM_REGEX;
   //t.string_ = buf;
@@ -1295,49 +1296,54 @@ convert_regex_production_one(Grammar *g, Production *p) {
       if (rr.elems.n && e.e.term_or_nterm != rr.elems[0].e.term_or_nterm)
 	goto Lfail;
       t = e.kind == ElemKind.ELEM_TERM ? e.e.term : e.e.nterm.regex_term;
-      *b++ = '('; 
+      buffer ~= '(';
       if (t.kind == TermKind.TERM_STRING)
 	s = escape_string_for_regex(t.string_[0 .. strlen(t.string_)]);
       else
 	s = t.string_[0 .. strlen(t.string_)];
-      memcpy(b, s.ptr, s.length); b += s.length;
-      *b++ = ')'; 
+      /* memcpy(b, s.ptr, s.length); b += s.length; */
+      buffer ~= s;
+      /* *b++ = ')';  */
+      buffer ~= ')';
       if (l == 2) 
-	*b++ = '*'; 
+      {	buffer ~= '*'; }
       else
-	*b++ = '+'; 
-      *b = 0;
-      p.regex_term.string_ = buf;
+      {	buffer ~= '+'; }
+      /* *b = 0; */
+    /* assert(buf[0 .. strlen(buf)] == buffer); */
+      p.regex_term.string_ = cast(char*)buffer.toStringz();
       p.regex_term.string_len = cast(uint)strlen(p.regex_term.string_);
     } else
       goto Lfail;
   } else { /* handle the base case, p = (r | r'), r = (e e') */
     if (p.rules.n > 1)
-      *b++ = '(';
+    {  buffer ~= '('; }
     for (int j = 0; j < p.rules.n; j++) {
       r = p.rules[j];
       if (r.elems.n > 1)
-	*b++ = '(';
+      { buffer ~= '('; }
       foreach (e; r.elems) {
 	t = e.kind == ElemKind.ELEM_TERM ? e.e.term : e.e.nterm.regex_term;
 	if (t.kind == TermKind.TERM_STRING)
 	  s = escape_string_for_regex(t.string_[0 .. strlen(t.string_)]);
 	else
 	  s = t.string_[0 .. strlen(t.string_)];
-	memcpy(b, s.ptr, s.length); b += s.length;
+	/* memcpy(b, s.ptr, s.length); b += s.length; */
+    buffer ~= s;
       }
       if (r.elems.n > 1)
-	*b++ = ')';
+      { buffer ~= ')'; }
       if (j != p.rules.n - 1)
-	*b++ = '|';
+      { buffer ~= '|'; }
     }
     if (p.rules.n > 1)
-      *b++ = ')';
-    *b = 0;
-      p.regex_term.string_ = buf;
+    {  buffer ~= ')'; }
+    /* *b = 0; */
+    /* assert(buf[0 .. strlen(buf)] == buffer); */
+      p.regex_term.string_ = cast(char*)buffer.toStringz();
     p.regex_term.string_len = cast(int)strlen(p.regex_term.string_);
   }
-  assert(b - buf <= buf_len);
+  //assert(b - buf <= buf_len);
   p.in_regex = 0;
 }
 
