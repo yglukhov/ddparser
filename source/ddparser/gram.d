@@ -394,7 +394,7 @@ ref auto last_elem(Rule* _r)
 immutable string action_types[] = [ "ACCEPT", "SHIFT", "REDUCE" ];
 
 
-Production* new_production(Grammar *g, string name) {
+Production* new_production(Grammar *g, string name) @safe {
   Production *p  = lookup_production(g, name); 
   if (p) {
     return p;
@@ -666,7 +666,7 @@ new_code(Grammar *g, string s, Rule *r) {
 Elem *
 dup_elem(Elem *e, Rule *r) {
   Elem *ee = new Elem();
-  memcpy(ee, e, (Elem).sizeof);
+  *ee = *e;
   if (ee.kind == ElemKind.ELEM_UNRESOLVED)
     ee.e.unresolved = e.e.unresolved;
   ee.rule = r;
@@ -746,7 +746,7 @@ add_pass_code(Grammar *g, Rule *r, char *pass_start, char *pass_end,
 
     
 Production *
-new_internal_production(Grammar *g, Production *p) {
+new_internal_production(Grammar *g, Production *p) @safe {
   string n = p ? p.name : " _synthetic";
   string name = n ~ "__" ~ g.productions.length.to!string();
   Production *pp = new_production(g, name);
@@ -851,7 +851,7 @@ rep_EBNF(Grammar *g, int min, int max) {
 }
 
 void
-initialize_productions(Grammar *g) {
+initialize_productions(Grammar *g) @safe {
   Production *pp = new_production(g, "0 Start");
   pp.internal = InternalKind.INTERNAL_HIDDEN;
 }
@@ -865,7 +865,7 @@ finish_productions(Grammar *g) {
   rr.elems[0].e.nterm = g.productions[1];
 }
 
-Production* lookup_production(Grammar* g, const(char)[] name)
+Production* lookup_production(Grammar* g, const(char)[] name) @trusted
 {
     foreach(p; g.productions)
         if (p.name == name) return p;
@@ -1497,8 +1497,8 @@ free_rule(Rule *r) {
     FREE(r.speculative_code.code);
   vec_free(&r.elems);
   for (i = 0; i < r.pass_code.n; i++) {
-    FREE(r.pass_code.v[i].code);
-    FREE(r.pass_code.v[i]);
+    FREE(r.pass_code[i].code);
+    FREE(r.pass_code[i]);
   }
   vec_free(&r.pass_code);
   FREE(r);
@@ -1509,13 +1509,13 @@ free_D_Grammar(Grammar *g) {
   int i, j, k;
 
   for (i = 0; i < g.productions.n; i++) {
-    Production *p = g.productions.v[i];
+    Production *p = g.productions[i];
     for (j = 0; j < p.rules.n; j++) {
-      Rule *r = p.rules.v[j];
+      Rule *r = p.rules[j];
       if (r == g.r)
 	g.r = null;
       for (k = 0; k < r.elems.n; k++) {
-	Elem *e = r.elems.v[k];
+	Elem *e = r.elems[k];
 	if (e == p.elem)
 	  p.elem = null;
 	FREE(e);
@@ -1533,45 +1533,45 @@ free_D_Grammar(Grammar *g) {
   }
   vec_free(&g.productions);
   for (i = 0; i < g.terminals.n; i++) {
-    Term *t = g.terminals.v[i];
+    Term *t = g.terminals[i];
     if (t.string_)
       FREE(t.string_);
   }
   vec_free(&g.terminals);
   for (i = 0; i < g.actions.n; i++)
-    free_Action(g.actions.v[i]);
+    free_Action(g.actions[i]);
   vec_free(&g.actions);
   if (g.scanner.code)
     FREE(g.scanner.code);
   for (i = 0; i < g.states.n; i++) {
-    State *s = g.states.v[i];
+    State *s = g.states[i];
     vec_free(&s.items);
     vec_free(&s.items_hash);
     for (j = 0; j < s.gotos.n; j++) {
-      FREE(s.gotos.v[j].elem);
-      FREE(s.gotos.v[j]);
+      FREE(s.gotos[j].elem);
+      FREE(s.gotos[j]);
     }
     vec_free(&s.gotos);
     vec_free(&s.shift_actions);
     vec_free(&s.reduce_actions);
     for (j = 0; j < s.right_epsilon_hints.n; j++)
-      FREE(s.right_epsilon_hints.v[j]);
+      FREE(s.right_epsilon_hints[j]);
     vec_free(&s.right_epsilon_hints);
     for (j = 0; j < s.error_recovery_hints.n; j++)
-      FREE(s.error_recovery_hints.v[j]);
+      FREE(s.error_recovery_hints[j]);
     vec_free(&s.error_recovery_hints);
     if (!s.same_shifts) {
       for (j = 0; j < s.scanner.states.n; j++) {
-	vec_free(&s.scanner.states.v[j].accepts);
-	vec_free(&s.scanner.states.v[j].live);
-	FREE(s.scanner.states.v[j]);
+	vec_free(&s.scanner.states[j].accepts);
+	vec_free(&s.scanner.states[j].live);
+	FREE(s.scanner.states[j]);
       }
       vec_free(&s.scanner.states);
       for (j = 0; j < s.scanner.transitions.n; j++)
-	if (s.scanner.transitions.v[j]) {
-	  vec_free(&s.scanner.transitions.v[j].live_diff);
-	  vec_free(&s.scanner.transitions.v[j].accepts_diff);
-	  FREE(s.scanner.transitions.v[j]);
+	if (s.scanner.transitions[j]) {
+	  vec_free(&s.scanner.transitions[j].live_diff);
+	  vec_free(&s.scanner.transitions[j].accepts_diff);
+	  FREE(s.scanner.transitions[j]);
 	}
       vec_free(&s.scanner.transitions);
     }
@@ -1579,13 +1579,13 @@ free_D_Grammar(Grammar *g) {
   }
   vec_free(&g.states);
   for (i = 0; i < g.declarations.n; i++) {
-    FREE(g.declarations.v[i].elem);
-    FREE(g.declarations.v[i]);
+    FREE(g.declarations[i].elem);
+    FREE(g.declarations[i]);
   }
   vec_free(&g.declarations);
   for (i = 0; i < g.passes.n; i++) {
-    FREE(g.passes.v[i].name);
-    FREE(g.passes.v[i]);
+    FREE(g.passes[i].name);
+    FREE(g.passes[i]);
   }
   vec_free(&g.passes);
   FREE(g);
@@ -1841,7 +1841,7 @@ print_production(Production *p) {
 
   for (j = 0; j < p.rules.n; j++) {
   Lmore:
-    r = p.rules.v[j];
+    r = p.rules[j];
     if (!j) {
       //      if (p.regex) {
       //	logf("%s%s%s", opening[variant], p.name, regex_production);
@@ -1856,7 +1856,7 @@ print_production(Production *p) {
     }
 
     for (k = 0; k < r.elems.n; k++)
-      print_element_escaped(r.elems.v[k], variant);
+      print_element_escaped(r.elems[k], variant);
 
     if (r.op_assoc)
       writefln(" %s%s ", assoc[variant], assoc_str(r.op_assoc));
@@ -1895,7 +1895,7 @@ print_productions(Grammar *g) {
     return;
   }
   for (i = 1; i < g.productions.n; i++)
-    print_production(g.productions.v[i]);
+    print_production(g.productions[i]);
 }
 
 private void print_declare(string s, string n) {
@@ -1910,7 +1910,7 @@ print_declarations(Grammar *g) {
   if (g.tokenizer)
     logf("${declare tokenize}\n");
   for (i = 0; i < g.declarations.n; i++) {
-    Declaration *dd = g.declarations.v[i];
+    Declaration *dd = g.declarations[i];
     Elem *ee = dd.elem;
     switch (dd.kind) {
     case DeclarationKind.DECLARE_LONGEST_MATCH:
@@ -1946,7 +1946,7 @@ print_declarations(Grammar *g) {
 
   { int token_exists = 0;
     for (i = 0; i < g.terminals.n; i++) {
-      Term *t = g.terminals.v[i];
+      Term *t = g.terminals[i];
       if (t.kind == TermKind.TERM_TOKEN) {
 	writefln("%s %s", token_exists?"":"${token", t.string_);
 	token_exists = 1;

@@ -73,17 +73,15 @@ scan_buffer(d_loc_t loc, const ref D_State parse_state, ShiftResult[] results) {
             break;
         default:
     }
-    if (shift) {
-        foreach(s; shift) {
-            results[nresults].loc = last_loc;
-            results[nresults++].shift = s;
-        }
+
+    foreach(s; shift) {
+        results[nresults].loc = last_loc;
+        results[nresults++].shift = s;
     }
+
     if (nresults) {
-        bool longest = false;
+        bool longest = parse_state.scan_kind == D_SCAN_LONGEST;
         char *end = results[nresults-1].loc.s;
-        if (parse_state.scan_kind == D_SCAN_LONGEST)
-            longest = true;
 
         int i = 0;
         if (parse_state.scan_kind == D_SCAN_MIXED) {

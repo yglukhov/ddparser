@@ -44,9 +44,8 @@ struct PNodeHash {
 }
 
 struct SNodeHash {
-  SNode  **v;
+  SNode*[]  v;
   uint		i;	/* size index (power of 2) */
-  uint  	m;	/* max size (highest prime < i ** 2) */
   uint  	n;	/* size */
   SNode  *all;
   SNode  *last_all;
@@ -307,11 +306,10 @@ uint SNODE_HASH(uint _s, D_Scope* _sc, void* _g)
 private SNode *
 find_SNode(Parser *p, uint stateIndex, D_Scope *sc, void *g) {
   SNodeHash *ph = &p.snode_hash;
-  SNode *sn;
   uint h = SNODE_HASH(stateIndex, sc, g);
   
   if (ph.v)
-    for (sn = ph.v[h % ph.m]; sn; sn = sn.bucket_next)
+    for (SNode *sn = ph.v[h % $]; sn; sn = sn.bucket_next)
       if (stateIndex == sn.stateIndex &&
           sn.initial_scope == sc &&
           sn.initial_globals == g)
@@ -323,17 +321,15 @@ private void
 insert_SNode_internal(Parser *p, SNode *sn) {
   SNodeHash *ph = &p.snode_hash;
   uint h = SNODE_HASH(sn.stateIndex, sn.initial_scope, sn.initial_globals), i;
-  SNode *t;
 
-  if (ph.n + 1 > ph.m) {
-    SNode **v = ph.v;
-    int m = ph.m;
+  if (ph.n + 1 > ph.v.length) {
+    SNode*[] v = ph.v;
+    auto m = ph.v.length;
     ph.i++;
-    ph.m = d_prime2[ph.i];
-    ph.v = cast(SNode**)MALLOC(ph.m * (*ph.v).sizeof);
+    ph.v = new SNode*[d_prime2[ph.i]];
     for (i = 0; i < m; i++)
     {
-        t = v[i];
+        SNode *t = v[i];
       while (t) {
         v[i] = v[i].bucket_next;
         insert_SNode_internal(p, t);
@@ -341,9 +337,9 @@ insert_SNode_internal(Parser *p, SNode *sn) {
       }
     }
   }
-  sn.bucket_next = ph.v[h % ph.m];
+  sn.bucket_next = ph.v[h % $];
   assert(sn.bucket_next != sn);
-  ph.v[h % ph.m] = sn;
+  ph.v[h % $] = sn;
   ph.n++;
 }
 
@@ -358,7 +354,7 @@ private SNode *
 new_SNode(Parser *p, uint stateIndex, d_loc_t *loc, D_Scope *sc, void *g) {
   SNode *sn = p.free_snodes;
   if (!sn)
-    sn = cast(SNode*)MALLOC((*sn).sizeof);
+    sn = new SNode();
   else
     p.free_snodes = sn.all_next;
   sn.depth = 0;
@@ -370,6 +366,7 @@ new_SNode(Parser *p, uint stateIndex, d_loc_t *loc, D_Scope *sc, void *g) {
   sn.initial_globals = g;
   sn.last_pn = null;
   sn.loc = *loc;
+
   insert_SNode(p, sn);
   if (p.t.states[stateIndex].accept) {
     if (!p.accept) {
@@ -464,7 +461,7 @@ free_old_nodes(Parser *p) {
   SNode*tsn;
   while (sn) {
     h = SNODE_HASH(sn.stateIndex, sn.initial_scope, sn.initial_globals);
-    SNode** lsn = &p.snode_hash.v[h % p.snode_hash.m];
+    SNode** lsn = &p.snode_hash.v[h % $];
     tsn = sn; sn = sn.all_next;
     while (*lsn != tsn) lsn = &(*lsn).bucket_next;
     *lsn = (*lsn).bucket_next;
@@ -499,17 +496,13 @@ alloc_parser_working_data(Parser *p) {
   p.pnode_hash.i = PNODE_HASH_INITIAL_SIZE_INDEX;
   p.pnode_hash.v = new PNode*[d_prime2[p.pnode_hash.i]];
   p.snode_hash.i = SNODE_HASH_INITIAL_SIZE_INDEX;
-  p.snode_hash.m = d_prime2[p.snode_hash.i];
-  p.snode_hash.v =
-    cast(SNode**)MALLOC(p.snode_hash.m * (*p.snode_hash.v).sizeof);
+  p.snode_hash.v = new SNode*[d_prime2[p.snode_hash.i]];
   p.shift_results = null;
   p.code_shifts = null;
 }
 
 private void
 free_parser_working_data(Parser *p) {
-  int i;
-
   free_old_nodes(p);
   free_old_nodes(p); /* to catch SNodes saved for error repair */
   memset(&p.pnode_hash, 0, (p.pnode_hash).sizeof);
@@ -1064,7 +1057,7 @@ private PNode *
 make_PNode(Parser *p, uint hash, int symbol, d_loc_t *start_loc, char *e, PNode *pn,
            D_Reduction *r, VecZNode *path, const D_Shift *sh, D_Scope *scope_)
 {
-  int l = cast(int)((PNode).sizeof - (d_voidp).sizeof + p.sizeof_user_parse_node);
+  int l = cast(int)(PNode.sizeof - d_voidp.sizeof + p.sizeof_user_parse_node);
   PNode *new_pn = p.free_pnodes;
   if (!new_pn)
     new_pn = cast(PNode*)MALLOC(l);
@@ -1974,8 +1967,8 @@ error_recovery(Parser *p) {
     free_old_nodes(p);
     free_old_nodes(p);
     reduce_one(p, r);
-    for (int i = 0; i < p.snode_hash.m; i++)
-      for (sn = p.snode_hash.v[i]; sn; sn = sn.bucket_next)
+    foreach (i; p.snode_hash.v)
+      for (sn = i; sn; sn = sn.bucket_next)
         foreach (z; sn.zns)
         {
           if (z)

@@ -46,6 +46,7 @@ struct Vec(T)
 
     void clear()
     {
+        assert(isIterating == 0);
         n = 0;
         v = null;
     }
@@ -55,7 +56,7 @@ struct Vec(T)
         return n;
     }
 
-    void add(T _i)
+    void add(T _i) @trusted
     {
         assert(isIterating == 0);
         if (!v) {
@@ -174,7 +175,7 @@ unittest
 alias AbstractVec = Vec!(void*);
 
 
-void vec_add(T, U)(T _v, U _i) if (isPointer!T)
+void vec_add(T, U)(T _v, U _i) @safe if (isPointer!T)
 {
     _v.add(_i);
 }
