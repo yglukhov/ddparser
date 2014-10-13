@@ -171,10 +171,6 @@ unittest
     assert(v[1] == 6);
 }
 
-
-alias AbstractVec = Vec!(void*);
-
-
 void vec_add(T, U)(T _v, U _i) @safe if (isPointer!T)
 {
     _v.add(_i);
@@ -218,9 +214,6 @@ struct Stack(_x)
     }
 }
 
-alias AbstractStack = Stack!(void*);
-
-
 alias uint8 = ubyte;
 alias uint16 = ushort;
 alias uint32 = uint;
@@ -245,7 +238,7 @@ void stack_push(T, U)(T _s, U _x)
 
 auto stack_head(T)(T _s)
 {
-    return ((_s).cur[-1]);
+    return _s.cur[-1];
 }
 
 auto stack_pop(T)(T _s)
@@ -253,15 +246,15 @@ auto stack_pop(T)(T _s)
     return (*--((_s).cur));
 }
 
-int stack_depth(T)(T _s)
+int stack_depth(T)(T _s) @safe
 {
-    return cast(int)((_s).cur - (_s).start);
+    return cast(int)(_s.cur - _s.start);
 }
 
 void stack_clear(T)(T _s)
 {
-    (_s).start = (_s).cur = (_s).end = (_s).initial.ptr;
-    (_s).end += INTEGRAL_STACK_SIZE;
+    _s.start = _s.cur = _s.end = _s.initial.ptr;
+    _s.end += INTEGRAL_STACK_SIZE;
 }
 
 alias stack_free = stack_clear;
@@ -396,7 +389,7 @@ void d_warn(Args...)(Args args) @trusted
     writefln(args);
 }
 
-string escape_string(const(char)[] s, bool singleQuote = false)
+string escape_string(const(char)[] s, bool singleQuote = false) @safe
 {
     auto result = appender!string();
     result.reserve(s.length * 4);
@@ -431,7 +424,7 @@ string escape_string(const(char)[] s, bool singleQuote = false)
     return result.data;
 }
 
-string escape_string_single_quote(const(char)[] s)
+string escape_string_single_quote(const(char)[] s) @safe
 {
     return escape_string(s, true);
 }
@@ -472,10 +465,9 @@ set_add(T, V : Vec!T)(V* v, T t) @trusted {
     return set_add(v, t);
 }
 
-void *
-set_add_fn(void *av, void *t, hash_fns_t *fns) {
-  AbstractVec *v = cast(AbstractVec*)av;
-  AbstractVec vv;
+T
+set_add_fn(T, V : Vec!T)(V *v, T t, hash_fns_t *fns) {
+  V vv;
   uint32 tt = fns.hash_fn(t, fns);
   int j, n = v.n;
   uint i;
@@ -503,10 +495,9 @@ set_add_fn(void *av, void *t, hash_fns_t *fns) {
     v.i = v.i + 1;
   }
   v.n = d_prime2[v.i];
-  v.v = cast(void**)MALLOC(v.n * (void *).sizeof);
-  memset(v.v, 0, v.n * (void *).sizeof);
+  v.v = cast(T*)MALLOC(v.n * T.sizeof);
   if (vv.v) {
-    set_union_fn(av, &vv, fns);
+    set_union_fn(v, &vv, fns);
   }
   return set_add_fn(v, t, fns);
 }
@@ -521,8 +512,7 @@ set_union(V)(V *v, V *vv) @trusted {
 }
 
 void
-set_union_fn(void *av, void *avv, hash_fns_t *fns) {
-  AbstractVec *vv = cast(AbstractVec*)avv;
+set_union_fn(V)(V *av, V *vv, hash_fns_t *fns) {
   uint i;
 
   for (i = 0; i < vv.n; i++)

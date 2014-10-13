@@ -8,9 +8,8 @@ import ddparser.lex;
 import ddparser.gram;
 import ddparser.dparse_tables;
 import ddparser.lr;
-import core.stdc.string;
+
 import std.conv;
-import core.stdc.stdio;
 import std.stdio;
 import std.bitmanip;
 import std.system;
@@ -23,8 +22,8 @@ private struct ScannerBlock {
   int state_index; 
   uint scanner_index; 
   int block_index; 
-  ScanState **chars; 
-  ScanStateTransition **transitions; 
+  ScanState*[] chars; 
+  ScanStateTransition*[] transitions; 
 }
 
 private alias VecScannerBlock = Vec!(ScannerBlock*);
@@ -43,7 +42,7 @@ extern(C) private uint32
 scanner_block_hash_fn(ScannerBlock *b, hash_fns_t *fns) {
   uint32 hash = 0;
   intptr_t i, block_size = cast(intptr_t)fns.data[0];
-  ScanState **sb = b.chars;
+  ScanState*[] sb = b.chars;
 
   for (i = 0; i < block_size; i++) {
     hash *= 17;
@@ -55,8 +54,8 @@ scanner_block_hash_fn(ScannerBlock *b, hash_fns_t *fns) {
 extern(C) private int
 scanner_block_cmp_fn(ScannerBlock *a, ScannerBlock *b, hash_fns_t *fns) {
   intptr_t i, block_size = cast(intptr_t)fns.data[0];
-  ScanState **sa = a.chars;
-  ScanState **sb = b.chars;
+  ScanState*[] sa = a.chars;
+  ScanState*[] sb = b.chars;
     
   for (i = 0; i < block_size; i++) {
     if (sa[i] == sb[i])
@@ -84,7 +83,7 @@ extern(C) private uint32
 trans_scanner_block_hash_fn(ScannerBlock *b, hash_fns_t *fns) {
   uint32 hash = 0;
   intptr_t i, block_size = cast(intptr_t)fns.data[0];
-  ScanStateTransition **sb = b.transitions;
+  ScanStateTransition*[] sb = b.transitions;
 
   for (i = 0; i < block_size; i++) {
     hash *= 3;
@@ -96,8 +95,8 @@ trans_scanner_block_hash_fn(ScannerBlock *b, hash_fns_t *fns) {
 extern(C) private int
 trans_scanner_block_cmp_fn(ScannerBlock *a, ScannerBlock *b, hash_fns_t *fns) {
   intptr_t i, block_size = cast(intptr_t)fns.data[0];
-  ScanStateTransition **sa = a.transitions;
-  ScanStateTransition **sb = b.transitions;
+  ScanStateTransition*[] sa = a.transitions;
+  ScanStateTransition*[] sb = b.transitions;
     
   for (i = 0; i < block_size; i++) {
     if (sa[i] == sb[i])
@@ -244,9 +243,9 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                     vsblock[ivsblock].scanner_index = j;
                     vsblock[ivsblock].block_index = k;
                     vsblock[ivsblock].chars = 
-                        &ss.v[j].chars[k * g.scanner_block_size];
+                        ss.v[j].chars[k * g.scanner_block_size .. $];
                     vsblock[ivsblock].transitions = 
-                        &ss.v[j].transition[k * g.scanner_block_size];
+                        ss.v[j].transition[k * g.scanner_block_size .. $];
                     xv = &vsblock[ivsblock];
                     ivsblock++;
                     assert(ivsblock <= nvsblocks);
@@ -342,9 +341,9 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                     vs.state_index = s.index;
                     vs.scanner_index = cast(uint)j;
                     vs.block_index = k;
-                    vs.chars = &ss.v[j].chars[k * g.scanner_block_size];
+                    vs.chars = ss.v[j].chars[k * g.scanner_block_size .. $];
                     vs.transitions = 
-                        &ss.v[j].transition[k * g.scanner_block_size];
+                        ss.v[j].transition[k * g.scanner_block_size .. $];
                     xv = &vs;
                     yv = cast(ScannerBlock*)set_add_fn(pscanner_block_hash, xv, &scanner_block_fns);
                     assert(yv != xv);
@@ -364,9 +363,9 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                         vs.state_index = s.index;
                         vs.scanner_index = cast(uint)j;
                         vs.block_index = k;
-                        vs.chars = &ss.v[j].chars[k * g.scanner_block_size];
+                        vs.chars = ss.v[j].chars[k * g.scanner_block_size .. $];
                         vs.transitions = 
-                            &ss.v[j].transition[k * g.scanner_block_size];
+                            ss.v[j].transition[k * g.scanner_block_size .. $];
                         xv = &vs;
                         yv = cast(ScannerBlock*)set_add_fn(ptrans_scanner_block_hash, xv, 
                                 &trans_scanner_block_fns);
@@ -463,12 +462,9 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
                 .array();
         }
     }
+
     /* gotos */
-    if (vgoto.length) {
-        tables.d_gotos = vgoto;
-    } else {
-        tables.d_gotos ~= 0;
-    }
+    tables.d_gotos = vgoto;
 }
 
 private void
