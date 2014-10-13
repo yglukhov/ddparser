@@ -8,6 +8,7 @@ module ddparser.parse;
 import std.stdio;
 import std.ascii;
 import std.algorithm;
+import std.conv;
 
 import ddparser.util;
 import ddparser.dparse_tables;
@@ -1873,7 +1874,7 @@ syntax_error_report_fn(D_Parser *p) {
   while (z && z.pn.parse_node.start_loc.s == z.pn.parse_node.end)
     z = (z.sns.v && z.sns[0].zns.v) ? z.sns[0].zns[0] : null;
   if (z && z.pn.parse_node.start_loc.s != z.pn.parse_node.end)
-    after = z.pn.parse_node.start_loc.s[0 .. z.pn.parse_node.end - z.pn.parse_node.start_loc.s];
+    after = z.pn.parse_node.matchedString;
   if (after)
     stderr.writefln("%s:%d: syntax error after '%s'", fn, p.loc.line, after);
     /* fprintf(stderr, "%s:%d: syntax error after '%s'\n", fn, p.loc.line, after); */
@@ -2109,84 +2110,95 @@ private bool wspace(char _x) // doesn't include nl
     }
 }
 
+void advance(ref const(char)[] s, size_t n = 1)
+{
+    assert(n <= s.length);
+    s = s[n .. $];
+    assert(s.length < 10000);
+}
+
 void
 white_space(D_Parser *p, d_loc_t *loc, void **p_user_globals) {
-  int rec = 0;
-  const(char) *s = loc.s, scol = null;
+    int rec = 0;
+    //const(char) *s = loc.s, scol = null;
+    const(char)* scol;
+    assert(p.end >= loc.s);
+    const(char)[] s = loc.s[0 .. p.end - loc.s];
 
-  if (*s == '#' && loc.col == 0) {
-  Ldirective:
-    {
-      const char *save = s;
-      s++;
-      while (wspace(*s)) s++;
-      if (!strncmp("line", s, 4)) {
-        if (wspace(s[4])) {
-          s += 5;
-          while (wspace(*s)) s++;
+    if (s.length && s[0] == '#' && loc.col == 0) {
+Ldirective:
+        {
+            auto save = s;
+            s.advance();
+            while (s.length && wspace(s[0])) s.advance();
+            if (s.startsWith("line")) {
+                if (wspace(s[4])) {
+                    s.advance(5);
+                    while (wspace(s[0])) s.advance();
+                }
+            }
+            if (isDigit(s[0])) {
+                loc.line = s.parse!uint() - 1;
+                while (wspace(s[0])) s.advance();
+                if (s[0] == '"')
+                    loc.pathname = s.ptr;
+            } else {
+                s = save;
+                goto Ldone;
+            }
         }
-      }
-      if (isDigit(*s)) {
-        loc.line = atoi(s) - 1;
-        while (isDigit(*s)) s++;
-        while (wspace(*s)) s++;
-        if (*s == '"')
-          loc.pathname = s;
-      } else {
-        s = save;
-        goto Ldone;
-      }
+        while (s.length && s[0] != '\n') s.advance();
     }
-    while (*s && *s != '\n') s++;
-  }
- Lmore:
-  while (wspace(*s)) s++;
-  if (*s == '\n') {
-    loc.line++;
-    scol = s + 1;
-    s++;
-    if (*s == '#')
-      goto Ldirective;
-    else
-      goto Lmore;
-  }
-  if (s[0] == '/') {
-    if (s[1] == '/') {
-      while (*s && *s != '\n') { s++; }
-      goto Lmore;
-    }
-    if (s[1] == '*') {
-      s += 2;
-    LnestComment:
-      rec++;
-    LmoreComment:
-      while (*s) {
-        if (s[0] == '*' && s[1] == '/') {
-          s += 2;
-          rec--;
-          if (!rec)
+Lmore:
+    while (s.length && wspace(s[0])) { s.advance(); }
+    if (s.length && s[0] == '\n') {
+        loc.line++;
+        s.advance();
+        scol = s.ptr;
+
+        if (s.length && s[0] == '#')
+            goto Ldirective;
+        else
             goto Lmore;
-          goto LmoreComment;
-        }
-        if (s[0] == '/' && s[1] == '*') {
-          s += 2;
-          goto LnestComment;
-        }
-        if (*s == '\n') {
-          loc.line++;
-          scol = s + 1;
-        }
-        s++;
-      }
     }
-  }
- Ldone:
-  if (scol)
-    loc.col = cast(uint)(s - scol);
-  else
-    loc.col += s - loc.s;
-  loc.s = s;
-  return;
+    if (s.length && s[0] == '/') {
+        if (s[1] == '/') {
+            while (s.length && s[0] != '\n') { s.advance(); }
+            goto Lmore;
+        }
+        if (s[1] == '*') {
+            s.advance(2);
+LnestComment:
+            rec++;
+LmoreComment:
+            while (s.length) {
+                if (s[0] == '*' && s[1] == '/') {
+                    s.advance(2);
+                    rec--;
+                    if (!rec)
+                        goto Lmore;
+                    goto LmoreComment;
+                }
+                if (s[0] == '/' && s[1] == '*') {
+                    s.advance(2);
+                    goto LnestComment;
+                }
+                if (s[0] == '\n') {
+                    loc.line++;
+                    scol = s.ptr + 1;
+                }
+                s.advance();
+            }
+        }
+    }
+Ldone:
+    assert(s.ptr <= p.end);
+    if (scol)
+        loc.col = cast(uint)(s.ptr - scol);
+    else
+        loc.col += s.ptr - loc.s;
+    loc.s = s.ptr;
+    return;
 }
 
 void null_white_space(D_Parser *p, d_loc_t *loc, void **p_globals) { }
@@ -2299,9 +2311,11 @@ D_ParseNode *
 dparse(D_Parser *p, string buf) {
     D_ParseNode *res = null;
 
+    auto len = buf.length;
+    buf ~= '\0';
     p.states = p.scans = p.shifts = p.reductions = p.compares = 0;
     p.start = buf.ptr;
-    p.end = buf.ptr + buf.length;
+    p.end = buf.ptr + len;
 
     initialize_whitespace_parser(p);
     alloc_parser_working_data(p);
