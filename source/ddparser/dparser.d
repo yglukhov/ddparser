@@ -501,7 +501,7 @@ private:
             {
                 string symbolName = symbolNameForSymbol(childSym);
                 if (logLevel) writeln("CH ", symbolName);
-                string value = stringValueForNode(node);
+                string value = node.matchedString;
                 auto term = new TerminalNode();
                 copyLocationFromDParseNodeToParseNode(node, term);
                 term.location.length = cast(uint)value.length;
@@ -572,11 +572,6 @@ private:
     static string symbolNameForSymbol(const D_Symbol* s) @trusted nothrow pure
     {
         return s.name;
-    }
-
-    static string stringValueForNode(D_ParseNode* cn)
-    {
-        return cn.start_loc.s[0 .. cn.end - cn.start_loc.s].idup;
     }
 
     final const(D_Symbol)* symbolForNode(D_ParseNode* n) const @trusted nothrow pure
