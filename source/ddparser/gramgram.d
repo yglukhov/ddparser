@@ -146,7 +146,7 @@ g.r = new_rule(g, g.p);
  g.r.final_code.f = (new_ps, children, n_children, pn_offset, parser)
  {
      mixin(commonValues);
-  string grammar_pathname = n1.start_loc.s[1 .. n1.end - n1.start_loc.s - 1].idup;
+  string grammar_pathname = n1.matchedString[1 .. $ - 1];
   if (parse_grammar(g, grammar_pathname, null) < 0)
     d_fail("unable to parse grammar '%s'", grammar_pathname);
   //FREE(grammar_pathname);    
@@ -283,12 +283,12 @@ star_EBNF(g);
      mixin(commonValues);
 
       if (!d_get_number_of_children(n2))
-     	add_declaration(g, n2.start_loc.s[0 .. n2.end - n2.start_loc.s].idup,  u1.kind, n2.start_loc.line);
+     	add_declaration(g, n2.matchedString,  u1.kind, n2.start_loc.line);
       else {
 	int i, n = d_get_number_of_children(n2);
 	for (i = 0; i < n; i++) {
 	  D_ParseNode *pn = d_get_child(n2, i);
-	  add_declaration(g, pn.start_loc.s[0 .. pn.end - pn.start_loc.s].idup,  u1.kind, pn.start_loc.line);
+	  add_declaration(g, pn.matchedString,  u1.kind, pn.start_loc.line);
       
 	}
       } 
@@ -346,7 +346,7 @@ g.r = new_rule(g, g.p);
  g.r.final_code.f = (new_ps, children, n_children, pn_offset, parser)
 {
      mixin(commonValues);
-      add_pass(g, n1.start_loc.s, n1.end,  u2.kind, n1.start_loc.line);
+      add_pass(g, n1.matchedString,  u2.kind, n1.start_loc.line);
       
   return 0;
 };
@@ -652,7 +652,7 @@ g.r = new_rule(g, g.p);
 {
      mixin(commonValues);
 
- new_token(g, n0.start_loc.s[0 .. n0.end - n0.start_loc.s].idup); 
+ new_token(g, n0.matchedString); 
   return 0;
 };
 
@@ -781,7 +781,7 @@ g.e = new_elem_nterm(g.p, var0x10fc9f300); g.p = var0x10fc9f500; g.r = var0x10fc
 {
      mixin(commonValues);
 
- g.p = new_production(g, n0.start_loc.s[0 .. n0.end - n0.start_loc.s].idup);
+ g.p = new_production(g, n0.matchedString);
   return 0;
 };
 
@@ -996,7 +996,7 @@ g.r = new_rule(g, g.p);
 {
      mixin(commonValues);
 
- g.e = new_string(g, n0.start_loc.s[0 .. n0.end - n0.start_loc.s].idup, g.r); 
+ g.e = new_string(g, n0.matchedString, g.r); 
   return 0;
 };
 
@@ -1015,7 +1015,7 @@ g.r = new_rule(g, g.p);
 {
      mixin(commonValues);
 
- g.e = new_string(g, n0.start_loc.s[0 .. n0.end - n0.start_loc.s].idup, g.r); 
+ g.e = new_string(g, n0.matchedString, g.r); 
   return 0;
 };
 
@@ -1053,7 +1053,7 @@ g.r = new_rule(g, g.p);
 {
      mixin(commonValues);
 
- g.e = new_ident(n0.start_loc.s[0 .. n0.end - n0.start_loc.s].idup, g.r); 
+ g.e = new_ident(n0.matchedString, g.r); 
   return 0;
 };
 
@@ -1089,7 +1089,7 @@ plus_EBNF(g);
 {
      mixin(commonValues);
 
- g.e = new_code(g, n1.start_loc.s[0 .. n1.end - n1.start_loc.s].idup, g.r); 
+ g.e = new_code(g, n1.matchedString, g.r); 
   return 0;
 };
 
@@ -1299,7 +1299,7 @@ g.e = new_elem_nterm(g.p, var0x10fccb700); g.p = var0x10fcc8200; g.r = var0x10fc
  
       if (g.e.kind != ElemKind.ELEM_TERM) 
 	d_fail("terminal name on non-terminal");
-      g.e.e.term.term_name = n1.start_loc.s[1 .. n1.end - n1.start_loc.s - 1].idup;
+      g.e.e.term.term_name = n1.matchedString[1 .. $ - 1];
     
   return 0;
 };
@@ -1862,8 +1862,8 @@ g.r = new_rule(g, g.p);
      mixin(commonValues);
 
 
-  add_pass_code(g, g.r, n0.start_loc.s, n0.end, n2.start_loc.s+1,
-    n2.end-1, n0.start_loc.line, n2.start_loc.line);
+  add_pass_code(g, g.r, n0.matchedString, n2.matchedString[1 .. $ - 1],
+          n0.start_loc.line, n2.start_loc.line);
 
   return 0;
 };

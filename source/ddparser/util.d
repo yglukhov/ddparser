@@ -310,26 +310,6 @@ char *dup_code(const char *str, const char *end)
 
 import core.memory;
 
-void* GC_MALLOC(size_t s)
-{
-    return GC.malloc(s);
-}
-
-void GC_FREE(void* p)
-{
-
-}
-
-void* GC_CALLOC(size_t s, size_t n)
-{
-    return GC.calloc(s*n);
-}
-
-void* GC_REALLOC(void* p, size_t s)
-{
-    return GC.realloc(p, s);
-}
-
 extern(C)
 {
 

@@ -707,24 +707,23 @@ add_declaration(Grammar *g, string s, uint kind, uint line) {
 }
 
 D_Pass *
-find_pass(Grammar *g, char *start, char *end) {
-  while (*start && isWhite(*start)) start++;
-  auto l = end - start;
+find_pass(Grammar *g, const(char)[] name) {
+  name = name.stripLeft();
   foreach (p; g.passes)
-    if (l == p.name_len &&
-	!strncmp(p.name, start, l))
+    if (name.length == p.name_len &&
+	!strncmp(p.name, name.ptr, name.length))
       return p;
   return null;
 }
 
 void 
-add_pass(Grammar *g, char *start, char *end, uint kind, uint line) {
-  if (find_pass(g, start, end))
-    d_fail("duplicate pass '%s' line %d", dup_str(start, end), line);
+add_pass(Grammar *g, string name, uint kind, uint line) {
+  if (find_pass(g, name))
+    d_fail("duplicate pass '%s' line %d", name, line);
   else {
     D_Pass *p = new D_Pass();
-    p.name = dup_str(start, end);
-    p.name_len = cast(uint)(end - start);
+    p.name = cast(char*)name.toStringz();
+    p.name_len = cast(uint)name.length;
     p.kind = kind;
     p.index = g.pass_index++;
     vec_add(&g.passes, p);
@@ -732,15 +731,15 @@ add_pass(Grammar *g, char *start, char *end, uint kind, uint line) {
 }
 
 void
-add_pass_code(Grammar *g, Rule *r, char *pass_start, char *pass_end,
-	      char *code_start, char *code_end, uint pass_line, uint code_line)
+add_pass_code(Grammar *g, Rule *r, string name,
+        string code, uint pass_line, uint code_line)
 {
-  D_Pass *p = find_pass(g, pass_start, pass_end);
+  D_Pass *p = find_pass(g, name);
   if (!p)
-    d_fail("unknown pass '%s' line %d", dup_str(pass_start, pass_end), pass_line);
+    d_fail("unknown pass '%s' line %d", name, pass_line);
   while (r.pass_code.n <= p.index) vec_add(&r.pass_code, null);
   r.pass_code[p.index] = new Code();
-  r.pass_code[p.index].code = dup_str(code_start, code_end);
+  r.pass_code[p.index].code = cast(char*)code.toStringz();
   r.pass_code[p.index].line = code_line;
 }
 

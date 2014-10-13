@@ -23,5 +23,11 @@ struct D_ParseNode {
   D_WhiteSpaceFn	white_space;
   D_ParseNode_Globals	*globals;
   D_ParseNode_User	user;
+
+  @property string matchedString() const
+  {
+      assert(end, "End is null");
+      return start_loc.s[0 .. end - start_loc.s].idup;
+  }
 }
 
