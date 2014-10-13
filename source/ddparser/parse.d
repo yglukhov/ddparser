@@ -2297,13 +2297,13 @@ handle_top_level_ambiguities(Parser *p, SNode *sn) {
 }
 
 D_ParseNode *
-dparse(D_Parser *p, char *buf, int buf_len) {
+dparse(D_Parser *p, string buf) {
     PNode *pn;
     D_ParseNode *res = null;
 
     p.states = p.scans = p.shifts = p.reductions = p.compares = 0;
-    p.start = buf;
-    p.end = buf + buf_len;
+    p.start = cast(char*)buf.ptr;
+    p.end = cast(char*)buf.ptr + buf.length;
 
     initialize_whitespace_parser(p);
     alloc_parser_working_data(p);

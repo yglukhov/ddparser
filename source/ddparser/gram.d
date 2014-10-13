@@ -190,8 +190,6 @@ struct Term {
   AssocKind		op_assoc;
   int			op_priority;
   string string_;
-  /* char			*string_; */
-  /* int			string_len; */
   mixin(bitfields!(
               uint, "scan_kind", 3,
               uint, "ignore_case", 1,
@@ -208,7 +206,7 @@ struct Term {
         //s.map(term_name, "term_name");
         s.map(op_assoc, "op_assoc");
         s.map(op_priority, "op_priority");
-        //s.mapCStringWithLength(string_, "string_", string_len);
+        //s.map(string_, "string_");
 
         mixin(fieldMap!("scan_kind", s));
         mixin(fieldMap!("ignore_case", s));
@@ -650,7 +648,6 @@ new_ident(string s, Rule *r)
   if (r)
     vec_add(&r.elems, x);
   return x;
-
 }
 
 void
@@ -1226,9 +1223,7 @@ make_elems_for_productions(Grammar *g) {
 private void
 convert_regex_production_one(Grammar *g, Production *p) {
   int l;
-  Production *pp;
   Rule *r, rr;
-  const(char)[] s;
 
   if (p.regex_term) /* already done */
     return;
@@ -1246,7 +1241,7 @@ convert_regex_production_one(Grammar *g, Production *p) {
 	if (!e.e.nterm.regex)
 	  d_fail("regex production '%s' cannot invoke non-regex production '%s'",
 	       p.name, e.e.nterm.name);
-	pp = e.e.nterm;
+	Production *pp = e.e.nterm;
 	for (l = 0; l < pp.rules.n; l++)
 	  if (pp.rules[l].speculative_code.code || pp.rules[l].final_code.code)
 	    d_fail("code not permitted in rule %d of regex productions '%s'", l, p.name);
@@ -1264,7 +1259,6 @@ convert_regex_production_one(Grammar *g, Production *p) {
   string buffer;
   Term *t = new_term();
   t.kind = TermKind.TERM_REGEX;
-  //t.string_ = buf;
   t.index = g.terminals.n;
   t.regex_production = p;
   vec_add(&g.terminals, t);
@@ -1288,19 +1282,14 @@ convert_regex_production_one(Grammar *g, Production *p) {
       t = e.kind == ElemKind.ELEM_TERM ? e.e.term : e.e.nterm.regex_term;
       buffer ~= '(';
       if (t.kind == TermKind.TERM_STRING)
-	s = escape_string_for_regex(t.string_);
+	buffer ~= escape_string_for_regex(t.string_);
       else
-	s = t.string_;
-      /* memcpy(b, s.ptr, s.length); b += s.length; */
-      buffer ~= s;
-      /* *b++ = ')';  */
+	buffer ~= t.string_;
       buffer ~= ')';
       if (l == 2) 
       {	buffer ~= '*'; }
       else
       {	buffer ~= '+'; }
-      /* *b = 0; */
-    /* assert(buf[0 .. strlen(buf)] == buffer); */
       p.regex_term.string_ = buffer;
     } else
       goto Lfail;
@@ -1314,11 +1303,9 @@ convert_regex_production_one(Grammar *g, Production *p) {
       foreach (e; r.elems) {
 	t = e.kind == ElemKind.ELEM_TERM ? e.e.term : e.e.nterm.regex_term;
 	if (t.kind == TermKind.TERM_STRING)
-	  s = escape_string_for_regex(t.string_);
+	  buffer ~= escape_string_for_regex(t.string_);
 	else
-	  s = t.string_;
-	/* memcpy(b, s.ptr, s.length); b += s.length; */
-    buffer ~= s;
+	  buffer ~= t.string_;
       }
       if (r.elems.n > 1)
       { buffer ~= ')'; }
@@ -1327,8 +1314,6 @@ convert_regex_production_one(Grammar *g, Production *p) {
     }
     if (p.rules.n > 1)
     {  buffer ~= ')'; }
-    /* *b = 0; */
-    /* assert(buf[0 .. strlen(buf)] == buffer); */
       p.regex_term.string_ = buffer;
   }
   p.in_regex = 0;

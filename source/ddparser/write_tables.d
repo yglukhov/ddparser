@@ -470,41 +470,7 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
         tables.d_gotos ~= 0;
     }
 }
-/+
-private int find_symbol(Grammar *g, const(char)[] s, int kind) {
-    s = s.stripLeft();
-        if (kind == D_SYMBOL_NTERM) {
-            Production *p = lookup_production(g, s);
-            if (p)
-                return p.index;
-        } else if (kind == D_SYMBOL_STRING) {
-            int found = -1;
-            for (int i = 0; i < g.terminals.n;i++)
-                if (g.terminals.v[i].kind == TermKind.TERM_STRING &&
-                        (g.terminals.v[i].term_name == s ||
-                        (g.terminals.v[i].term_name.length == 0 &&
-                          g.terminals.v[i].string_len == s.length &&
-                          !strncmp(s.ptr, g.terminals.v[i].string_, s.length)))) {
-                    if (found > 0) {
-                        d_fail("attempt to find symbol for non-unique string '%s'\n",
-                                g.terminals.v[i].string_);
-                    } else
-                        found = i;
-                }
-            if (found > 0)
-                return found + g.productions.n;
-        }
-    return -1;
-}
 
-private int
-find_symbol(Grammar *g, char *s, char *e, int kind) {
-    if (e > s) {
-        return find_symbol(g, s[0 .. e - s], kind);
-    }
-    return -1;
-}
-+/
 private void
 buildReductions(Grammar *g, ref BuildTables tables) {
     foreach (p; g.productions) {

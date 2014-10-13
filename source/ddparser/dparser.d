@@ -222,7 +222,7 @@ class Parser
 
     ParseNode parse(string s)
     {
-        D_ParseNode * node = dparse(parser, cast(char*)s.ptr, cast(int)s.length);
+        D_ParseNode * node = dparse(parser, s);
         ParseNode result;
         bool ok = false;
         if (node && !parser.syntax_errors)

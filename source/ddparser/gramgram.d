@@ -2210,7 +2210,7 @@ bool parseGrammar(Grammar* g, string str)
         initialize_productions(g);
     D_Parser *p = new_D_Parser(gramGramTables, (GramGramParseNode_User).sizeof);
     p.initial_globals = g;
-    if (!dparse(p, cast(char*)str.ptr, cast(int)str.length))
+    if (!dparse(p, str))
         return false;
 
     if (g.productions.n > 1)

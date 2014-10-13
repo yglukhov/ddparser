@@ -88,7 +88,7 @@ unittest
         string output;
         logFunc = (s) { output ~= s; };
         d_verbose_level = 1;
-        D_ParseNode * node = dparse(parser, cast(char*)input.ptr, cast(int)input.length);
+        D_ParseNode * node = dparse(parser, input);
         d_verbose_level = oldVL;
 
         string expectedOutput = readContentsOfFile(testFolder ~ "/" ~ i ~ ".g.1.check");
