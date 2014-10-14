@@ -1,6 +1,6 @@
 {
 	"name": "ddparser",
-	"description": "D language bindings for dparser",
+	"description": "D language port for dparser",
 	"copyright": "Copyright © 2014, yglukhov",
 	"authors": ["yglukhov"],
     "targetType":"sourceLibrary",

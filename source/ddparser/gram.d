@@ -642,7 +642,7 @@ new_utf8_char(Grammar *g, const(char) *s, const(char) *e, Rule *r) {
     return x;
 }
 
-    Elem *
+Elem *
 new_ident(string s, Rule *r) @safe
 {
     Elem *x = new Elem();

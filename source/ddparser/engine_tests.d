@@ -8,6 +8,7 @@ import ddparser.gram;
 import ddparser.dparse;
 import ddparser.util;
 import std.stdio;
+import std.path;
 
 
 unittest
@@ -56,11 +57,12 @@ unittest
         "g51.test",
     ];
 
+    enum testFolder = dirName(__FILE__) ~ "/../../d/tests";
+
     foreach(i; tests)
     {
         stderr.writeln(i);
         D_Grammar* g = createEmptyGrammar();
-        string testFolder = "/Volumes/Work/Projects/ddparser/d/tests";
         string gram = readContentsOfFile(testFolder ~ "/" ~ i ~ ".g");
         parseGrammar(g, gram) || assert(false);
         build_grammar(g) >= 0 || assert(false);
