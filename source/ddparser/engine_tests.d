@@ -9,6 +9,7 @@ import ddparser.dparse;
 import ddparser.util;
 import std.stdio;
 import std.path;
+import std.string;
 
 
 unittest
@@ -59,30 +60,37 @@ unittest
 
     enum testFolder = dirName(__FILE__) ~ "/../../d/tests";
 
-    foreach(i; tests)
+    debug(trace)
     {
-        stderr.writeln(i);
-        D_Grammar* g = createEmptyGrammar();
-        string gram = readContentsOfFile(testFolder ~ "/" ~ i ~ ".g");
-        parseGrammar(g, gram) || assert(false);
-        build_grammar(g) >= 0 || assert(false);
+        pragma(msg, "This test will not be run in debug(trace)");
+    }
+    else
+    {
+        foreach(i; tests)
+        {
+            stderr.writeln(i);
+            D_Grammar* g = createEmptyGrammar();
+            string gram = readContentsOfFile(testFolder ~ "/" ~ i ~ ".g");
+            parseGrammar(g, gram) || assert(false);
+            build_grammar(g) >= 0 || assert(false);
 
-        auto binaryTables = createTablesFromGrammar(g, null, null);
+            auto binaryTables = createTablesFromGrammar(g, null, null);
 
-        auto parser = new_D_Parser(binaryTables, D_ParseNode_User.sizeof);
-        parser.save_parse_tree = 1;
+            auto parser = new_D_Parser(binaryTables, D_ParseNode_User.sizeof);
+            parser.save_parse_tree = 1;
 
-        string input = readContentsOfFile(testFolder ~ "/" ~ i ~ ".g.1");
-        auto oldVL = d_verbose_level;
+            string input = readContentsOfFile(testFolder ~ "/" ~ i ~ ".g.1");
+            auto oldVL = d_verbose_level;
 
-        string output;
-        logFunc = (s) { output ~= s; };
-        d_verbose_level = 1;
-        D_ParseNode * node = dparse(parser, input);
-        d_verbose_level = oldVL;
+            string output;
+            logFunc = (s) { output ~= s; };
+            d_verbose_level = 1;
+            D_ParseNode * node = dparse(parser, input);
+            d_verbose_level = oldVL;
 
-        string expectedOutput = readContentsOfFile(testFolder ~ "/" ~ i ~ ".g.1.check");
-        assert(output == expectedOutput);
+            string expectedOutput = readContentsOfFile(testFolder ~ "/" ~ i ~ ".g.1.check");
+            assert(output == expectedOutput);
+        }
     }
 }
 
