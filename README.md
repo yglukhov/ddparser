@@ -1,7 +1,7 @@
 ddparser
 ========
 
-[Dparser](http://dparser.sourceforge.net) bindings for [D language](http://dlang.org)
+[Dparser](http://dparser.sourceforge.net) port of [D language](http://dlang.org)
 
 Dparser is a GLR parser, with lots of features:
 - Runtime generation of parsing tables. Compile-time generation is also supported.
