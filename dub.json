@@ -1,7 +1,8 @@
 {
-	"name": "ddparser",
-	"description": "D language port for dparser",
-	"copyright": "Copyright © 2014, yglukhov",
-	"authors": ["yglukhov"],
+    "name": "ddparser",
+    "description": "D language port for dparser",
+    "copyright": "Copyright © 2014, yglukhov",
+    "license": "BSD",
+    "authors": ["yglukhov"],
     "targetType":"sourceLibrary",
 }
