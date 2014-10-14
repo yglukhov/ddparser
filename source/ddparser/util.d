@@ -3,7 +3,7 @@ module ddparser.util;
 
 import core.stdc.string;
 public import core.stdc.stdint;
-import core.stdc.ctype;
+
 import std.ascii;
 import std.string;
 import std.stdio;
@@ -18,7 +18,6 @@ enum INITIAL_VEC_SHIFT =    3;
 enum INITIAL_VEC_SIZE = (1 << INITIAL_VEC_SHIFT);
 enum INTEGRAL_VEC_SIZE =    3;
 enum INTEGRAL_STACK_SIZE =  8;
-/* enum TRICK_VEC_SIZE =        (INITIAL_VEC_SIZE - INTEGRAL_VEC_ELEMENTS); */
 
 enum SET_MAX_SEQUENTIAL =   5;
 
@@ -290,7 +289,7 @@ void FREE(void* p) @safe
 
 }
 
-char *dup_code(const char *str, const char *end)
+string dup_code(const char *str, const char *end)
 {
     if (0)
     {
@@ -323,27 +322,7 @@ struct hash_fns_t {
   void      *data[2];
 }
 
-void Trace(int line, char* str)
-{
-    if (0)
-    {
-    import std.array;
-    char[] s = str[0 .. strlen(str)];
-    s = s.replace("(D_PN(_ps, _offset).globals)", "g");
-    s = s.replace(".", ".");
-    s = s.replace("(*(D_PN(_children[0], _offset)))", "_c0");
-    s = s.replace("(*(D_PN(_children[1], _offset)))", "_c1");
-    s = s.replace("(D_PN(_children[0], _offset).user)", "_c0.user");
-    s = s.replace("(D_PN(_children[1], _offset).user)", "_c1.user");
-    s = s.replace("(D_PN(_ps, _offset).user)", "_ps.user");
-
-    writeln("// TRACE ", line, "\n", s);
-    }
-
-}
-
-
-char *
+string
 d_dup_pathname_str(const(char)*s) {
     const(char)*e = s;
     if (!s)
@@ -355,13 +334,10 @@ d_dup_pathname_str(const(char)*s) {
         return dup_str(s, s+strlen(s));
 }
 
-char *
+string
 dup_str(const char *s, const char *e) {
   int l = cast(int)(e ? e-s : strlen(s));
-  char *ss = cast(char*)MALLOC(l+1);
-  memcpy(ss, s, l);
-  ss[l] = 0;
-  return ss;
+  return s[0 .. l].idup;
 }
 
 uint strhashl(const(char)[] s)

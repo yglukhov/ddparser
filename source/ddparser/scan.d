@@ -5,7 +5,6 @@ import ddparser.dparse;
 import ddparser.parse;
 import ddparser.dparse_tables;
 import ddparser.util;
-import core.stdc.string;
 import std.stdio;
 
 struct ShiftResult

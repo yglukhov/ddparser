@@ -5,9 +5,6 @@ import ddparser.util;
 
 import std.algorithm;
 
-import core.stdc.string;
-import core.stdc.stdlib;
-
 enum INITIAL_ALLITEMS =	3359;
 
 private uint item_hash(Item* _i)
@@ -304,15 +301,9 @@ new_Hint(size_t d, State *s, Rule *r) {
   return h;
 }
 
-extern(C) private int 
-hintcmp(const void *ai, const void *aj) {
-  Hint *i = *cast(Hint**)ai;	
-  Hint *j = *cast(Hint**)aj;
-  return 
-    (i.depth > j.depth) ? 1 : (
-      (i.depth < j.depth) ? -1 : (
-	(i.rule.index > j.rule.index) ? 1 : (
-	  (i.rule.index < j.rule.index) ? -1 : 0)));
+bool isHintLessThanHint(Hint* a, Hint* b)
+{
+  return (a.depth < b.depth) || (a.depth == b.depth && a.rule.index < b.rule.index);
 }
 
 private void
@@ -343,8 +334,7 @@ build_right_epsilon_hints(Grammar *g) {
           }
       }
       if (s.right_epsilon_hints.length > 1)
-          qsort(s.right_epsilon_hints.v, s.right_epsilon_hints.length, 
-                  (Hint*).sizeof, &hintcmp);
+          s.right_epsilon_hints.array.sort!isHintLessThanHint();
   }
 }
 
@@ -377,8 +367,7 @@ build_error_recovery(Grammar *g) {
                 }
             }
         }
-        qsort(s.error_recovery_hints.v, s.error_recovery_hints.length, 
-                (Hint*).sizeof, &hintcmp);
+        s.error_recovery_hints.array.sort!isHintLessThanHint();
     }
 }
 

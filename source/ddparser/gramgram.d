@@ -34,12 +34,13 @@ auto u2 = cast(GramGramParseNode_User*)(n_children > 2 ? &((D_PN(children[2], pn
 auto uu = cast(GramGramParseNode_User*)&(D_PN(new_ps, pn_offset)).user;
 };
 
-char* dup_code(string c)
+string dup_code(string c)
 {
-    return cast(char*)c.toStringz();
+    return c;
+    /* return cast(char*)c.toStringz(); */
 }
 
-char* dup_code(const char* s, const char* e)
+string dup_code(const char* s, const char* e)
 {
     return dup_str(s, e);
 }
@@ -238,7 +239,7 @@ plus_EBNF(g);
 {
      mixin(commonValues);
 
-      g.scanner.code = dup_str(n1.start_loc.s, n1.end);
+      g.scanner.code = n1.matchedString;
       g.scanner.line = n0.start_loc.line;
       
   return 0;
@@ -280,12 +281,12 @@ star_EBNF(g);
      mixin(commonValues);
 
       if (!d_get_number_of_children(n2))
-     	add_declaration(g, n2.matchedString,  u1.kind, n2.start_loc.line);
+     	add_declaration(g, n2.matchedString, cast(DeclarationKind)u1.kind, n2.start_loc.line);
       else {
 	int i, n = d_get_number_of_children(n2);
 	for (i = 0; i < n; i++) {
 	  D_ParseNode *pn = d_get_child(n2, i);
-	  add_declaration(g, pn.matchedString,  u1.kind, pn.start_loc.line);
+	  add_declaration(g, pn.matchedString, cast(DeclarationKind)u1.kind, pn.start_loc.line);
       
 	}
       } 

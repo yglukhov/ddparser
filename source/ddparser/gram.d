@@ -27,7 +27,12 @@ enum NO_PROD            =0xFFFFFFFF;
 alias Item = Elem;
 
 struct Code {
-    char    *code;
+    union
+    {
+       string code;
+       D_ReductionCode _f;
+    }
+
     int line;
     void serialize(Serializer s)
     {
@@ -38,13 +43,13 @@ struct Code {
 
     @property void f(D_ReductionCode c)
     {
-        code = cast(char*)c;
+        _f = c;
         line = -1;
     }
 
     @property D_ReductionCode f()
     {
-        if (line == -1) return cast(D_ReductionCode)code;
+        if (line == -1) return _f;
         return null;
     }
 }
@@ -226,7 +231,7 @@ alias DECLARE_NUM = DeclarationKind.DECLARE_NUM;
 
 struct Declaration {
     Elem *  elem;
-    uint        kind;
+    DeclarationKind    kind;
     uint        index;
 
     void serialize(Serializer s)
@@ -334,7 +339,6 @@ struct Elem {
         /* else if (kind == ElemKind.ELEM_UNRESOLVED) */
         /*     s.map(e.unresolved, "unresolved"); */
     }
-
 }
 
 struct Grammar {
@@ -674,7 +678,7 @@ dup_elem(Elem *e, Rule *r) @safe {
 }
 
 void
-new_declaration(Grammar *g, Elem *e, uint kind) {
+new_declaration(Grammar *g, Elem *e, DeclarationKind kind) {
     Declaration *d = new Declaration();
     d.elem = e;
     d.kind = kind;
@@ -683,7 +687,7 @@ new_declaration(Grammar *g, Elem *e, uint kind) {
 }
 
 void
-add_declaration(Grammar *g, string s, uint kind, uint line) {
+add_declaration(Grammar *g, string s, DeclarationKind kind, uint line) {
     if (s.length == 0) {
         switch (kind) {
             case DeclarationKind.DECLARE_SET_OP_PRIORITY: g.set_op_priority_from_rule = 1; return;
@@ -737,7 +741,7 @@ add_pass_code(Grammar *g, Rule *r, string name,
         d_fail("unknown pass '%s' line %d", name, pass_line);
     while (r.pass_code.length <= p.index) vec_add(&r.pass_code, null);
     r.pass_code[p.index] = new Code();
-    r.pass_code[p.index].code = cast(char*)code.toStringz();
+    r.pass_code[p.index].code = code;
     r.pass_code[p.index].line = code_line;
 }
 
@@ -1471,14 +1475,6 @@ private void
 free_rule(Rule *r) {
     int i;
     FREE(r.end);
-    if (r.final_code.code)
-        FREE(r.final_code.code);
-    if (r.speculative_code.code)
-        FREE(r.speculative_code.code);
-    for (i = 0; i < r.pass_code.length; i++) {
-        FREE(r.pass_code[i].code);
-        FREE(r.pass_code[i]);
-    }
     vec_free(&r.pass_code);
     FREE(r);
 }
@@ -1511,8 +1507,6 @@ free_D_Grammar(Grammar *g) {
     }
     for (i = 0; i < g.actions.length; i++)
         free_Action(g.actions[i]);
-    if (g.scanner.code)
-        FREE(g.scanner.code);
     for (i = 0; i < g.states.length; i++) {
         State *s = g.states[i];
         vec_free(&s.items_hash);

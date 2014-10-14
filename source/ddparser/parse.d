@@ -16,9 +16,8 @@ import ddparser.dparse;
 import ddparser.scan;
 import ddparser.gram;
 import ddparser.symtab;
-//import core.stdc.stdio;
+
 import core.stdc.string;
-import core.stdc.stdlib;
 
 enum NO_DPN = cast(D_ParseNode*)0x1;
 PNode* DPN_TO_PN(D_ParseNode* dpn)
@@ -85,7 +84,7 @@ struct Parser {
   int			dont_use_height_for_disambiguation;
   int			dont_use_greediness_for_disambiguation;
   int 			commit_actions_interval; /* 0 is immediate */
-  int 			error_recovery;
+  bool 			error_recovery;
   bool			partial_parses;
   /* parse results */
   int 			syntax_errors;
@@ -134,8 +133,8 @@ struct PNode {
   const(D_Shift)* shift;
   VecPNode		children;
   uint			height;		/* max tree height */
-  uint8			evaluated;
-  uint8			error_recovery;
+  bool			evaluated;
+  bool			error_recovery;
   PNode		*all_next;
   PNode		*bucket_next;
   PNode		*ambiguities;
@@ -506,8 +505,8 @@ private void
 free_parser_working_data(Parser *p) {
   free_old_nodes(p);
   free_old_nodes(p); /* to catch SNodes saved for error repair */
-  memset(&p.pnode_hash, 0, (p.pnode_hash).sizeof);
-  memset(&p.snode_hash, 0, (p.snode_hash).sizeof);
+  p.pnode_hash = p.pnode_hash.init;
+  p.snode_hash = p.snode_hash.init;
   while (p.reductions_todo) {
     Reduction *r = p.free_reductions.next;
     FREE(p.free_reductions); p.free_reductions = r;
@@ -1796,7 +1795,7 @@ commit_tree(Parser *p, PNode *pn) {
   if (pn.evaluated)
     return pn;
   if (!is_unreduced_epsilon_PNode(pn))
-    pn.evaluated = 1;
+    pn.evaluated = true;
   if (pn.ambiguities)
     pn = resolve_ambiguities(p, pn);
   fixup_ebnf = p.fixup_EBNF_productions;
@@ -1867,8 +1866,7 @@ find_substr(const (char) *str, const(char)[] s) {
 
 private void
 syntax_error_report_fn(D_Parser *p) {
-  char *_fn = d_dup_pathname_str(p.loc.pathname);
-  const(char)[] fn = _fn[0 .. strlen(_fn)];
+  const(char)[] fn = d_dup_pathname_str(p.loc.pathname);
   const(char)[] after;
   ZNode *z = p.snode_hash.last_all ? p.snode_hash.last_all.zns[0] : null;
   while (z && z.pn.parse_node.start_loc.s == z.pn.parse_node.end)
@@ -1973,8 +1971,8 @@ error_recovery(Parser *p) {
         {
           if (z)
             if (z.pn.reduction == rr) {
-              z.pn.evaluated = 1;
-              z.pn.error_recovery = 1;
+              z.pn.evaluated = true;
+              z.pn.error_recovery = true;
             }
         }
     if (p.shifts_todo || p.reductions_todo)
@@ -2212,7 +2210,7 @@ new_D_Parser(D_ParserTables *t, int sizeof_ParseNode_User) {
   p.commit_actions_interval = DEFAULT_COMMIT_ACTIONS_INTERVAL;
   p.syntax_error_fn = &syntax_error_report_fn;
   p.ambiguity_fn = &ambiguity_abort_fn;
-  p.error_recovery = 1;
+  p.error_recovery = true;
   p.save_parse_tree = t.save_parse_tree;
   if (p.t.default_white_space)
     p.initial_white_space_fn = p.t.default_white_space;
@@ -2267,7 +2265,7 @@ initialize_whitespace_parser(Parser *p) {
   if (p.t.whitespace_state) {
     p.whitespace_parser = new_subparser(p);
     p.whitespace_parser.initial_white_space_fn = &null_white_space;
-    p.whitespace_parser.error_recovery = 0;
+    p.whitespace_parser.error_recovery = false;
     p.whitespace_parser.partial_parses = true;
     p.whitespace_parser.free_node_fn = p.free_node_fn;
   }
