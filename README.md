@@ -1,11 +1,11 @@
 ddparser
 ========
 
-[Dparser](http://dparser.sourceforge.net) port of [D language](http://dlang.org)
+[Dparser](http://dparser.sourceforge.net) port in [D language](http://dlang.org)
 
 Dparser is a GLR parser, with lots of features:
 - Runtime generation of parsing tables. Compile-time generation is work in progress.
-- Handling of ambigous grammars. Calls back to user code, when ambiguity can not be resolved automatically.
+- Handling of ambiguous grammars. Calls back to user code, when ambiguity can not be resolved automatically.
 - Terminals are defined within the same grammar used for language syntax, by means of strings and regular expressions.
 - Many more. Please, read the [official page](http://dparser.sourceforge.net).
 
