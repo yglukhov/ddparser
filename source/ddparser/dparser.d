@@ -26,23 +26,18 @@ void hexDump(const ubyte* ptr, uint len)
     }
 }
 
+private auto uniqueTypeValue(string f = __FILE__, int i = __LINE__)()
+{
+    enum Value { value }
+    return Value.value;
+}
+
 class Grammar
 {
     alias Action = void delegate(Parser.Context c);
 
-    shared static this()
-    {
-        propagate = (c)
-        {
-            enforce(c.length == 1);
-            c.result = c[0];
-        };
-    }
-
-    static Action propagate;
-    static Action reduceByAppending;
-    enum Spec { spec }
-    alias spec = Spec.spec;
+    enum propagate = uniqueTypeValue();
+    enum spec = uniqueTypeValue();
 
     static struct Production
     {
@@ -63,7 +58,16 @@ class Grammar
         return this;
     }
 
-    Grammar opBinary(string s : "<<")(Spec)
+    Grammar opBinary(string s : "<<")(typeof(propagate))
+    {
+        return this << (c)
+        {
+            enforce(c.length == 1);
+            c.result = c[0];
+        };
+    }
+
+    Grammar opBinary(string s : "<<")(typeof(spec))
     {
         productions[$-1].spec = true;
         return this;
@@ -276,19 +280,19 @@ class Parser
         Object userInfo;
         bool isFinal;
 
-        @property ulong length()
+        @property ulong length() pure @safe nothrow
         {
             return children.length;
         }
 
-        auto opDollar()
+        auto opDollar() pure @safe nothrow
         {
             return length;
         }
 
-        auto opIndex(uint index)
+        auto opIndex(uint index) pure
         {
-            index < children.length || assert(false, "Out of bounds: " ~ this.toString());
+            index < children.length || assert(false, "Out of bounds: "/* ~ this.toString()*/);
             return children[index];
         }
 
