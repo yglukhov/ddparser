@@ -10,7 +10,6 @@ import ddparser.lr;
 import ddparser.lex;
 import ddparser.dparse;
 import ddparser.parse;
-import core.stdc.string;
 import std.stdio;
 import std.json;
 import std.conv;
@@ -484,105 +483,102 @@ string escape_string_for_regex(const char[] s) @safe
     return result.data;
 }
 
-private string unescapeTermString(const(char)[] termString, TermKind kind)
+private string unescapeTermString(const(char)[] termString, TermKind kind) @safe
 {
-    char *s;
-    char *start = null;
-    char *ss;
+    string result;
+
+    uint start = 0;
     int length;
     uint base = 0;
 
-    char* res = cast(char*)termString.dup.toStringz();
 
-    for (ss = s = res; *s; s++) {
-        if (*s == '\\') {
-            switch (s[1]) {
+    for (uint i = 0; i < termString.length; ++i) {
+        if (termString[i] == '\\') {
+            switch (termString[i + 1]) {
                 case '\\':
                     if (kind == TermKind.TERM_STRING)
-                    { *ss = '\\'; s++; break; }
+                    { result ~= '\\'; i++; break; }
                     else
-                        goto Ldefault;
-                case 'b': *ss = '\b'; s++; break;
-                case 'f': *ss = '\f'; s++; break;
-                case 'n': *ss = '\n'; s++; break;
-                case 'r': *ss = '\r'; s++; break;
-                case 't': *ss = '\t'; s++; break;
-                case 'v': *ss = '\v'; s++; break;
-                case 'a': *ss = '\a'; s++; break;
-                case 'c': *ss = 0; assert(false); //return;
+                        goto default;
+                case 'b': result ~= '\b'; i++; break;
+                case 'f': result ~= '\f'; i++; break;
+                case 'n': result ~= '\n'; i++; break;
+                case 'r': result ~= '\r'; i++; break;
+                case 't': result ~= '\t'; i++; break;
+                case 'v': result ~= '\v'; i++; break;
+                case 'a': result ~= '\a'; i++; break;
+                case 'c': assert(false); //return;
                 case '\"':
                           if (kind == TermKind.TERM_REGEX)
-                          { *ss = '\"'; s++; break; }
+                          { result ~= '\"'; i++; break; }
                           else
-                              goto Ldefault;
+                              goto default;
                 case '\'':
                           if (kind == TermKind.TERM_STRING)
-                          { *ss = '\''; s++; break; }
+                          { result ~= '\''; i++; break; }
                           else
-                              goto Ldefault;
+                              goto default;
                 case 'x':
                           length = 0;
-                          if (s[2].isHexDigit()) {
+                          if (termString[i + 2].isHexDigit()) {
                               base = 16;
-                              start = s + 2;
+                              start = i + 2;
                               length++;
-                              if (s[3].isHexDigit())
+                              if (termString[i + 3].isHexDigit())
                                   length++;
                           }
-                          s += length + 1;
+                          i += length + 1;
                           goto Lncont;
                 case 'd':
                           length = 0;
-                          if (s[2].isDigit()) {
+                          if (termString[i + 2].isDigit()) {
                               base = 10;
-                              start = s + 2;
+                              start = i + 2;
                               length++;
-                              if ((s[3]).isDigit()) {
+                              if ((termString[i + 3]).isDigit()) {
                                   length++;
-                                  if (s[4].isDigit() && ((s[2] < '2') || ((s[2] == '2') && ((s[3] < '5') ||
-                                                      ((s[3] == '5') && (s[4] < '6'))))))
+                                  if (termString[i + 4].isDigit() && ((termString[i + 2] < '2') || ((termString[i + 2] == '2') && ((termString[i + 3] < '5') ||
+                                                      ((termString[i + 3] == '5') && (termString[i + 4] < '6'))))))
                                       length++;
                               }
                           }
-                          s += length + 1;
+                          i += length + 1;
                           goto Lncont;
                 case '0': case '1': case '2': case '3':
                 case '4': case '5': case '6': case '7':
                           length = 1;
                           base = 8;
-                          start = s + 1;
-                          if (s[2].isDigit() && (s[2] != '8') && (s[2] != '9')) {
+                          start = i + 1;
+                          if (termString[i + 2].isDigit() && (termString[i + 2] != '8') && (termString[i + 2] != '9')) {
                               length++;
-                              if (s[3].isDigit() && (s[3] != '8') && (s[3] != '9')) {
+                              if (termString[i + 3].isDigit() && (termString[i + 3] != '8') && (termString[i + 3] != '9')) {
                                   length++;
                               }
                           }
-                          s += length;
+                          i += length;
                           /* fall through */
 Lncont:
                           if (length > 0) {
-                              *ss = start[0 .. length].to!ubyte(base);
-                              if (*s > 0)
+                              result ~= cast(char)termString[start .. start + length].to!ubyte(base);
+                              if (i < termString.length)
                                   break;
                               d_fail("encountered an escaped null while processing '%s'", termString);
                           } else
                               goto next;
-Ldefault:
+                          break;
                 default:
-                          *ss++ = *s;
-                          *ss = s[1];
-                          s++;
+                          result ~= termString[i];
+                          result ~= termString[i + 1];
+                          i ++;
                           break;
             }
-        } else
-            *ss = *s;
-        ss++;
+        }
+        else
+        {
+            result ~= termString[i];
+        }
 next:;
     }
-    *s = 0;
-    *ss = 0;
-
-    string result = cast(string)res[0 .. strlen(res)];
 
     if (!result.length)
         d_fail("empty string after unescape '%s'", termString);
