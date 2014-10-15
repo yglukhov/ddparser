@@ -98,7 +98,7 @@ struct Vec(T)
         add(v);
     }
 
-    int opApply(int delegate(ref T) operations)
+    int opApply(scope int delegate(ref T) operations)
     {
         isIterating++;
         int res = 0;
