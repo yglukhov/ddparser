@@ -20,7 +20,7 @@ version (unittest) Grammar createGrammar()
     return g;
 }
 
-unittest
+version(unittest) bool testParser()
 {
     Grammar g = createGrammar();
 
@@ -29,6 +29,13 @@ unittest
 
     auto result = p.parse("123 + 456");
     assert(result.toString() == "EXPRESSION[INT_LITERAL['123'], '+', INT_LITERAL['456']]", "Unexpected parse result");
+    return true;
+}
+
+unittest
+{
+    //enum t = testParser();
+    assert(testParser());
 }
 
 unittest

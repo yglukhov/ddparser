@@ -2201,12 +2201,21 @@ private __gshared D_ParserTables* gramGramTables;
 
 bool parseGrammar(Grammar* g, string str)
 {
-    if (gramGramTables == null)
-        gramGramTables = createTablesFromGrammar(grammarGrammar(), null, null);
+    D_ParserTables* ggTables;
+    if (__ctfe)
+    {
+        ggTables = createTablesFromGrammar(grammarGrammar(), null, null);
+    }
+    else
+    {
+        if (gramGramTables == null)
+           gramGramTables = createTablesFromGrammar(grammarGrammar(), null, null);
+        ggTables = gramGramTables;
+    }
 
     if (!g.productions.length)
         initialize_productions(g);
-    D_Parser *p = new_D_Parser(gramGramTables, (GramGramParseNode_User).sizeof);
+    D_Parser *p = new_D_Parser(ggTables, (GramGramParseNode_User).sizeof);
     p.initial_globals = g;
     if (!dparse(p, str))
         return false;
