@@ -1,6 +1,6 @@
 module ddparser.tests;
 
-import ddparser.dparser;
+import ddparser;
 import std.stdio;
 
 version (unittest) Grammar createGrammar()
