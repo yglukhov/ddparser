@@ -4,5 +4,5 @@
     "copyright": "Copyright © 2014, yglukhov",
     "license": "BSD",
     "authors": ["yglukhov"],
-    "targetType":"sourceLibrary",
+    "targetType":"library",
 }
