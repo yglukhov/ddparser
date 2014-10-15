@@ -95,7 +95,7 @@ symhash_add(D_SymHash *sh, D_Sym *s) {
     vv.n = sh.syms.n;
     sh.syms.n = sh.grow;
     sh.grow = sh.grow * 2 + 1;
-    sh.syms.v = cast(D_Sym**)MALLOC(sh.syms.n * (void *).sizeof);
+    sh.syms.v = (new D_Sym*[sh.syms.n]).ptr;// cast(D_Sym**)MALLOC(sh.syms.n * (void *).sizeof);
     v = sh.syms.v;
     n = sh.syms.n;
     vec_clear(&tv);
@@ -122,8 +122,7 @@ new_D_SymHash() {
   D_SymHash *sh = new D_SymHash();
   sh.grow = INITIAL_SYMHASH_SIZE * 2 + 1;
   sh.syms.n = INITIAL_SYMHASH_SIZE;
-  sh.syms.v = cast(D_Sym**)MALLOC(sh.syms.n * (void *).sizeof);
-  memset(sh.syms.v, 0, sh.syms.n * (void *).sizeof);
+  sh.syms.v = (new D_Sym*[sh.syms.n]).ptr; // cast(D_Sym**)MALLOC(sh.syms.n * (void *).sizeof);
   return sh;
 }
 

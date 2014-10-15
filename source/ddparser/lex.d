@@ -22,6 +22,7 @@ struct ScanState {
   ScanState 	*chars[256];
   VecAction		accepts;
   VecAction		live;
+  PointerSet!Action liveSet;
   ScanStateTransition	*transition[256];
 }
 
@@ -152,7 +153,7 @@ dfa_to_scanner(ref VecDFAState alldfas, ref ScanState*[] scanner) {
 
 private void
 nfa_to_scanner(NFAState *n, Scanner *s) {
-  DFAState *x = new DFAState(), y;
+  DFAState *x = new DFAState();
   VecDFAState alldfas;
 
   vec_add(&x.states, n);
@@ -160,16 +161,17 @@ nfa_to_scanner(NFAState *n, Scanner *s) {
   vec_add(&alldfas, x);
   for (int i = 0; i < alldfas.length; i++) { // alldfas may change while iterating
       for (int i_char = 0; i_char < 256; i_char++) {
-          y = null;
+          PointerSet!NFAState states;
+
           foreach (i_state; alldfas[i].states) {
               foreach (i; i_state.chars[i_char]) {
-                  if (!y)
-                      y = new DFAState();
-                  set_add(&y.states, i);
+                  states.add(i);
               }
           }
-          if (y) {
-              set_to_vec(&y.states);
+
+          if (!states.isEmpty) {
+              DFAState *y = new DFAState();
+              states.toVec(y.states);
               nfa_closure(y);
               foreach (i; alldfas)
                   if (eq_dfa_state(y, i)) {
@@ -360,7 +362,7 @@ private void
 compute_liveness(Scanner *scanner) {
   /* basis */
   foreach (ss; scanner.states) {
-    set_union(&ss.live, &ss.accepts);
+    ss.liveSet.unionSet(ss.accepts);
   }
   bool changed = true;
   while (changed) {
@@ -370,23 +372,23 @@ compute_liveness(Scanner *scanner) {
           ScanState* sss = ss.chars[j];
           if (sss) {
               if (ss != sss)
-                  if (set_union(&ss.live, &sss.live))
+                  if (ss.liveSet.unionSet(sss.liveSet))
                       changed = true;
           }
       }
     }
   }
   foreach (ss; scanner.states) {
-    set_to_vec(&ss.live);
+    ss.liveSet.toVec(ss.live);
     sort_VecAction(ss.live);
   }
 }
 
-extern(C) private uint32
-trans_hash_fn(ScanStateTransition *a, hash_fns_t *fns) {
+uint32
+trans_hash_fn(ScanStateTransition *a) {
   uint h = 0;
 
-  if (!fns.data[0])
+  if (LIVE_DIFF_IN_TRANSITIONS)
     foreach (i; a.live_diff)
       h += 3 * i.index;
   foreach (i; a.accepts_diff)
@@ -394,16 +396,16 @@ trans_hash_fn(ScanStateTransition *a, hash_fns_t *fns) {
   return h;
 }
 
-extern(C) private int
-trans_cmp_fn(ScanStateTransition *a, ScanStateTransition *b, hash_fns_t *fns) {
+int
+trans_cmp_fn(ScanStateTransition *a, ScanStateTransition *b) {
   int i;
   
-  if (!fns.data[0])
+  if (LIVE_DIFF_IN_TRANSITIONS)
     if (a.live_diff.n != b.live_diff.n)
       return 1;
   if (a.accepts_diff.n != b.accepts_diff.n)
     return 1;
-  if (!fns.data[0])
+  if (LIVE_DIFF_IN_TRANSITIONS)
     for (i = 0; i < a.live_diff.n; i++)
       if (a.live_diff[i] != b.live_diff[i])
 	return 1;
@@ -413,52 +415,39 @@ trans_cmp_fn(ScanStateTransition *a, ScanStateTransition *b, hash_fns_t *fns) {
   return 0;
 }
 
-private hash_fns_t trans_hash_fns;
+alias ScanStateTransitionSet = Set!(ScanStateTransition*, trans_hash_fn, trans_cmp_fn);
 
-static this()
-{
-    trans_hash_fns = hash_fns_t(
-        cast(hash_fn_t)&trans_hash_fn,
-        cast(cmp_fn_t)&trans_cmp_fn,
-          [ null, null ]
-    );
-}
 
 private void
 build_transitions(LexState *ls, Scanner *s) {
   int j;
   ScanStateTransition *trans = null, x;
 
-  if (LIVE_DIFF_IN_TRANSITIONS)
-  {
-  trans_hash_fns.data[0] = cast(void*)0;
-  }
-  else
-  {
-  trans_hash_fns.data[0] = cast(void*)1;
-  }
+  assert(s.transitions.length == 0);
+  ScanStateTransitionSet transitions;
+
   foreach (ss; s.states) {
-    for (j = 0; j < 256; j++) {
-      if (!trans) {
-    trans = new ScanStateTransition();
+      for (j = 0; j < 256; j++) {
+          if (!trans) {
+              trans = new ScanStateTransition();
+          }
+          if (ss.chars[j]) {
+              action_diff(trans.live_diff, ss.live, ss.chars[j].live);
+              action_intersect(trans.accepts_diff, ss.accepts, 
+                      trans.live_diff);
+          }
+          if ((x = transitions.add(trans)) == trans)
+              trans = null;
+          else {
+              vec_free(&trans.live_diff); 
+              vec_free(&trans.accepts_diff);
+          }
+          ss.transition[j] = x;
       }
-      if (ss.chars[j]) {
-	action_diff(trans.live_diff, ss.live, ss.chars[j].live);
-	action_intersect(trans.accepts_diff, ss.accepts, 
-			 trans.live_diff);
-      }
-      if ((x = set_add_fn(&s.transitions, trans, &trans_hash_fns)) == trans)
-	trans = null;
-      else {
-	vec_free(&trans.live_diff); 
-	vec_free(&trans.accepts_diff);
-      }
-      ss.transition[j] = x;
-    }
   }
   if (trans)
     FREE(trans);
-  set_to_vec(&s.transitions);
+  transitions.toVec(s.transitions);
   for (int i = 0; i < s.transitions.n; i++)
     s.transitions[i].index = i;
   ls.transitions += s.transitions.n;
@@ -576,7 +565,7 @@ build_scanners(Grammar *g) {
 	build_state_scanner(g, ls, s);
     }
   }
-  if (d_verbose_level)
+  if (!__ctfe && d_verbose_level)
     writefln("%d scanners %d transitions", ls.scanners, ls.transitions);
 }
 

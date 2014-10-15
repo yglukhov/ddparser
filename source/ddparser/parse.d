@@ -927,9 +927,9 @@ cmp_priorities(Parser *p, PNode *x, PNode *y) {
 }
 
 private void
-get_all(Parser *p, PNode *x, VecPNode *vx) {
-  int i;
-  if (set_add(vx, x)) {
+get_all(Parser *p, PNode *x, ref bool[PNode*] vx) {
+  if (x !in vx) {
+    vx[x] = true;
     foreach (pn; x.children) {
       LATEST(pn);
       get_all(p, pn, vx);
@@ -939,17 +939,17 @@ get_all(Parser *p, PNode *x, VecPNode *vx) {
 
 private void
 get_unshared_pnodes(Parser *p, PNode *x, PNode *y, ref PNode*[] pvx, ref PNode*[] pvy) {
-  VecPNode vx, vy;
-  vec_clear(&vx); vec_clear(&vy);
+  bool[PNode*] vx, vy;
+
   LATEST(x); LATEST(y);
-  get_all(p, x, &vx);
-  get_all(p, y, &vy);
-  foreach (i; vx)
-    if (i && !set_find(&vy, i))
-      pvx ~= i;
-  foreach (i; vy)
-    if (i && !set_find(&vx, i))
-      pvy ~= i;
+  get_all(p, x, vx);
+  get_all(p, y, vy);
+  foreach (i, _; vx)
+    if (i && i !in vy)
+      pvx ~= cast(PNode*)i;
+  foreach (i, _; vy)
+    if (i && i !in vx)
+      pvy ~= cast(PNode*)i;
 }
 
 int

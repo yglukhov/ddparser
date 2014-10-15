@@ -26,11 +26,8 @@ enum NO_PROD            =0xFFFFFFFF;
 alias Item = Elem;
 
 struct Code {
-    union
-    {
-       string code;
-       D_ReductionCode _f;
-    }
+    string code;
+    D_ReductionCode _f;
 
     int line;
     void serialize(Serializer s)
@@ -44,6 +41,7 @@ struct Code {
     {
         _f = c;
         line = -1;
+        code = "";
     }
 
     @property D_ReductionCode f()
@@ -91,7 +89,7 @@ struct State {
     uint        index;
     uint64  hash;
     Item*[] items;
-    Vec!(Item*) items_hash;
+    bool[Item*] items_hash;
     Goto*[] gotos;
     VecAction   shift_actions;
     VecAction   reduce_actions;
@@ -287,6 +285,18 @@ struct Production {
 
 enum ElemKind {
     ELEM_NTERM, ELEM_TERM, ELEM_UNRESOLVED, ELEM_END
+}
+
+bool elemTermOrNtermEqual(in Elem a, in Elem b)
+{
+    if (a.kind != b.kind) return false;
+    if (__ctfe)
+    {
+          if (a.kind == ElemKind.ELEM_NTERM) return a.e.nterm == b.e.nterm;
+          else if (a.kind == ElemKind.ELEM_TERM) return a.e.term == b.e.term;
+          else return a.e.unresolved == b.e.unresolved;
+    }
+    return a.e.term_or_nterm == b.e.term_or_nterm;
 }
 
 struct Elem {
@@ -1505,7 +1515,6 @@ free_D_Grammar(Grammar *g) {
         free_Action(g.actions[i]);
     for (i = 0; i < g.states.length; i++) {
         State *s = g.states[i];
-        vec_free(&s.items_hash);
         for (j = 0; j < s.gotos.length; j++) {
             FREE(s.gotos[j].elem);
             FREE(s.gotos[j]);
@@ -1714,12 +1723,12 @@ build_grammar(Grammar *g) {
     check_default_actions(g);
     build_LR_tables(g);
     map_declarations_to_states(g);
-    if (d_verbose_level) {
+    if (!__ctfe && d_verbose_level) {
         logf("%d productions %d terminals %d states %d declarations\n",
                 g.productions.length, g.terminals.length, g.states.length,
                 g.declarations.length);
     }
-    if (d_verbose_level > 1) {
+    if (!__ctfe && d_verbose_level > 1) {
         print_grammar(g);
         print_states(g);
     }

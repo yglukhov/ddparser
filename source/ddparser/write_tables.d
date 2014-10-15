@@ -38,10 +38,10 @@ scanner_size(State *s) {
   return 4;
 }
 
-extern(C) private uint32
-scanner_block_hash_fn(ScannerBlock *b, hash_fns_t *fns) {
+uint32
+scanner_block_hash_fn(ScannerBlock *b, int block_size) {
   uint32 hash = 0;
-  intptr_t i, block_size = cast(intptr_t)fns.data[0];
+  intptr_t i;
   ScanState*[] sb = b.chars;
 
   for (i = 0; i < block_size; i++) {
@@ -51,9 +51,9 @@ scanner_block_hash_fn(ScannerBlock *b, hash_fns_t *fns) {
   return hash;
 }
 
-extern(C) private int
-scanner_block_cmp_fn(ScannerBlock *a, ScannerBlock *b, hash_fns_t *fns) {
-  intptr_t i, block_size = cast(intptr_t)fns.data[0];
+int
+scanner_block_cmp_fn(ScannerBlock *a, ScannerBlock *b, int block_size) {
+  intptr_t i;
   ScanState*[] sa = a.chars;
   ScanState*[] sb = b.chars;
     
@@ -68,21 +68,12 @@ scanner_block_cmp_fn(ScannerBlock *a, ScannerBlock *b, hash_fns_t *fns) {
   return 0;
 }
 
-hash_fns_t scanner_block_fns;
+alias ScannerBlockSet = Set!(ScannerBlock*, scanner_block_hash_fn, scanner_block_cmp_fn);
 
-static this()
-{
-scanner_block_fns = hash_fns_t(
-  cast(hash_fn_t)&scanner_block_hash_fn,
-  cast(cmp_fn_t)&scanner_block_cmp_fn,
-  [null, null]
-);
-}
-
-extern(C) private uint32
-trans_scanner_block_hash_fn(ScannerBlock *b, hash_fns_t *fns) {
+uint32
+trans_scanner_block_hash_fn(ScannerBlock *b, int block_size) {
   uint32 hash = 0;
-  intptr_t i, block_size = cast(intptr_t)fns.data[0];
+  intptr_t i;
   ScanStateTransition*[] sb = b.transitions;
 
   for (i = 0; i < block_size; i++) {
@@ -92,9 +83,9 @@ trans_scanner_block_hash_fn(ScannerBlock *b, hash_fns_t *fns) {
   return hash;
 }
 
-extern(C) private int
-trans_scanner_block_cmp_fn(ScannerBlock *a, ScannerBlock *b, hash_fns_t *fns) {
-  intptr_t i, block_size = cast(intptr_t)fns.data[0];
+int
+trans_scanner_block_cmp_fn(ScannerBlock *a, ScannerBlock *b, int block_size) {
+  intptr_t i;
   ScanStateTransition*[] sa = a.transitions;
   ScanStateTransition*[] sb = b.transitions;
     
@@ -109,49 +100,32 @@ trans_scanner_block_cmp_fn(ScannerBlock *a, ScannerBlock *b, hash_fns_t *fns) {
   return 0;
 }
 
-hash_fns_t 
-trans_scanner_block_fns;
 
-static this()
-{
-trans_scanner_block_fns = hash_fns_t(
-  cast(hash_fn_t)&trans_scanner_block_hash_fn,
-  cast(cmp_fn_t)&trans_scanner_block_cmp_fn,
-  [null, null]
-);
-}
+alias TransScannerBlockSet = Set!(ScannerBlock*, trans_scanner_block_hash_fn, trans_scanner_block_cmp_fn);
 
-extern(C) private uint32
-shift_hash_fn(Action *sa, hash_fns_t *fns) {
+
+uint32
+shift_hash_fn(Action *sa) {
   return sa.term.index + (sa.kind == ActionKind.ACTION_SHIFT_TRAILING ? 1000000 : 0);
 }
 
-extern(C) private int
-shift_cmp_fn(Action *sa, Action *sb, hash_fns_t *fns) {
+
+int
+shift_cmp_fn(Action *sa, Action *sb) {
   return (sa.term.index != sb.term.index) || (sa.kind != sb.kind);
 }
 
-hash_fns_t 
-shift_fns;
-
-static this()
-{
-shift_fns = hash_fns_t(
-  cast(hash_fn_t)&shift_hash_fn,
-  cast(cmp_fn_t)&shift_cmp_fn,
-  [null, null]
-);
-}
+alias ShiftSet = Set!(Action *, shift_hash_fn, shift_cmp_fn);
 
 
 private void
 buildScannerData(Grammar *g, ref BuildTables tables) {
     ScannerBlock *xv, yv;
-    VecScannerBlock scanner_block_hash[4];
-    VecScannerBlock *pscanner_block_hash;
-    VecScannerBlock trans_scanner_block_hash[4];
-    VecScannerBlock *ptrans_scanner_block_hash;
-    VecAction shift_hash;
+    ScannerBlockSet scanner_block_hash[4];
+    ScannerBlockSet* pscanner_block_hash;
+    TransScannerBlockSet trans_scanner_block_hash[4];
+    TransScannerBlockSet* ptrans_scanner_block_hash;
+    ShiftSet shift_hash;
     int k, x, xx;
 
     D_Shift*[] allShifts = new D_Shift*[g.terminals.length];
@@ -190,16 +164,8 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
     foreach (i; g.states)
         nvsblocks += i.scanner.states.length * g.scanner_blocks;
     ScannerBlock[] vsblock = new ScannerBlock[nvsblocks ? nvsblocks : 1];
-    for (int i = 0; i < 4; i++) {
-        vec_clear(&scanner_block_hash[i]);
-        vec_clear(&trans_scanner_block_hash[i]);
-    }
-    scanner_block_fns.data[0] = cast(void*)cast(uintptr_t)g.scanner_block_size;
-    scanner_block_fns.data[1] = cast(void*)g;
-    trans_scanner_block_fns.data[0] = cast(void*)cast(uintptr_t)g.scanner_block_size;
-    trans_scanner_block_fns.data[1] = cast(void*)g;
+
     /* shift */
-    vec_clear(&shift_hash);
     int ivsblock = 0;
 
     TableMap!(D_Shift*[], 2) tables_d_accepts_diff2;
@@ -249,7 +215,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                     ivsblock++;
                     assert(ivsblock <= nvsblocks);
                     /* output state scanner blocks */
-                    yv = set_add_fn(pscanner_block_hash, xv, &scanner_block_fns);
+                    yv = pscanner_block_hash.add(xv, g.scanner_block_size);
                     if (xv == yv) {
                         int size = scanner_size(s);
                         auto d_scanner3 = appender!(ubyte[])();
@@ -267,8 +233,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                     }
                     if (s.scan_kind != D_SCAN_LONGEST || s.trailing_context) {
                         /* output accept_diff scanner blocks */
-                        yv = set_add_fn(ptrans_scanner_block_hash, xv, 
-                                &trans_scanner_block_fns);
+                        yv = ptrans_scanner_block_hash.add(xv, g.scanner_block_size);
                         if (xv == yv) {
                             int size = scanner_size(s);
                             auto d_accepts_diff3 = appender!(ubyte[])();
@@ -297,7 +262,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                                 continue;
                             }
                             a.temp_string = tmp;
-                            Action *aa = set_add_fn(&shift_hash, a, &shift_fns);
+                            Action *aa = shift_hash.add(a);
                             if (aa != a)
                                 continue;
                         }
@@ -330,7 +295,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                 if (ss[j].accepts.n) {
                     if (ss[j].accepts.n == 1) {
                         Action* a = ss[j].accepts.v[0];
-                        a = set_add_fn(&shift_hash, a, &shift_fns);
+                        a = shift_hash.add(a);
                         sb.shift = tables_d_shift2.storage[a.temp_string];
                     } else
                         sb.shift = tables_d_shift2[i, j];
@@ -344,7 +309,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                     vs.transitions = 
                         ss[j].transition[k * g.scanner_block_size .. $];
                     xv = &vs;
-                    yv = set_add_fn(pscanner_block_hash, xv, &scanner_block_fns);
+                    yv = pscanner_block_hash.add(xv, g.scanner_block_size);
                     assert(yv != xv);
                     sb.scanner_block[k] = cast(uint*)tables_d_scanner3[yv.state_index, yv.scanner_index, yv.block_index].ptr;
                 }
@@ -366,8 +331,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                         vs.transitions = 
                             ss[j].transition[k * g.scanner_block_size .. $];
                         xv = &vs;
-                        yv = set_add_fn(ptrans_scanner_block_hash, xv, 
-                                &trans_scanner_block_fns);
+                        yv = ptrans_scanner_block_hash.add(xv, g.scanner_block_size);
                         assert(yv != xv);
                         trans.scanner_block[k] = cast(uint*)tables_d_accepts_diff3[ yv.state_index, yv.scanner_index,
                                     yv.block_index].ptr;
@@ -474,7 +438,7 @@ buildReductions(Grammar *g, ref BuildTables tables) {
             for (int k = 0; k < j; k++)
                 if (r.elems.length == p.rules[k].elems.length &&
                         r.speculative_code.code == p.rules[k].speculative_code.code &&
-                        r.final_code.code == p.rules[k].final_code.code &&
+                        r.final_code == p.rules[k].final_code &&
                         r.op_priority == p.rules[k].op_priority &&
                         r.op_assoc == p.rules[k].op_assoc &&
                         r.rule_priority == p.rules[k].rule_priority &&
@@ -532,8 +496,8 @@ buildReductions(Grammar *g, ref BuildTables tables) {
     }
 }
 
-extern(C) private uint32
-er_hint_hash_fn(State *a, hash_fns_t *fns) {
+uint32
+er_hint_hash_fn(State *a) {
   VecHint *sa = &a.error_recovery_hints;
   uint32 hash = 0, i;
   Term *ta;
@@ -548,8 +512,8 @@ er_hint_hash_fn(State *a, hash_fns_t *fns) {
   return hash;
 }
 
-extern(C) private int
-er_hint_cmp_fn(State *a, State *b, hash_fns_t *fns) {
+int
+er_hint_cmp_fn(State *a, State *b) {
   int i;
   VecHint *sa = &a.error_recovery_hints, sb = &b.error_recovery_hints;
   if (sa.n != sb.n)
@@ -565,25 +529,14 @@ er_hint_cmp_fn(State *a, State *b, hash_fns_t *fns) {
   return 0;
 }
 
-hash_fns_t 
-er_hint_hash_fns;
-
-static this()
-{
-er_hint_hash_fns = hash_fns_t(
-  cast(hash_fn_t)&er_hint_hash_fn,
-  cast(cmp_fn_t)&er_hint_cmp_fn,
-  [null, null]
-);
-}
-
+alias ErrorHintSet = Set!(State*, er_hint_hash_fn, er_hint_cmp_fn);
 
 private void
-buildErrorData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
+buildErrorData(Grammar *g, ref BuildTables tables, ref ErrorHintSet er_hash) {
     for (int i = 0; i < g.states.length; i++) {
         State *s = g.states[i];
         if (s.error_recovery_hints.n) {
-            State *h = set_add_fn(er_hash, s, &er_hint_hash_fns);
+            State* h = er_hash.add(s);
             if (h == s) {
                 D_ErrorRecoveryHint d_error_recovery_hints[];
                 foreach (erh; s.error_recovery_hints) {
@@ -601,7 +554,7 @@ buildErrorData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
 }
 
 private void
-buildStateData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
+buildStateData(Grammar *g, ref BuildTables tables, ref ErrorHintSet er_hash) {
     if (g.states.length) {
         tables.d_states = new D_State[g.states.length];
         foreach (i, ref state; tables.d_states) {
@@ -624,7 +577,7 @@ buildStateData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
             }
 
             if (s.error_recovery_hints.n) {
-                State* h = set_add_fn(er_hash, s, &er_hint_hash_fns);
+                State* h = er_hash.add(s);
                 state.error_recovery_hints = tables.d_error_recovery_hints1[h.index];
                 assert(state.error_recovery_hints.length == s.error_recovery_hints.n);
             }
@@ -663,7 +616,7 @@ bool is_EBNF(uint _x)
     return _x == InternalKind.INTERNAL_CONDITIONAL || _x == InternalKind.INTERNAL_STAR || _x == InternalKind.INTERNAL_PLUS;
 }
 
-private D_SymbolKind d_symbol_values[] = [ 
+private immutable D_SymbolKind d_symbol_values[] = [ 
   D_SymbolKind.D_SYMBOL_STRING, D_SymbolKind.D_SYMBOL_REGEX, D_SymbolKind.D_SYMBOL_CODE, D_SymbolKind.D_SYMBOL_TOKEN ];
 
 private void
@@ -704,8 +657,7 @@ buildPassesData(Grammar *g, ref BuildTables tables) {
 
 D_ParserTables* createTablesFromGrammar(Grammar* g, D_ReductionCode spec_code, D_ReductionCode final_code)
 {
-    VecState er_hash;
-    vec_clear(&er_hash);
+    ErrorHintSet er_hash;
 
     g.scanner_block_size = 256/g.scanner_blocks;
 
@@ -718,8 +670,8 @@ D_ParserTables* createTablesFromGrammar(Grammar* g, D_ReductionCode spec_code, D
     buildReductions(g, tables);
     buildScannerData(g, tables);
     buildGotoData(g, tables);
-    buildErrorData(g, tables, &er_hash);
-    buildStateData(g, tables, &er_hash);
+    buildErrorData(g, tables, er_hash);
+    buildStateData(g, tables, er_hash);
     buildSymbolData(g, tables);
     buildPassesData(g, tables);
 

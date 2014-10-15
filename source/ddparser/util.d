@@ -65,6 +65,13 @@ struct Vec(T)
     void add(T _i) @trusted
     {
         assert(isIterating == 0);
+
+        if (__ctfe)
+        {
+            v = (v[0 .. n] ~ _i).ptr;
+            return;
+        }
+
         if (!v) {
             v = e.ptr;
             e[n] = _i;
@@ -166,6 +173,132 @@ struct Vec(T)
     }
 }
 
+struct Set(T, alias HashFunc, alias CompareFunc)
+{
+    alias THash = ReturnType!HashFunc;
+    T[][THash] data;
+    T add(Args...)(T t, ref bool changed, Args args)
+    {
+        assert(isValidValue(t));
+
+        auto h = HashFunc(t, args);
+        auto arr = h in data;
+        if (arr)
+        {
+            foreach(i; *arr)
+            {
+                static if (is (ReturnType!CompareFunc == bool))
+                {
+                    if (CompareFunc(i, t, args))
+                    {
+                        changed = false;
+                        return i;
+                    }
+                }
+                else
+                {
+                    if (CompareFunc(i, t, args) == 0)
+                    {
+                        changed = false;
+                        return i;
+                    }
+                }
+            }
+            *arr ~= t;
+        }
+        else
+        {
+            data[h] = [t];
+        }
+        changed = true;
+        return t;
+    }
+
+    T add(Args...)(T t, Args args)
+    {
+        bool changed;
+        return add(t, changed, args);
+    }
+
+    int opApply(scope int delegate(ref T v) d)
+    {
+        int result = 0;
+        foreach(k, v; data)
+        {
+            foreach(t; v)
+            {
+                result = d(t);
+                if (result) return result;
+            }
+        }
+        return result;
+    }
+
+    bool unionSet(Other)(ref Other other)
+    {
+        bool changed = false;
+        foreach(i; other) if (isValidValue(i))
+        {
+            bool ch;
+            add(i, ch);
+            if (ch) changed = true;
+        }
+        return changed;
+    }
+
+    void toVec(ref Vec!T result)
+    {
+        foreach(i; this) result ~= i;
+    }
+
+    @property bool isEmpty() const
+    {
+        return data.length == 0;
+    }
+
+    bool isValidValue(in T v)
+    {
+        static if (isPointer!T)
+            return v != null;
+        else
+            return true;
+    }
+
+    void clear()
+    {
+        data = null;
+    }
+}
+
+V _simpleHashFunc(V)(V v)
+{
+    return v;
+}
+
+bool _simpleCompareFunc(V)(in V a, in V b)
+{
+    return a == b;
+}
+
+alias SimpleSet(T) = Set!(T, _simpleHashFunc!T, _simpleCompareFunc!T);
+
+alias PointerSet(T) = SimpleSet!(T*);
+
+
+
+unittest
+{
+    SimpleSet!(int) intSet;
+    intSet.add(5);
+    intSet.add(6);
+    intSet.add(5);
+
+    Vec!int vec;
+    intSet.toVec(vec);
+
+    assert((vec[0] == 5 && vec[1] == 6) || (vec[0] == 6 && vec[1] == 5));
+}
+
 unittest
 {
     Vec!int v;
@@ -265,7 +398,7 @@ void stack_clear(T)(T _s)
 
 alias stack_free = stack_clear;
 
-uint d_prime2[] = [
+immutable uint d_prime2[] = [
   1, 3, 7, 13, 31, 61, 127, 251, 509, 1021, 2039, 4093, 8191,
   16381, 32749, 65521, 131071, 262139, 524287, 1048573, 2097143,
   4194301, 8388593, 16777213, 33554393, 67108859, 134217689,
@@ -308,19 +441,6 @@ string dup_code(const char *str, const char *end)
 }
 
 import core.memory;
-
-extern(C)
-{
-
-alias hash_fn_t = uint function (void *, hash_fns_t*);
-alias cmp_fn_t = int function (void *, void *, hash_fns_t*);
-}
-
-struct hash_fns_t {
-  hash_fn_t hash_fn;
-  cmp_fn_t  cmp_fn;
-  void      *data[2];
-}
 
 string
 d_dup_pathname_str(const(char)*s) {
@@ -410,135 +530,6 @@ string escape_string(const(char)[] s, bool singleQuote = false) @safe
 string escape_string_single_quote(const(char)[] s) @safe
 {
     return escape_string(s, true);
-}
-
-
-bool
-set_add(T, V : Vec!T)(V* v, T t) @trusted {
-    V vv;
-    int j, n = v.n;
-    uint i;
-    if (n) {
-        uint h = cast(uint)(cast(uintptr_t)t);
-        h = h % n;
-        for (i = h, j = 0;
-                i < v.n && j < SET_MAX_SEQUENTIAL;
-                i = ((i + 1) % n), j++)
-        {
-            if (!v.v[i]) {
-                v.v[i] = t;
-                return true;
-            } else if (v.v[i] == t)
-                return false;
-        }
-    }
-    if (!n) {
-        vv.v = null;
-        v.i = INITIAL_SET_SIZE_INDEX;
-    } else {
-        vv.v = v.v;
-        vv.n = v.n;
-        v.i = v.i + 1;
-    }
-    v.n = d_prime2[v.i];
-    v.v = cast(T*)MALLOC(v.n * T.sizeof);
-    if (vv.v) {
-        set_union(v, &vv);
-    }
-    return set_add(v, t);
-}
-
-T
-set_add_fn(T, V : Vec!T)(V *v, T t, hash_fns_t *fns) {
-  V vv;
-  uint32 tt = fns.hash_fn(t, fns);
-  int j, n = v.n;
-  uint i;
-  if (n) {
-    uint h = tt % n;
-    for (i = h, j = 0;
-     i < v.n && j < SET_MAX_SEQUENTIAL;
-     i = ((i + 1) % n), j++)
-    {
-      if (!v.v[i]) {
-    v.v[i] = t;
-    return t;
-      } else {
-    if (!fns.cmp_fn(v.v[i], t, fns))
-      return v.v[i];
-      }
-    }
-  }
-  if (!n) {
-    vv.v = null;
-    v.i = INITIAL_SET_SIZE_INDEX;
-  } else {
-    vv.v = v.v;
-    vv.n = v.n;
-    v.i = v.i + 1;
-  }
-  v.n = d_prime2[v.i];
-  v.v = cast(T*)MALLOC(v.n * T.sizeof);
-  if (vv.v) {
-    set_union_fn(v, &vv, fns);
-  }
-  return set_add_fn(v, t, fns);
-}
-
-bool
-set_union(V)(V *v, V *vv) @trusted {
-  bool changed = false;
-  foreach (i; *vv)
-    if (i)
-      changed = set_add(v, i) || changed;
-  return changed;
-}
-
-void
-set_union_fn(V)(V *av, V *vv, hash_fns_t *fns) {
-  uint i;
-
-  for (i = 0; i < vv.n; i++)
-    if (vv.v[i])
-      set_add_fn(av, vv.v[i], fns);
-}
-
-void
-set_to_vec(V)(V *v) {
-  V vv;
-  uint i;
-
-  vv.n = v.n;
-  vv.v = v.v;
-  if (v.v == v.e.ptr) {
-    memcpy(vv.e.ptr, v.e.ptr, (v.e).sizeof);
-    vv.v = vv.e.ptr;
-  }
-  v.n = 0;
-  v.v = null;
-  for (i = 0; i < vv.n; i++)
-    if (vv.v[i])
-      v.vec_add_internal(vv[i]);
-}
-
-bool
-set_find(T, V : Vec!T)(V *v, T t) {
-  int j, n = v.n;
-  uint i;
-  if (n) {
-    uint h = cast(uint)(cast(uintptr_t)t);
-    h = h % n;
-    for (i = h, j = 0;
-     i < v.n && j < SET_MAX_SEQUENTIAL;
-     i = ((i + 1) % n), j++)
-    {
-      if (!v.v[i]) {
-    return false;
-      } else if (v.v[i] == t)
-    return true;
-    }
-  }
-  return false;
 }
 
 void d_free(void *x) { }

@@ -15,7 +15,8 @@ private uint item_hash(Item* _i)
 
 private int
 insert_item(State *s, Elem *e) {
-  if (set_add(&s.items_hash, e)) {
+  if (e !in s.items_hash) {
+    s.items_hash[e] = true;
     s.items ~= e;
     return 1;
   }
@@ -27,14 +28,8 @@ bool itemIsLessThanItem(Item* a, Item* b)
   return item_hash(a) < item_hash(b);
 }
 
-private State *
-new_state() {
-  return new State();
-}
-
 private void
 free_state(State *s) {
-  vec_free(&s.items_hash);
   FREE(s);
 }
 
@@ -73,7 +68,7 @@ private State *
 build_closure(Grammar *g, State *s) {
   for (int i = 0; i < s.items.length; i++) { // s.items may change during iteration
     if (s.items[i].kind == ElemKind.ELEM_NTERM) {
-      foreach (r; s.items[i].nterm.rules)
+      foreach (r; s.items[i].e.nterm.rules)
 	insert_item(s, r.elems.length ? 
 		    r.elems[0] : r.end);
     }
@@ -105,10 +100,9 @@ build_state_for(Grammar *g, State *s, Elem *e) {
   State *ss = null;
 
   foreach (i; s.items) {
-    if (i.kind != ElemKind.ELEM_END && i.kind == e.kind &&
-        i.e.term_or_nterm == e.e.term_or_nterm)
+    if (i.kind != ElemKind.ELEM_END && elemTermOrNtermEqual(*i, *e))
     {
-      if (!ss) ss = new_state();
+      if (!ss) ss = new State();
       insert_item(ss, next_elem(i));
     }
   }
@@ -135,7 +129,7 @@ private void
 build_states_for_each_production(Grammar *g) {
   foreach (p; g.productions)
     if (!p.internal && p.elem) {
-      State *s = new_state();
+      State *s = new State();
       insert_item(s, p.elem);
       p.state = build_closure(g, s);
     }
@@ -163,7 +157,7 @@ sort_Gotos(Grammar *g) {
 
 private void
 build_LR_sets(Grammar *g) {
-  State *s = new_state();
+  State *s = new State();
   insert_item(s, g.productions[0].rules[0].elems[0]);
   build_closure(g, s);
   build_states_for_each_production(g);
@@ -287,7 +281,7 @@ build_actions(Grammar *g) {
 State *
 goto_State(State *s, Elem *e) {
   foreach (i; s.gotos)
-    if (i.elem.e.term_or_nterm == e.e.term_or_nterm)
+    if (elemTermOrNtermEqual(*i.elem, *e))
       return i.state;
   return null;
 }
