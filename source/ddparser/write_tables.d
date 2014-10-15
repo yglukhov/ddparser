@@ -249,7 +249,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                     ivsblock++;
                     assert(ivsblock <= nvsblocks);
                     /* output state scanner blocks */
-                    yv = cast(ScannerBlock *)set_add_fn(pscanner_block_hash, xv, &scanner_block_fns);
+                    yv = set_add_fn(pscanner_block_hash, xv, &scanner_block_fns);
                     if (xv == yv) {
                         int size = scanner_size(s);
                         auto d_scanner3 = appender!(ubyte[])();
@@ -267,7 +267,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                     }
                     if (s.scan_kind != D_SCAN_LONGEST || s.trailing_context) {
                         /* output accept_diff scanner blocks */
-                        yv = cast(ScannerBlock*)set_add_fn(ptrans_scanner_block_hash, xv, 
+                        yv = set_add_fn(ptrans_scanner_block_hash, xv, 
                                 &trans_scanner_block_fns);
                         if (xv == yv) {
                             int size = scanner_size(s);
@@ -297,7 +297,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                                 continue;
                             }
                             a.temp_string = tmp;
-                            Action *aa = cast(Action*)set_add_fn(&shift_hash, a, &shift_fns);
+                            Action *aa = set_add_fn(&shift_hash, a, &shift_fns);
                             if (aa != a)
                                 continue;
                         }
@@ -330,7 +330,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                 if (ss[j].accepts.n) {
                     if (ss[j].accepts.n == 1) {
                         Action* a = ss[j].accepts.v[0];
-                        a = cast(Action*)set_add_fn(&shift_hash, a, &shift_fns);
+                        a = set_add_fn(&shift_hash, a, &shift_fns);
                         sb.shift = tables_d_shift2.storage[a.temp_string];
                     } else
                         sb.shift = tables_d_shift2[i, j];
@@ -344,7 +344,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                     vs.transitions = 
                         ss[j].transition[k * g.scanner_block_size .. $];
                     xv = &vs;
-                    yv = cast(ScannerBlock*)set_add_fn(pscanner_block_hash, xv, &scanner_block_fns);
+                    yv = set_add_fn(pscanner_block_hash, xv, &scanner_block_fns);
                     assert(yv != xv);
                     sb.scanner_block[k] = cast(uint*)tables_d_scanner3[yv.state_index, yv.scanner_index, yv.block_index].ptr;
                 }
@@ -366,7 +366,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                         vs.transitions = 
                             ss[j].transition[k * g.scanner_block_size .. $];
                         xv = &vs;
-                        yv = cast(ScannerBlock*)set_add_fn(ptrans_scanner_block_hash, xv, 
+                        yv = set_add_fn(ptrans_scanner_block_hash, xv, 
                                 &trans_scanner_block_fns);
                         assert(yv != xv);
                         trans.scanner_block[k] = cast(uint*)tables_d_accepts_diff3[ yv.state_index, yv.scanner_index,
@@ -583,7 +583,7 @@ buildErrorData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
     for (int i = 0; i < g.states.length; i++) {
         State *s = g.states[i];
         if (s.error_recovery_hints.n) {
-            State *h = cast(State*)set_add_fn(er_hash, s, &er_hint_hash_fns);
+            State *h = set_add_fn(er_hash, s, &er_hint_hash_fns);
             if (h == s) {
                 D_ErrorRecoveryHint d_error_recovery_hints[];
                 foreach (erh; s.error_recovery_hints) {
@@ -624,7 +624,7 @@ buildStateData(Grammar *g, ref BuildTables tables, VecState *er_hash) {
             }
 
             if (s.error_recovery_hints.n) {
-                State* h = cast(State*)set_add_fn(er_hash, s, &er_hint_hash_fns);
+                State* h = set_add_fn(er_hash, s, &er_hint_hash_fns);
                 state.error_recovery_hints = tables.d_error_recovery_hints1[h.index];
                 assert(state.error_recovery_hints.length == s.error_recovery_hints.n);
             }

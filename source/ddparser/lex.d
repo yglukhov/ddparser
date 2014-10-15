@@ -447,7 +447,7 @@ build_transitions(LexState *ls, Scanner *s) {
 	action_intersect(trans.accepts_diff, ss.accepts, 
 			 trans.live_diff);
       }
-      if ((x = cast(ScanStateTransition*)set_add_fn(&s.transitions, trans, &trans_hash_fns)) == trans)
+      if ((x = set_add_fn(&s.transitions, trans, &trans_hash_fns)) == trans)
 	trans = null;
       else {
 	vec_free(&trans.live_diff); 
