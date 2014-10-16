@@ -380,6 +380,7 @@ compute_liveness(Scanner *scanner) {
   }
   foreach (ss; scanner.states) {
     ss.liveSet.toVec(ss.live);
+    ss.liveSet.clear();
     sort_VecAction(ss.live);
   }
 }

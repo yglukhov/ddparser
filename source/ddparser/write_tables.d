@@ -9,12 +9,9 @@ import ddparser.gram;
 import ddparser.dparse_tables;
 import ddparser.lr;
 
-import std.conv;
-import std.stdio;
 import std.bitmanip;
 import std.system;
 import std.array;
-import std.string;
 import std.algorithm;
 
 

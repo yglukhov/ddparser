@@ -132,7 +132,7 @@ struct Vec(T)
     }
 
 
-    void vec_add_internal(T elem) {
+    private void vec_add_internal(T elem) {
         assert(isIterating == 0);
         if (!n) {
             v = e.ptr;
