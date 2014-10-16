@@ -42,16 +42,15 @@ void trace(string file = __FILE__, int line = __LINE__, Args...)(Args args)
             }
             __ctfeWrite("\n");
         }
-    }
-    else
-    {
-
-        stderr.write(file, ":", line);
-        if (args.length)
+        else
         {
-            stderr.write(":", args);
+            stderr.write(file, ":", line);
+            if (args.length)
+            {
+                stderr.write(":", args);
+            }
+            stderr.writeln();
         }
-        stderr.writeln();
     }
 }
 
