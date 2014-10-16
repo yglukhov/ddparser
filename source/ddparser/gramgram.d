@@ -2197,10 +2197,11 @@ build_grammar(g);
    return g; 
 }
 
-private __gshared D_ParserTables* gramGramTables;
 
 bool parseGrammar(Grammar* g, string str)
 {
+    static __gshared D_ParserTables* gramGramTables;
+
     D_ParserTables* ggTables;
     if (__ctfe)
     {
