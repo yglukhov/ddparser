@@ -253,15 +253,15 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                 }
                 /* output shifts */
                 if (ss[j].accepts.n) {
-                    string tmp = i.to!string() ~ "." ~ j.to!string();
+                    size_t[2] tmp = [i, j];
                     for (k = 0; k < ss[j].accepts.n; k++) {
                         Action *a = ss[j].accepts.v[k];
                         if (ss[j].accepts.n == 1) {
-                            if (a.temp_string)
+                            if (a.temp_key[0] != size_t.max)
                             {
                                 continue;
                             }
-                            a.temp_string = tmp;
+                            a.temp_key = tmp;
                             Action *aa = shift_hash.add(a);
                             if (aa != a)
                                 continue;
@@ -296,7 +296,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
                     if (ss[j].accepts.n == 1) {
                         Action* a = ss[j].accepts.v[0];
                         a = shift_hash.add(a);
-                        sb.shift = tables_d_shift2.storage[a.temp_string];
+                        sb.shift = tables_d_shift2.storage[a.temp_key];
                     } else
                         sb.shift = tables_d_shift2[i, j];
                 }
@@ -689,36 +689,18 @@ D_ParserTables* createTablesFromGrammar(Grammar* g, D_ReductionCode spec_code, D
     return result;
 }
 
-struct TableMap(T, int dimention = 1)
+struct TableMap(T, int dimension = 1)
 {
-    T[string] storage;
+    T[size_t[dimension]] storage;
 
-    private string keyWithArgs(size_t i, size_t j, size_t k, size_t l) pure
+    ref T opIndex(size_t[dimension] key ...)
     {
-        assert((dimention == 1 && j == 0 && k == 0 && l == 0)
-                || (dimention == 2 && k == 0 && l == 0)
-                || (dimention == 3 && l == 0)
-                || (dimention == 4));
-        switch(dimention)
-        {
-            case 1: return i.to!string();
-            case 2: return i.to!string() ~ "." ~ j.to!string();
-            case 3: return i.to!string() ~ "." ~ j.to!string() ~ "." ~ k.to!string();
-            case 4: return i.to!string() ~ "." ~ j.to!string() ~ "." ~ k.to!string() ~ "." ~ l.to!string();
-            default: assert(false);
-        }
-    }
-
-    ref T opIndex(size_t i, size_t j = 0, size_t k = 0, size_t l = 0)
-    {
-        string key = keyWithArgs(i,j,k,l);
         assert(key in storage);
         return storage[key];
     }
 
-    void opIndexAssign(T val, size_t i, size_t j = 0, size_t k = 0, size_t l = 0)
+    void opIndexAssign(T val, size_t[dimension] key ...)
     {
-        string key = keyWithArgs(i,j,k,l);
         assert(key !in storage);
         storage[key] = val;
     }

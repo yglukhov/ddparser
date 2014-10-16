@@ -66,7 +66,7 @@ struct Action {
     Rule        *rule;
     State       *state;
     uint            index;
-    string  temp_string;
+    size_t[2] temp_key = [size_t.max];
 }
 
 alias VecAction = Vec!(Action*);
