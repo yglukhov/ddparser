@@ -72,7 +72,7 @@ struct D_Shift {
 struct SB_(T)
 {
     D_Shift*[] shift;
-    T* scanner_block[SCANNER_BLOCKS];
+    T*[SCANNER_BLOCKS] scanner_block;
 }
 
 alias SB_uint8 = SB_!ubyte;
@@ -83,7 +83,7 @@ static assert(SB_uint8.sizeof == SB_uint16.sizeof && SB_uint16.sizeof == SB_uint
 
 struct SB_trans(T)
 {
-    T* scanner_block[SCANNER_BLOCKS];
+    T*[SCANNER_BLOCKS] scanner_block;
 }
 
 alias SB_trans_uint8 = SB_trans!ubyte;

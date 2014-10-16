@@ -255,8 +255,8 @@ struct Production {
                 uint, "", 26
                 ));
     Rule            *nullable;  /* shortest rule for epsilon reduction */
-    Production  *declaration_group[DECLARE_NUM];
-    Declaration     *last_declaration[DECLARE_NUM];
+    Production*[DECLARE_NUM] declaration_group;
+    Declaration*[DECLARE_NUM] last_declaration;
     State           *state; /* state for independent parsing of this productions*/
     Elem        *elem;  /* base elem for the item set of the above state */
     Term        *regex_term;    /* regex production terminal */
@@ -414,7 +414,7 @@ alias D_Grammar = Grammar;
  */
 
 
-immutable string action_types[] = [ "ACCEPT", "SHIFT", "REDUCE" ];
+immutable string[] action_types = [ "ACCEPT", "SHIFT", "REDUCE" ];
 
 
 Production* new_production(Grammar *g, string name) @safe {
@@ -611,7 +611,7 @@ Elem * new_string(Grammar *g, string s, Rule *r)
 
 Elem *
 new_utf8_char(Grammar *g, const(char) *s, const(char) *e, Rule *r) {
-    char utf8_code[4];
+    char[4] utf8_code;
     ulong utf32_code, base, len = 0;
     for (utf32_code=0, base=1; e>=s+3; base*=16) {
         e--;
@@ -1791,10 +1791,10 @@ private void
 print_production(Production *p) {
     uint j, k;
     Rule *r;
-    string opening[] = [ ""        , "\n\t  [ logf(\""    , "\n\t  { logf(\"" ];
-    string closing[] = [ "\n"      , "\\n\"); ]\n"          , "\\n\"); }\n" ];
-    string middle[]  = [ "\n\t:   ", "  <-  "               , "  <=  " ];
-    string assoc[]   = [ "$"       , "#"                    , "#" ];
+    string[] opening = [ ""        , "\n\t  [ logf(\""    , "\n\t  { logf(\"" ];
+    string[] closing = [ "\n"      , "\\n\"); ]\n"          , "\\n\"); }\n" ];
+    string[] middle  = [ "\n\t:   ", "  <-  "               , "  <=  " ];
+    string[] assoc   = [ "$"       , "#"                    , "#" ];
     string speculative_final_closing = "\\n\"); ]";  /* closing[1] without final newline */
     string next_or_rule = "\t|   ";
     //  char *regex_production = "  ::=  ";

@@ -83,7 +83,7 @@ class Serializer
     {
         if (serializing)
         {
-            JSONValue arr[];
+            JSONValue[] arr;
             foreach(i; v[0 .. len])
             {
                 arr ~= serializeValue(i);

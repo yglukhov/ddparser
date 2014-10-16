@@ -59,7 +59,7 @@ struct Vec(T)
     uint n;
     uint i;
     T *v;
-    T e[INTEGRAL_VEC_SIZE];
+    T[INTEGRAL_VEC_SIZE] e;
     uint isIterating;
 
     void clear()
@@ -332,7 +332,7 @@ struct Stack(_x)
     _x *start;
     _x *end;
     _x *cur;
-    _x initial[INTEGRAL_STACK_SIZE];
+    _x[INTEGRAL_STACK_SIZE] initial;
 
     void push(_x v)
     {
@@ -410,7 +410,7 @@ void stack_clear(T)(T _s)
 
 alias stack_free = stack_clear;
 
-immutable uint d_prime2[] = [
+immutable uint[] d_prime2 = [
   1, 3, 7, 13, 31, 61, 127, 251, 509, 1021, 2039, 4093, 8191,
   16381, 32749, 65521, 131071, 262139, 524287, 1048573, 2097143,
   4194301, 8388593, 16777213, 33554393, 67108859, 134217689,

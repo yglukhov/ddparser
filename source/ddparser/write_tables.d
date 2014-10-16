@@ -118,9 +118,9 @@ alias ShiftSet = Set!(Action *, shift_hash_fn, shift_cmp_fn);
 private void
 buildScannerData(Grammar *g, ref BuildTables tables) {
     ScannerBlock *xv, yv;
-    ScannerBlockSet scanner_block_hash[4];
+    ScannerBlockSet[4] scanner_block_hash;
     ScannerBlockSet* pscanner_block_hash;
-    TransScannerBlockSet trans_scanner_block_hash[4];
+    TransScannerBlockSet[4] trans_scanner_block_hash;
     TransScannerBlockSet* ptrans_scanner_block_hash;
     ShiftSet shift_hash;
     int k, x, xx;
@@ -178,7 +178,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
 
         /* build accepts differences */
         for (int j = 0; j < s.scanner.transitions.n; j++) {
-            D_Shift* d_accepts_diff2[];
+            D_Shift*[] d_accepts_diff2;
             foreach (k; s.scanner.transitions[j].accepts_diff) {
                 if (k.kind != ActionKind.ACTION_SHIFT_TRAILING)
                     d_accepts_diff2 ~= allShifts[k.term.index];
@@ -189,7 +189,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
             tables_d_accepts_diff2[i, j] = d_accepts_diff2;
         }
         if (s.scanner.transitions.n) {
-            D_Shift*[] d_accepts_diff1[];
+            D_Shift*[][] d_accepts_diff1;
             for (int j = 0; j < s.scanner.transitions.n; j++) {
                 d_accepts_diff1 ~= tables_d_accepts_diff2[i,j];
             }
@@ -314,7 +314,7 @@ buildScannerData(Grammar *g, ref BuildTables tables) {
 
             tables.d_scanner1[i] = d_scanner;
             if (s.scan_kind != D_SCAN_LONGEST || s.trailing_context) {
-                SB_trans_uint32 d_transition[] = new SB_trans_uint32[ss.length];
+                SB_trans_uint32[] d_transition = new SB_trans_uint32[ss.length];
                 /* output scanner accepts diffs tables */
                 ptrans_scanner_block_hash = 
                     &trans_scanner_block_hash[scanner_size(s)-1]; 
@@ -535,7 +535,7 @@ buildErrorData(Grammar *g, ref BuildTables tables, ref ErrorHintSet er_hash) {
         if (s.error_recovery_hints.n) {
             State* h = er_hash.add(s);
             if (h == s) {
-                D_ErrorRecoveryHint d_error_recovery_hints[];
+                D_ErrorRecoveryHint[] d_error_recovery_hints;
                 foreach (erh; s.error_recovery_hints) {
                     Term *t = erh.rule.elems[$ - 1].term;
                     D_ErrorRecoveryHint hint;
@@ -613,7 +613,7 @@ bool is_EBNF(uint _x)
     return _x == InternalKind.INTERNAL_CONDITIONAL || _x == InternalKind.INTERNAL_STAR || _x == InternalKind.INTERNAL_PLUS;
 }
 
-private immutable D_SymbolKind d_symbol_values[] = [ 
+private immutable D_SymbolKind[] d_symbol_values = [ 
   D_SymbolKind.D_SYMBOL_STRING, D_SymbolKind.D_SYMBOL_REGEX, D_SymbolKind.D_SYMBOL_CODE, D_SymbolKind.D_SYMBOL_TOKEN ];
 
 private void
@@ -706,7 +706,7 @@ struct TableMap(T, int dimension = 1)
 struct BuildTables
 {
     D_Shift*[][][uint] d_accepts_diff1;
-    D_Symbol d_symbols[];
+    D_Symbol[] d_symbols;
 
     D_Reduction*[uint] reductions;
     SB_uint32[][uint] d_scanner1;
@@ -715,7 +715,7 @@ struct BuildTables
     D_Reduction*[][size_t] d_reductions1;
     D_RightEpsilonHint[][size_t] d_right_epsilon_hints1;
     D_ErrorRecoveryHint[][size_t] d_error_recovery_hints1;
-    ushort d_gotos[];
+    ushort[] d_gotos;
 
     D_State[] d_states;
     D_Pass[] d_passes;

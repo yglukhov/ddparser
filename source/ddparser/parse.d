@@ -644,7 +644,7 @@ reduce_actions(Parser *p, PNode *pn, D_Reduction *r) {
 }
 
 enum x  = 666; /* impossible */
-private int child_table[4][3][6] = [
+private int[6][3][4] child_table = [
 [
 /* binary parent, child on left */
   /* priority of child vs parent, or = with child|parent associativity

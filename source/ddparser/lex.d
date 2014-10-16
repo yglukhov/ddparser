@@ -19,17 +19,17 @@ struct ScanStateTransition {
 
 struct ScanState {
   uint			index;
-  ScanState 	*chars[256];
+  ScanState*[256] chars;
   VecAction		accepts;
   VecAction		live;
   PointerSet!Action liveSet;
-  ScanStateTransition	*transition[256];
+  ScanStateTransition*[256] transition;
 }
 
 
 struct NFAState {
   uint			index;
-  Vec!(NFAState*)	chars[256];
+  Vec!(NFAState*)[256] chars;
   Vec!(NFAState*)	epsilon;
   Vec!(Action*)		accepts;
   Vec!(Action*)		live;
@@ -37,7 +37,7 @@ struct NFAState {
 
 struct DFAState {
   Vec!(NFAState*)	states;
-  DFAState	*chars[256];	
+  DFAState*[256] chars;	
   ScanState		*scan;
 }
 
@@ -222,7 +222,7 @@ build_regex_nfa(LexState *ls, ref const(uint8)[] areg, NFAState *pp, NFAState *n
               break;
           case '[':
               {
-                  bool mark[256];
+                  bool[256] mark;
                   bool reversed = false;
                   if (reg[0] == '^') {
                       reg.popFront();
