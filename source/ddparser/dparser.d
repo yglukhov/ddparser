@@ -1,6 +1,5 @@
 module ddparser.dparser;
 
-import std.c.string;
 import std.string;
 import std.stdio;
 import core.memory;
@@ -280,7 +279,7 @@ class Parser
         Object userInfo;
         bool isFinal;
 
-        @property ulong length() pure @safe nothrow
+        @property size_t length() pure @safe nothrow
         {
             return children.length;
         }
@@ -290,7 +289,7 @@ class Parser
             return length;
         }
 
-        auto opIndex(uint index) pure
+        auto opIndex(size_t index) pure
         {
             index < children.length || assert(false, "Out of bounds: "/* ~ this.toString()*/);
             return children[index];
