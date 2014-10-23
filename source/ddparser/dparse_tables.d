@@ -26,7 +26,7 @@ struct d_loc_t {
   int col, line;
 }
 
-alias D_WhiteSpaceFn = void function(D_Parser *p, 
+alias D_WhiteSpaceFn = void delegate(D_Parser *p, 
         d_loc_t *loc, void **p_globals);
 alias D_ScanCode = int function(d_loc_t *loc, ushort *symbol, 
         int *term_priority, ubyte *op_assoc, int *op_priority);
