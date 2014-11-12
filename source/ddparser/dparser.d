@@ -1,6 +1,7 @@
 module ddparser.dparser;
 
 import std.string;
+import std.algorithm;
 import std.stdio;
 import core.memory;
 import std.conv;
