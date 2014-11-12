@@ -413,13 +413,15 @@ buildGotoData(Grammar *g, ref BuildTables tables) {
         }
         /* modified_reduce_actions */
         if (s.right_epsilon_hints.n) {
-            tables.d_right_epsilon_hints1[i] =
-                s.right_epsilon_hints.array
-                .map!(x =>
-                    D_RightEpsilonHint(cast(ushort)x.depth,
+            D_RightEpsilonHint[] hints = new D_RightEpsilonHint[s.right_epsilon_hints.length];
+            for (uint j = 0; j < s.right_epsilon_hints.length; ++j)
+            {
+                auto x = s.right_epsilon_hints[j];
+                hints[j] = D_RightEpsilonHint(cast(ushort)x.depth,
                                        cast(ushort)x.state.index,
-                                       tables.reductions[original_reduction(x.rule).index]))()
-                .array();
+                                       tables.reductions[original_reduction(x.rule).index]);
+            }
+            tables.d_right_epsilon_hints1[i] = hints;
         }
     }
 

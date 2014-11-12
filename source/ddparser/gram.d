@@ -174,11 +174,6 @@ struct Rule {
         s.map(action_index, "action_index");
         s.map(same_reduction, "same_reduction");
     }
-
-    @property ref Elem* lastElem()
-    {
-        return elems[$ - 1];
-    }
 }
 
 enum TermKind {
@@ -333,6 +328,14 @@ struct Elem {
     {
         kind = ElemKind.ELEM_NTERM;
         e.nterm = p;
+    }
+
+    string toString()
+    {
+        if (kind == ElemKind.ELEM_NTERM) return "NTERM: " ~ nterm.name;
+        if (kind == ElemKind.ELEM_TERM) return "TERM: " ~ term.term_name;
+        if (kind == ElemKind.ELEM_UNRESOLVED) return "UNRES: " ~ e.unresolved;
+        return "END";
     }
 
     void serialize(Serializer s)
@@ -761,10 +764,10 @@ new_internal_production(Grammar *g, Production *p) @safe {
     pp.regex = p ? p.regex : 0;
     if (p) {
         bool found = false;
-        Production *tp = null, ttp;
+        Production *tp = null;
         for (int i = 0; i < g.productions.length; i++) {
             if (found) {
-                ttp = g.productions[i];
+                Production *ttp = g.productions[i];
                 g.productions[i] = tp;
                 tp = ttp;
             } else if (p == g.productions[i]) {
@@ -783,12 +786,12 @@ conditional_EBNF(Grammar *g) {
     Production *pp = new_internal_production(g, g.p);
     pp.internal = InternalKind.INTERNAL_CONDITIONAL;
     Rule *rr = new_rule(g, pp);
-    rr.elems ~= g.r.lastElem;
-    g.r.lastElem.rule = rr;
-    rr.lastElem.rule = rr;
+    rr.elems ~= g.r.elems[$-1];
+    g.r.elems[$-1].rule = rr;
+    rr.elems[$-1].rule = rr;
     pp.rules ~= rr;
     pp.rules ~= new_rule(g, pp);
-    g.r.lastElem = new_elem_nterm(pp, g.r);
+    g.r.elems[$-1] = new_elem_nterm(pp, g.r);
 }
 
 void
@@ -798,13 +801,13 @@ star_EBNF(Grammar *g) {
     Rule *rr = new_rule(g, pp);
     if (!g.right_recursive_BNF) {
         rr.elems ~= new_elem_nterm(pp, rr);
-        rr.elems ~= g.r.lastElem;
-        g.r.lastElem = new_elem_nterm(pp, g.r);
-        rr.lastElem.rule = rr;
+        rr.elems ~= g.r.elems[$-1];
+        g.r.elems[$-1] = new_elem_nterm(pp, g.r);
+        rr.elems[$-1].rule = rr;
     } else {
-        rr.elems ~= g.r.lastElem;
-        g.r.lastElem = new_elem_nterm(pp, g.r);
-        rr.lastElem.rule = rr;
+        rr.elems ~= g.r.elems[$-1];
+        g.r.elems[$-1] = new_elem_nterm(pp, g.r);
+        rr.elems[$-1].rule = rr;
         rr.elems ~= new_elem_nterm(pp, rr);
     }
     pp.rules ~= rr;
@@ -816,18 +819,18 @@ plus_EBNF(Grammar *g) {
     Production *pp = new_internal_production(g, g.p);
     pp.internal = InternalKind.INTERNAL_PLUS;
     Rule *rr = new_rule(g, pp);
-    Elem *elem = g.r.lastElem;
+    Elem *elem = g.r.elems[$-1];
     if (!g.right_recursive_BNF) {
         rr.elems ~= new_elem_nterm(pp, rr);
         rr.elems ~= dup_elem(elem, rr);
-        g.r.lastElem = new_elem_nterm(pp, g.r);
+        g.r.elems[$-1] = new_elem_nterm(pp, g.r);
         if (g.r.rule_priority) {
             rr.rule_priority = g.r.rule_priority;
             rr.rule_assoc = AssocKind.ASSOC_NARY_LEFT;
         }
     } else {
         rr.elems ~= dup_elem(elem, rr);
-        g.r.lastElem = new_elem_nterm(pp, g.r);
+        g.r.elems[$-1] = new_elem_nterm(pp, g.r);
         rr.elems ~= new_elem_nterm(pp, rr);
         if (g.r.rule_priority) {
             rr.rule_priority = g.r.rule_priority;
@@ -846,14 +849,14 @@ rep_EBNF(Grammar *g, int min, int max) {
     if (max < min) max = min;
 
     Production *pp = new_internal_production(g, g.p);
-    Elem *elem = g.r.lastElem;
+    Elem *elem = g.r.elems[$-1];
     for (int i = min; i <= max; i++) {
         Rule *rr = new_rule(g, pp);
         for (int j = 0; j < i; j++)
             rr.elems ~= dup_elem(elem, rr);
         pp.rules ~= rr;
     }
-    g.r.lastElem = new_elem_nterm(pp, g.r);
+    g.r.elems[$-1] = new_elem_nterm(pp, g.r);
     FREE(elem);
 }
 
@@ -1427,7 +1430,7 @@ Lcontinue:;
         s = g.states[i];
         e = &eq[s.index];
         if (e.eq) {
-            if (d_verbose_level > 2) {
+            if (!__ctfe && d_verbose_level > 2) {
                 logf("eq %d %d ", s.index, e.eq.index);
                 if (e.diff_state)
                     logf("diff state (%d %d) ",

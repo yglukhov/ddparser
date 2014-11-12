@@ -263,7 +263,7 @@ build_actions(Grammar *g) {
             if (e.kind != ElemKind.ELEM_END) {
                 if (e.kind == ElemKind.ELEM_TERM) {
                     foreach (z; s.gotos) {
-                        if (z.elem.e.term_or_nterm == e.term)
+                        if (z.elem.kind == ElemKind.ELEM_TERM && z.elem.e.term == e.term)
                             add_action(g, s, ActionKind.ACTION_SHIFT, 
                                     e.term, null, z.state);
                     }
