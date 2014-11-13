@@ -3,4 +3,4 @@
 *.out
 *.log
 .dub
-__test_library__
+__test__library__
